@@ -307,12 +307,17 @@
   justify-content: center;
   width: 100%;
   max-width: 420px;
+  flex-shrink: 0;
 }
 
 .login-page__mascot {
-  width: min(72%, 320px);
-  height: auto;
   display: block;
+  width: min(72%, 320px);
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 228.267 / 323.701;
+  object-fit: contain;
+  object-position: center;
 }
 
 @media (max-width: 900px) {
@@ -327,6 +332,7 @@
   }
 
   .login-page__mascot {
-    width: min(200px, 45vw);
+    width: min(200px, 55vw);
+    aspect-ratio: 228.267 / 323.701;
   }
 }

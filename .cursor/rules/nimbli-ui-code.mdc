@@ -1,0 +1,46 @@
+---
+description: Nimbli UI (shadcn, Tailwind, primary color), file layout, naming, and code quality
+alwaysApply: true
+---
+
+# Nimbli UI & Code Rules
+
+## Components
+
+- Reuse existing components before adding new ones.
+- Prefer **shadcn/ui** primitives (`Button`, `Input`, `Card`, `Dialog`, etc.).
+- Introduce a custom component when the same UI appears **more than once**.
+- Put reusable UI in `src/components/`. Keep each component small and single-purpose.
+
+## Design
+
+- **Primary color:** `#2bbf9d`.
+- Child-friendly, clean, structured layouts; consistent spacing, border-radius, and typography.
+- **Styling:** Tailwind utility classes only — **no inline `style` props**; use shadcn/theme tokens where applicable.
+- **Mobile-first** breakpoints and layout.
+
+## Code quality
+
+- Avoid long or repetitive code; extract shared pieces.
+- Split large components into smaller ones.
+- **No business logic inside JSX** — use functions, modules, and **custom hooks** (`src/hooks/`) for Supabase and data flow.
+- Ship what the task needs; avoid speculative abstractions.
+
+## File structure
+
+- **Pages:** `src/pages/`
+- **Reusable UI:** `src/components/`
+- **Data / Supabase / side effects:** `src/hooks/`
+- **Context:** `src/context/`
+
+## Naming
+
+- **Components & filenames:** PascalCase, filename matches export (e.g. `ExerciseCard.jsx`).
+- **Functions & hooks:** camelCase (e.g. `handleLogin`, `useProfile`).
+
+## Forbidden
+
+- Inline styles (use Tailwind + shadcn).
+- Duplicate code that should be shared.
+- Monolithic files mixing many unrelated concerns.
+- Comments that only restate obvious code.
