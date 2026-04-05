@@ -28,7 +28,7 @@ alwaysApply: true
 
 ## File structure
 
-- **Pages:** `src/pages/`
+- **Pages:** `src/pages/` — group by feature: `loginflow/` (login, code, choose password), `kind/`, `ouder/`, `kine/` (role dashboards).
 - **Reusable UI:** `src/components/`
 - **Data / Supabase / side effects:** `src/hooks/`
 - **Context:** `src/context/`

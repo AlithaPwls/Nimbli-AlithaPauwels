@@ -1,10 +1,15 @@
 import { Routes, Route } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
-import Login from './pages/Login.jsx'
-import Register from './pages/Register.jsx'
-import DashboardKind from './pages/DashboardKind.jsx'
-import DashboardOuder from './pages/DashboardOuder.jsx'
-import DashboardKine from './pages/DashboardKine.jsx'
+import Login from './pages/loginflow/Login.jsx'
+import LoginWithCode from './pages/loginflow/LoginWithCode.tsx'
+import RegisterOuder from './pages/loginflow/RegisterOuder.tsx'
+import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.tsx'
+import DashboardKind from './pages/kind/DashboardKind.jsx'
+import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
+import DashboardKine from './pages/kine/DashboardKine.jsx'
+import KineOefeningen from './pages/kine/KineOefeningen.jsx'
+import KineInstellingen from './pages/kine/KineInstellingen.jsx'
+import KineLayout from './components/kine/KineLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 export default function App() {
@@ -12,22 +17,33 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<LoginWithCode />} />
+      <Route path="/register/ouder" element={<RegisterOuder />} />
+      <Route path="/register/kine" element={<RegisterKinePractice />} />
+      <Route path="/loginwithcode" element={<Navigate to="/register" replace />} />
+      <Route path="/choose-password" element={<Navigate to="/register" replace />} />
       <Route path="/dashboard/kind" element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRole="child">
           <DashboardKind />
         </ProtectedRoute>
       } />
       <Route path="/dashboard/ouder" element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRole="parent">
           <DashboardOuder />
         </ProtectedRoute>
       } />
-      <Route path="/dashboard/kine" element={
-        <ProtectedRoute>
-          <DashboardKine />
-        </ProtectedRoute>
-      } />
+      <Route
+        path="/dashboard/kine"
+        element={
+          <ProtectedRoute allowedRole="kine">
+            <KineLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardKine />} />
+        <Route path="oefeningen" element={<KineOefeningen />} />
+        <Route path="instellingen" element={<KineInstellingen />} />
+      </Route>
     </Routes>
   )
 }

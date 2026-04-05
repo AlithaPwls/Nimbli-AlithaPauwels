@@ -1,40 +1,46 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import supabase from '../lib/supabaseClient.js'
-import mascot from '../assets/login-mascot-figma.svg'
+import mascot from '../../assets/login-mascot-figma.svg'
+import { useAuth } from '@/hooks/useAuth.js'
+import { useLogin } from '@/hooks/useLogin.js'
 import './Login.css'
+
+const ROLE_PATH = {
+  child: '/dashboard/kind',
+  parent: '/dashboard/ouder',
+  kine: '/dashboard/kine',
+}
 
 export default function Login() {
   const navigate = useNavigate()
+  const { user, role, loading: authLoading } = useAuth()
+  const { login, loading: loginLoading, error, clearError } = useLogin()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
-  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (authLoading) return
+    if (user && role && ROLE_PATH[role]) {
+      navigate(ROLE_PATH[role], { replace: true })
+    }
+  }, [authLoading, user, role, navigate])
 
   async function handleLogin(e) {
     e.preventDefault()
-    setError(null)
+    clearError()
+    await login({ email, password })
+  }
 
-    const { data, error: signError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
+  const busy = loginLoading || authLoading
 
-    if (signError) {
-      setError('Email of wachtwoord klopt niet')
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
-
-    if (profile?.role === 'child') navigate('/dashboard/kind')
-    else if (profile?.role === 'parent') navigate('/dashboard/ouder')
-    else if (profile?.role === 'kine') navigate('/dashboard/kine')
+  if (authLoading) {
+    return (
+      <div className="login-page login-page--boot">
+        <p className="login-page__lead">Laden…</p>
+      </div>
+    )
   }
 
   return (
@@ -61,6 +67,7 @@ export default function Login() {
                 placeholder="Email adres"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={busy}
               />
             </div>
 
@@ -77,6 +84,7 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={busy}
               />
             </div>
 
@@ -86,6 +94,7 @@ export default function Login() {
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
+                disabled={busy}
               />
               <span className="login-page__remember-box" aria-hidden>
                 <svg
@@ -109,20 +118,26 @@ export default function Login() {
 
             {error ? <p className="login-page__error">{error}</p> : null}
 
-            <button className="login-page__btn login-page__btn--primary" type="submit">
-              Inloggen
+            <button
+              className="login-page__btn login-page__btn--primary"
+              type="submit"
+              disabled={busy}
+              aria-busy={loginLoading}
+            >
+              {loginLoading ? 'Bezig met inloggen…' : 'Inloggen'}
             </button>
 
             <button
               className="login-page__btn login-page__btn--secondary"
               type="button"
               onClick={() => navigate('/register')}
+              disabled={busy}
             >
               Aanmelden met code
             </button>
 
             <p className="login-page__forgot">
-              <a href="#">Wachtwoord vergeten? Klik hier</a>
+              <a href="/register">Wachtwoord vergeten? Klik hier</a>
             </p>
           </form>
 
@@ -131,6 +146,7 @@ export default function Login() {
               className="login-page__btn login-page__btn--primary"
               type="button"
               onClick={() => navigate('/register/kine')}
+              disabled={busy}
             >
               Registreer je praktijk
             </button>

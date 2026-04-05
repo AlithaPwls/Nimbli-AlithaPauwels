@@ -1,3 +1,3 @@
 export default function DashboardKind() {
-    return <h1>Dashboard Kind</h1>
-  }
+  return <h1>Dashboard Kind</h1>
+}

@@ -1,5 +1,10 @@
 /* Nimbli login — aligned with Figma (node 2:291), fonts loaded in index.html */
 
+.login-page--boot {
+  justify-content: center;
+  align-items: center;
+}
+
 .login-page {
   --login-green: #2bb39b;
   --login-green-dark: #1e7a6a;
