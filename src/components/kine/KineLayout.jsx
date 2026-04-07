@@ -9,12 +9,14 @@ export default function KineLayout() {
 
   useEffect(() => {
     if (loading) return
-    if (profile?.practice_id == null) {
+    // Only redirect once we actually have a profile row.
+    // When profile fetching is slow/failing, redirecting here feels like a logout.
+    if (profile && profile.practice_id == null) {
       navigate('/register/kine', { replace: true })
     }
   }, [loading, profile, navigate])
 
-  if (loading || profile?.practice_id == null) {
+  if (loading || !profile || profile.practice_id == null) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-nimbli-canvas font-nimbli-body text-nimbli-muted">
         Laden…

@@ -44,9 +44,8 @@ export function useLogin() {
           .single()
 
         if (profileError || !profile?.role || !VALID_ROLES.includes(profile.role)) {
-          await supabase.auth.signOut()
           setError(
-            'Je account is nog niet volledig ingesteld. Neem contact op met je kinesist.'
+            'Je account is nog niet volledig ingesteld (profiel ontbreekt of is niet toegankelijk). Neem contact op met je kinesist.'
           )
           return { ok: false }
         }

@@ -23,7 +23,12 @@ export default function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to="/login" replace />
   }
 
-  if (!role || !ROLE_PATH[role]) {
+  // If we have a session but role is not resolved yet (or profile lookup failed),
+  // don't bounce the user back to /login — that feels like a random logout.
+  if (!role) {
+    return <div>Laden…</div>
+  }
+  if (!ROLE_PATH[role]) {
     return <Navigate to="/login" replace />
   }
 
