@@ -1,5 +1,6 @@
 import { Activity, Search, Target, UserPlus, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useKinePatients } from '@/hooks/kine/useKinePatients'
@@ -118,6 +119,7 @@ function PatientCard({ patient }) {
 
 export default function DashboardKine() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
   const practiceId = profile?.practice_id ?? null
@@ -173,6 +175,7 @@ export default function DashboardKine() {
           <Button
             type="button"
             className="h-10 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground hover:bg-nimbli/90"
+            onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
           >
             <UserPlus className="mr-2 size-4" aria-hidden />
             Patiënt toevoegen

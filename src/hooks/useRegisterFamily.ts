@@ -4,8 +4,8 @@ import supabase from '@/lib/supabaseClient.js'
 export type RegisterFamilyInput = {
   parentEmail: string
   password: string
-  parentFirstname: string
-  parentLastname: string
+  parentFirstname?: string
+  parentLastname?: string
   inviteCode: string
   childProfile: ProfileRowRef
   parentProfile: ProfileRowRef
@@ -77,8 +77,6 @@ export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: 
     .update({
       user_id: parentUserId,
       email,
-      firstname: input.parentFirstname.trim(),
-      lastname: input.parentLastname.trim(),
     })
     .eq('id', input.parentProfile.id)
     .is('user_id', null)

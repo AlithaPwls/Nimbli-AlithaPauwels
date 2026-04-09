@@ -5,6 +5,7 @@ import { ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChoosePasswordForm } from '@/hooks/useChoosePasswordForm'
 import { registerFamily } from '@/hooks/useRegisterFamily'
+import supabase from '@/lib/supabaseClient.js'
 import type { ProfileRowRef, RegisterOuderLocationState } from '@/types/register-flow'
 
 function dutchGreeting(): string {
@@ -23,11 +24,9 @@ export default function RegisterOuder() {
   const location = useLocation()
   const state = location.state as RegisterOuderLocationState | null
 
-  const [firstname, setFirstname] = useState('')
-  const [lastname, setLastname] = useState('')
-  const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [parentEmail, setParentEmail] = useState<string>('')
 
   const {
     password,
@@ -46,6 +45,33 @@ export default function RegisterOuder() {
     }
   }, [state, navigate])
 
+  useEffect(() => {
+    if (!state?.parentProfile?.id) return
+    const fromState = state.parentProfile.email?.trim() ?? ''
+    if (fromState) {
+      setParentEmail(fromState)
+      return
+    }
+
+    let cancelled = false
+    async function load() {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', state.parentProfile.id)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) return
+      const next = data?.email?.trim() ?? ''
+      setParentEmail(next)
+    }
+    void load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [state?.parentProfile?.email, state?.parentProfile?.id])
+
   if (!state?.inviteCode || !state.childProfile?.id || !state.parentProfile?.id) {
     return null
   }
@@ -58,13 +84,9 @@ export default function RegisterOuder() {
     setFormError(null)
     if (!validate()) return
 
-    const em = email.trim()
+    const em = parentEmail.trim()
     if (!em) {
-      setFormError('Vul je e-mailadres in.')
-      return
-    }
-    if (!firstname.trim() || !lastname.trim()) {
-      setFormError('Vul je voor- en achternaam in.')
+      setFormError('E-mailadres ontbreekt. Vraag je kinesist om je profiel te controleren.')
       return
     }
 
@@ -73,8 +95,8 @@ export default function RegisterOuder() {
       const result = await registerFamily({
         parentEmail: em,
         password,
-        parentFirstname: firstname,
-        parentLastname: lastname,
+        parentFirstname: state.parentProfile.firstname,
+        parentLastname: state.parentProfile.lastname,
         inviteCode: state.inviteCode,
         childProfile: state.childProfile,
         parentProfile: state.parentProfile,
@@ -122,34 +144,6 @@ export default function RegisterOuder() {
             noValidate
           >
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-firstname" className="sr-only">
-                Voornaam
-              </label>
-              <input
-                id="reg-firstname"
-                type="text"
-                autoComplete="given-name"
-                value={firstname}
-                onChange={(e) => setFirstname(e.target.value)}
-                placeholder="Voornaam"
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-lastname" className="sr-only">
-                Achternaam
-              </label>
-              <input
-                id="reg-lastname"
-                type="text"
-                autoComplete="family-name"
-                value={lastname}
-                onChange={(e) => setLastname(e.target.value)}
-                placeholder="Achternaam"
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
               <label htmlFor="reg-email" className="sr-only">
                 E-mailadres
               </label>
@@ -157,10 +151,10 @@ export default function RegisterOuder() {
                 id="reg-email"
                 type="email"
                 autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="E-mailadres"
-                className={inputClass}
+                value={parentEmail}
+                disabled
+                aria-disabled="true"
+                className={`${inputClass} cursor-not-allowed border-nimbli-slot-border/70 bg-gray-100 text-nimbli-muted placeholder:text-nimbli-muted/80 opacity-100`}
               />
             </div>
 

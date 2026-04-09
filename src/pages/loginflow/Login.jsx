@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import mascot from '../../assets/login-mascot-figma.svg'
 import { useAuth } from '@/hooks/useAuth.js'
@@ -13,19 +13,12 @@ const ROLE_PATH = {
 
 export default function Login() {
   const navigate = useNavigate()
-  const { user, role, loading: authLoading } = useAuth()
+  const { loading: authLoading } = useAuth()
   const { login, loading: loginLoading, error, clearError } = useLogin()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
-
-  useEffect(() => {
-    if (authLoading) return
-    if (user && role && ROLE_PATH[role]) {
-      navigate(ROLE_PATH[role], { replace: true })
-    }
-  }, [authLoading, user, role, navigate])
 
   async function handleLogin(e) {
     e.preventDefault()

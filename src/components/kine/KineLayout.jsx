@@ -25,9 +25,9 @@ export default function KineLayout() {
   }
 
   return (
-    <div className="flex min-h-svh bg-nimbli-canvas">
+    <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
       <KineSidebar />
-      <main className="min-h-svh min-w-0 flex-1 overflow-auto">
+      <main className="min-w-0 flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>

@@ -9,6 +9,10 @@ import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
 import DashboardKine from './pages/kine/DashboardKine.jsx'
 import KineOefeningen from './pages/kine/KineOefeningen.jsx'
 import KineInstellingen from './pages/kine/KineInstellingen.jsx'
+import AddPatient1 from './pages/kine/AddPatient-1.jsx'
+import AddPatient2 from './pages/kine/AddPatient-2.jsx'
+import AddPatient3 from './pages/kine/AddPatient-3.jsx'
+import AddPatient4 from './pages/kine/AddPatient-4.jsx'
 import KineLayout from './components/kine/KineLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
@@ -41,6 +45,10 @@ export default function App() {
         }
       >
         <Route index element={<DashboardKine />} />
+        <Route path="patienten/nieuw" element={<AddPatient1 />} />
+        <Route path="patienten/nieuw/2" element={<AddPatient2 />} />
+        <Route path="patienten/nieuw/3" element={<AddPatient3 />} />
+        <Route path="patienten/nieuw/4" element={<AddPatient4 />} />
         <Route path="oefeningen" element={<KineOefeningen />} />
         <Route path="instellingen" element={<KineInstellingen />} />
       </Route>

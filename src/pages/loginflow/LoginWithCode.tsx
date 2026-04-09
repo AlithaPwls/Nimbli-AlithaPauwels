@@ -83,7 +83,7 @@ export default function LoginWithCode() {
       const codeWithDash = `${code.slice(0, 3)}-${code.slice(3)}`
       const { data: rows, error } = await supabase
         .from('profiles')
-        .select('id, firstname, lastname, role, invite_code, user_id')
+        .select('id, firstname, lastname, email, role, invite_code, user_id')
         .in('invite_code', [code, codeWithDash])
 
       if (error) {
@@ -127,6 +127,7 @@ export default function LoginWithCode() {
           id: parent.id,
           firstname: parent.firstname,
           lastname: parent.lastname,
+          email: parent.email,
         },
       }
       navigate('/register/ouder', { state: next })

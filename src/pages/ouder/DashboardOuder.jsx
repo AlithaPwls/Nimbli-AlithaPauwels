@@ -1,6 +1,7 @@
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
 
+
 export default function DashboardOuder() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
@@ -15,7 +16,7 @@ export default function DashboardOuder() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8 font-nimbli-body text-nimbli-ink">
-      <h1 className="font-nimbli-heading text-2xl font-extrabold">{profile.firstname}</h1>
+      <h1 className="font-nimbli-heading text-2xl font-extrabold">{profile.firstname} {profile.lastname}</h1>
       <p className="mt-2 text-sm text-nimbli-muted">
         Uitloggen om opnieuw te testen met e-mail en wachtwoord, of om de registratieflow opnieuw te
         doorlopen.

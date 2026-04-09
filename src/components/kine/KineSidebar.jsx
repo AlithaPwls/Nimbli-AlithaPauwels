@@ -14,8 +14,9 @@ const navItemClass = ({ isActive }) =>
   )
 
 function NavIcon({ Icon, isActive }) {
+  const IconComponent = Icon
   return (
-    <Icon
+    <IconComponent
       className={cn('size-[26px] shrink-0', isActive ? 'text-nimbli' : 'text-nimbli-ink')}
       aria-hidden
     />
@@ -27,7 +28,7 @@ export default function KineSidebar() {
 
   return (
     <aside
-      className="flex h-svh w-[220px] shrink-0 flex-col border-r border-[#e5e7eb] bg-white px-6 pt-8 pb-6"
+      className="sticky top-0 flex h-svh w-[220px] shrink-0 flex-col border-r border-[#e5e7eb] bg-white px-6 pt-8 pb-6"
       aria-label="Hoofdnavigatie kinesist"
     >
       <Link

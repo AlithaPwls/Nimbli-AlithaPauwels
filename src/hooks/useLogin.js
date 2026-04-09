@@ -27,6 +27,17 @@ export function useLogin() {
       setLoading(true)
 
       try {
+        // Explicitly switch sessions: if someone is already logged in, log them out first.
+        // This matches the requirement that logging in from /login replaces the current user.
+        try {
+          const { data } = await supabase.auth.getSession()
+          if (data?.session?.user) {
+            await supabase.auth.signOut()
+          }
+        } catch {
+          // ignore (we'll attempt sign-in regardless)
+        }
+
         const { data, error: signError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
@@ -47,6 +58,11 @@ export function useLogin() {
           setError(
             'Je account is nog niet volledig ingesteld (profiel ontbreekt of is niet toegankelijk). Neem contact op met je kinesist.'
           )
+          try {
+            await supabase.auth.signOut()
+          } catch {
+            // ignore
+          }
           return { ok: false }
         }
 
