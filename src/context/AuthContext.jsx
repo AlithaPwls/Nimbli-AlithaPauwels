@@ -12,7 +12,7 @@ async function fetchProfileRow(userId) {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, firstname, lastname, email, role, practice_id')
-    .eq('user_id', userId)
+    .eq('id', userId)
     .maybeSingle()
 
   if (error || !data) {

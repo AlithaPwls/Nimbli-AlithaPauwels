@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { clearAddPatientDraft, readAddPatientDraft } from '@/lib/addPatientDraft'
+import { runFinalizeAddPatientOnce } from '@/lib/finalizeAddPatientOnce'
 import { useFinalizeAddPatient } from '@/hooks/kine/useFinalizeAddPatient'
 
 function StepHeader() {
@@ -50,7 +51,7 @@ export default function AddPatient4() {
     async function run() {
       const draft = readAddPatientDraft()
       if (!draft) return
-      const res = await finalize(draft)
+      const res = await runFinalizeAddPatientOnce(finalize, draft)
       if (cancelled) return
       if (res.ok && res.inviteCode) {
         setCode(res.inviteCode)

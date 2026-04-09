@@ -17,7 +17,8 @@ function childAuthEmail(inviteCode: string) {
 }
 
 /**
- * Parent + synthetic child Auth users, then link existing profile rows via user_id.
+ * Parent + synthetic child Auth users, then attach pending profile rows to Auth:
+ * set both `id` and `user_id` to the new auth.users.id (same value).
  */
 export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: true } | { ok: false; message: string }> {
   const email = input.parentEmail.trim()
@@ -75,6 +76,7 @@ export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: 
   const { error: upParent } = await supabase
     .from('profiles')
     .update({
+      id: parentUserId,
       user_id: parentUserId,
       email,
     })
@@ -88,6 +90,7 @@ export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: 
   const { error: upChild } = await supabase
     .from('profiles')
     .update({
+      id: childUserId,
       user_id: childUserId,
       email: childEmail,
     })

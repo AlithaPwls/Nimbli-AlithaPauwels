@@ -87,9 +87,8 @@ export function useKinePracticeRegistration() {
             return { ok: false, message: 'Praktijk aanmaken mislukt. Probeer later opnieuw.' }
           }
 
-          const profileId = crypto.randomUUID()
           const { error: insProf } = await supabase.from('profiles').insert({
-            id: profileId,
+            id: uid,
             firstname: form.kineFirstname.trim(),
             lastname: form.kineLastname.trim(),
             email,
@@ -133,8 +132,8 @@ export function useKinePracticeRegistration() {
         const { error: upErr } = await supabase
           .from('profiles')
           .update({ practice_id: practiceRow.id })
-          .eq('user_id', authUserId)
           .eq('role', 'kine')
+          .or(`id.eq.${authUserId},user_id.eq.${authUserId}`)
 
         if (upErr) {
           return { ok: false, message: 'Praktijk koppelen aan je profiel mislukt.' }

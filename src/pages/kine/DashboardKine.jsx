@@ -2,120 +2,12 @@ import { Activity, Search, Target, UserPlus, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import KinePatientCard from '@/components/kine/KinePatientCard.jsx'
+import KinePatientsEmptyState from '@/components/kine/KinePatientsEmptyState.jsx'
+import KineStatCard from '@/components/kine/KineStatCard.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useKinePatients } from '@/hooks/kine/useKinePatients'
 import { useKineDashboardKpis } from '@/hooks/kine/useKineDashboardKpis'
-
-function clampProgress(progress) {
-  const safe = Number.isFinite(progress) ? progress : 0
-  return Math.min(1, Math.max(0, safe))
-}
-
-function progressValue(progress) {
-  return Math.round(clampProgress(progress) * 100)
-}
-
-function StatCard({ title, value, subtitle, accent = 'nimbli', progress = null, Icon }) {
-  const barValue = progress == null ? null : progressValue(progress)
-
-  const accentText =
-    accent === 'yellow' ? 'text-[#FBB92A]' : accent === 'blue' ? 'text-[#82B3E1]' : 'text-nimbli'
-  const accentBg =
-    accent === 'yellow' ? 'bg-[#FBB92A]/20' : accent === 'blue' ? 'bg-[#82B3E1]/20' : 'bg-nimbli/15'
-  const accentAccent =
-    accent === 'yellow'
-      ? 'accent-[#FBB92A]'
-      : accent === 'blue'
-        ? 'accent-[#82B3E1]'
-        : 'accent-nimbli'
-
-  return (
-    <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
-      <div className="flex items-start gap-3">
-        <div className={['mt-0.5 grid size-8 place-items-center rounded-xl', accentBg, accentText].join(' ')}>
-          {Icon ? <Icon className="size-4" aria-hidden /> : null}
-        </div>
-        <div className="min-w-0">
-          <p className="font-nimbli-heading text-sm font-bold text-nimbli-muted">{title}</p>
-          <p
-            className={[
-              'mt-3 font-nimbli-heading text-3xl font-extrabold tracking-tight',
-              accent === 'nimbli' ? 'text-nimbli' : accent === 'yellow' ? 'text-[#FBB92A]' : 'text-[#82B3E1]',
-            ].join(' ')}
-          >
-            {value}
-          </p>
-          {subtitle ? <p className="mt-1 text-xs text-nimbli-muted">{subtitle}</p> : null}
-
-          {barValue != null ? (
-            <progress
-              className={['mt-3 h-1.5 w-full overflow-hidden rounded-full bg-nimbli-canvas', accentAccent].join(
-                ' '
-              )}
-              value={barValue}
-              max={100}
-              aria-label={`${title} ${barValue}%`}
-            />
-          ) : null}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function formatPct(progress) {
-  return `${Math.round(clampProgress(progress) * 100)}%`
-}
-
-function PatientCard({ patient }) {
-  const pct = formatPct(patient.progress)
-  const barValue = progressValue(patient.progress)
-
-  return (
-    <button
-      type="button"
-      className="group relative w-full cursor-pointer rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 hover:bg-nimbli-canvas/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
-    >
-      <div className="flex items-start gap-4">
-        <img
-          className="mt-0.5 size-12 shrink-0 rounded-xl object-cover ring-1 ring-nimbli-slot-border/20"
-          src={patient.avatarUrl}
-          alt={`${patient.name} profielfoto`}
-          loading="lazy"
-          decoding="async"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate font-nimbli-heading text-base font-extrabold text-nimbli-ink">
-                {patient.name}
-              </p>
-              <p className="mt-0.5 text-xs text-nimbli-muted">{patient.age} jaar</p>
-            </div>
-            <p className="shrink-0 text-xs font-semibold text-nimbli">{patient.delta}</p>
-          </div>
-
-          <p className="mt-3 line-clamp-2 text-xs text-nimbli-muted">{patient.focus}</p>
-
-          <div className="mt-3 flex items-center gap-2 text-[11px] text-nimbli-muted">
-            <span className="size-2 rounded-full bg-nimbli" aria-hidden />
-            <span className="truncate">Laatste sessie: {patient.lastSession}</span>
-          </div>
-
-          <div className="mt-4 flex items-center gap-3">
-            <progress
-              className="h-2 flex-1 overflow-hidden rounded-full bg-nimbli-canvas accent-[#82B3E1]"
-              value={barValue}
-              max={100}
-              aria-label={`Voortgang ${patient.name} ${barValue}%`}
-            />
-            <p className="w-10 text-right text-[11px] font-semibold text-nimbli-muted">{pct}</p>
-          </div>
-        </div>
-      </div>
-    </button>
-  )
-}
 
 export default function DashboardKine() {
   const { profile } = useAuth()
@@ -133,86 +25,103 @@ export default function DashboardKine() {
     return combined || 'kinesist'
   }, [profile?.firstname, profile?.lastname])
 
+  const goAddPatient = () => navigate('/dashboard/kine/patienten/nieuw')
+
   const totalPatients = kpis.totalPatients
-  const adherenceValue = kpis.adherencePct == null ? '—' : `${kpis.adherencePct}%`
-  const complianceValue = kpis.compliancePct == null ? '—' : `${kpis.compliancePct}%`
+  const adherenceDisplay =
+    kpisLoading ? '…' : kpis.adherencePct == null ? '--' : `${kpis.adherencePct}%`
+  const complianceDisplay =
+    kpisLoading ? '…' : kpis.compliancePct == null ? '--' : `${kpis.compliancePct}%`
+
+  const adherenceProgress =
+    kpis.adherencePct == null ? null : Math.min(1, Math.max(0, kpis.adherencePct / 100))
+  const complianceProgress =
+    kpis.compliancePct == null ? null : Math.min(1, Math.max(0, kpis.compliancePct / 100))
+
+  const showFigmaEmpty = !patientsLoading && patients.length === 0 && !query.trim()
+  const showNoSearchResults = !patientsLoading && patients.length === 0 && query.trim()
 
   return (
     <div className="min-h-svh bg-nimbli-foreground">
       <div className="mx-auto max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
-        <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight">
+        <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-black">
           Goeiedag {greetingName}!
         </h1>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3">
-          <StatCard
+          <KineStatCard
             title="Totaal Patiënten"
             value={kpisLoading ? '…' : String(totalPatients)}
             subtitle="Actieve behandeltrajecten"
             accent="nimbli"
             Icon={Users}
           />
-          <StatCard
+          <KineStatCard
             title="Gemiddeld"
-            value={adherenceValue}
+            value={adherenceDisplay}
             subtitle="Therapietrouw"
             accent="yellow"
-            progress={kpis.adherencePct == null ? null : kpis.adherencePct / 100}
+            progress={adherenceProgress}
             Icon={Activity}
           />
-          <StatCard
+          <KineStatCard
             title="Compliance"
-            value={complianceValue}
+            value={complianceDisplay}
             subtitle="Gemiddelde rate"
             accent="blue"
-            progress={kpis.compliancePct == null ? null : kpis.compliancePct / 100}
+            progress={complianceProgress}
             Icon={Target}
           />
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-nimbli-heading text-2xl font-extrabold">Mijn Patiënten</h2>
-          <Button
-            type="button"
-            className="h-10 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground hover:bg-nimbli/90"
-            onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
-          >
-            <UserPlus className="mr-2 size-4" aria-hidden />
-            Patiënt toevoegen
-          </Button>
-        </div>
+        <div className="mt-10 flex flex-col gap-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-nimbli-heading text-xl font-bold text-[#1a1a1a]">Mijn Patiënten</h2>
+            <Button
+              type="button"
+              className="h-10 rounded bg-nimbli font-nimbli-heading text-sm font-black text-white shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90"
+              onClick={goAddPatient}
+            >
+              <UserPlus className="mr-2 size-[18px]" aria-hidden />
+              Patiënt toevoegen
+            </Button>
+          </div>
 
-        <div className="mt-4 rounded-2xl border-2 border-[#e1dbd3] bg-white p-5 shadow-[0_2px_0_0_#e1dbd3]">
-          <label className="sr-only" htmlFor="kine-patient-search">
-            Zoek patiënt
-          </label>
-          <div className="flex items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white px-4 py-3">
-            <Search className="size-4 text-nimbli-muted" aria-hidden />
-            <input
-              id="kine-patient-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Zoek patiënt..."
-              className="w-full bg-transparent text-sm text-nimbli-ink placeholder:text-nimbli-muted focus:outline-none"
-              type="text"
-              autoComplete="off"
-            />
+          <div>
+            <label className="sr-only" htmlFor="kine-patient-search">
+              Zoek patiënt
+            </label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-nimbli-muted"
+                aria-hidden
+              />
+              <input
+                id="kine-patient-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Zoek patiënt..."
+                className="h-[46px] w-full rounded-[10px] border border-[#e5e7eb] bg-white py-3 pl-11 pr-4 text-sm text-nimbli-ink placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-nimbli/30"
+                type="search"
+                autoComplete="off"
+              />
+            </div>
           </div>
 
           {patientsLoading ? (
-            <div className="mt-6 rounded-xl bg-nimbli-canvas px-4 py-6 text-center text-sm text-nimbli-muted">
+            <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white px-4 py-12 text-center text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
               Patiënten laden…
             </div>
-          ) : patients.length === 0 ? (
-            <div className="mt-6 rounded-xl bg-nimbli-canvas px-4 py-6 text-center text-sm text-nimbli-muted">
-              {query.trim()
-                ? `Geen patiënten gevonden voor “${query.trim()}”.`
-                : 'Nog geen patiënten. Voeg je eerste patiënt toe.'}
+          ) : showNoSearchResults ? (
+            <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white px-4 py-12 text-center text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
+              Geen patiënten gevonden voor “{query.trim()}”.
             </div>
+          ) : showFigmaEmpty ? (
+            <KinePatientsEmptyState onAddPatient={goAddPatient} />
           ) : (
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {patients.map((patient) => (
-                <PatientCard key={patient.id} patient={patient} />
+                <KinePatientCard key={patient.id} patient={patient} />
               ))}
             </div>
           )}

@@ -1,3 +1,4 @@
+/** Row ref from invite lookup; `id` is pending until registration, then equals auth user id. */
 export type ProfileRowRef = {
   id: string
   firstname: string

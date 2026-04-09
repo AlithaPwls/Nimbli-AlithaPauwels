@@ -3,13 +3,15 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/useAuth.js'
+import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { readAddPatientDraft } from '@/lib/addPatientDraft'
 
 const ASSETS = {
   patientPhoto: 'https://www.figma.com/api/mcp/asset/9123c94e-5949-40f2-ad85-7eb04295e8e2',
-  stretchNaarDeSterren: 'https://www.figma.com/api/mcp/asset/c7f45815-ed1a-4e61-9180-fdab4bb49b4f',
-  superheldPose: 'https://www.figma.com/api/mcp/asset/0ac56bf7-9b21-44b4-b6aa-773e8aff2ab3',
 }
+
+const EMPTY_EXERCISE_IDS = []
 
 function StepHeader() {
   return (
@@ -59,37 +61,45 @@ function Pill({ tone = 'yellow', children }) {
       ? 'bg-[#FBB92A] text-[#302d2d]'
       : tone === 'green'
         ? 'bg-[#BDE786] text-[#302d2d]'
-        : 'bg-nimbli/15 text-nimbli-ink'
+        : tone === 'purple'
+          ? 'bg-[#E9B5FF] text-[#302d2d]'
+          : 'bg-nimbli/15 text-nimbli-ink'
 
   return <span className={['inline-flex h-5 items-center rounded-full px-2 text-xs', cls].join(' ')}>{children}</span>
 }
 
-function ExerciseRow({ title, tone, tag, difficulty, reps, time, imageUrl }) {
+function ExerciseRow({ exercise }) {
   return (
     <SmallCard className="p-6">
       <div className="flex items-start gap-4">
         <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+          <img
+            src={exercise.imageUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{title}</p>
+          <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{exercise.title}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <Pill tone={tone}>{tag}</Pill>
+            <Pill tone={exercise.categoryTone}>{exercise.category}</Pill>
             <span className="text-nimbli-muted">•</span>
-            <span className="text-xs text-nimbli-ink">{difficulty}</span>
+            <span className="text-xs text-nimbli-ink">{exercise.difficulty}</span>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-nimbli-muted">
             <span className="inline-flex items-center gap-1.5">
               <span aria-hidden>↻</span>
-              {reps}
+              {exercise.reps}
             </span>
             <span aria-hidden>•</span>
             <span className="inline-flex items-center gap-1.5">
               <span aria-hidden>⏱</span>
-              {time}
+              {exercise.time}
             </span>
           </div>
         </div>
@@ -100,6 +110,9 @@ function ExerciseRow({ title, tone, tag, difficulty, reps, time, imageUrl }) {
 
 export default function AddPatient3() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const practiceId = profile?.practice_id ?? null
+  const { exercises, loading: exercisesLoading } = usePracticeExercises(practiceId)
 
   const draft = useMemo(() => readAddPatientDraft() ?? {}, [])
   const patientName = `${draft.childFirstname ?? ''} ${draft.childLastname ?? ''}`.trim() || 'Nieuwe patiënt'
@@ -110,7 +123,17 @@ export default function AddPatient3() {
   const parentRelation = draft.parentRelation || '—'
   const behandeldoel = draft.focus || '—'
 
-  const selectedCount = Array.isArray(draft.selectedExerciseIds) ? draft.selectedExerciseIds.length : 0
+  const selectedExerciseIds = useMemo(() => {
+    const d = draft.selectedExerciseIds
+    return Array.isArray(d) ? d : EMPTY_EXERCISE_IDS
+  }, [draft])
+
+  const selectedExercises = useMemo(() => {
+    const set = new Set(selectedExerciseIds)
+    return exercises.filter((e) => set.has(e.id))
+  }, [exercises, selectedExerciseIds])
+
+  const selectedCount = selectedExerciseIds.length
 
   return (
     <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
@@ -178,24 +201,21 @@ export default function AddPatient3() {
                   Startprogramma ({selectedCount} oefeningen)
                 </p>
                 <div className="mt-4 space-y-4">
-                  <ExerciseRow
-                    title="Stretch naar de Sterren"
-                    tone="yellow"
-                    tag="Mobiliteit"
-                    difficulty="Makkelijk"
-                    reps="10x herhalingen"
-                    time="2 min"
-                    imageUrl={ASSETS.stretchNaarDeSterren}
-                  />
-                  <ExerciseRow
-                    title="Superheld pose"
-                    tone="green"
-                    tag="Balans"
-                    difficulty="Moeilijk"
-                    reps="12x herhalingen"
-                    time="2 min"
-                    imageUrl={ASSETS.superheldPose}
-                  />
+                  {exercisesLoading && selectedCount > 0 ? (
+                    <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
+                      Oefeningen laden…
+                    </div>
+                  ) : selectedCount === 0 ? (
+                    <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
+                      Geen startoefeningen geselecteerd.
+                    </div>
+                  ) : selectedExercises.length === 0 ? (
+                    <div className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
+                      Geselecteerde oefeningen niet gevonden. Ga terug naar stap 2 om opnieuw te kiezen.
+                    </div>
+                  ) : (
+                    selectedExercises.map((ex) => <ExerciseRow key={ex.id} exercise={ex} />)
+                  )}
                 </div>
               </div>
             </div>

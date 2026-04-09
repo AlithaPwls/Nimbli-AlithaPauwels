@@ -14,7 +14,7 @@ Nimbli uses a custom authentication flow where the kinesiologist creates account
 - He creates two rows: one for the child (role: 'child') and one for the parent (role: 'parent')
 - Both rows share the same `invite_code` (e.g. six digits or `XXX-XXX`)
 - `email` is required on `profiles` — use placeholders until the parent registers (e.g. `ouder@pending.local` / `kind@pending.local`); real addresses are written at registration
-- `user_id` stays null until Step 4; `id` is an independent UUID for foreign keys across the app
+- `user_id` stays null until Step 4; `id` is a temporary UUID until the row is linked to Auth (then `id` becomes the same UUID as `auth.users.id`)
 
 ### Step 2: Parent enters invite code
 - Parent goes to `/register` (`LoginWithCode.tsx`, 6 digits; also tries `XXX-XXX` if stored that way)
@@ -38,21 +38,20 @@ Nimbli uses a custom authentication flow where the kinesiologist creates account
 ```
 - Both accounts use the same password so the parent can switch to the child view without re-entering the password
 
-### Step 4: Link profiles to Auth (`user_id`)
-- Pre-created rows keep their stable primary key `id` (used by `child_id`, relations, etc.). **Do not** replace `id` with the Auth user id.
-- After both `signUp` calls, set `user_id` to the new `auth.users.id` and set emails (and parent name if the parent edits it):
+### Step 4: Link profiles to Auth (`id` + `user_id`)
+- After both `signUp` calls, set **both** `id` and `user_id` to the new `auth.users.id` (same value), and set emails. Foreign keys to `profiles(id)` use `ON UPDATE CASCADE` so related rows stay valid when the PK changes from the pending UUID to the Auth UUID.
 ```js
   supabase.from('profiles')
-    .update({ user_id: parentAuthId, email: parentEmail, firstname, lastname })
+    .update({ id: parentAuthId, user_id: parentAuthId, email: parentEmail })
     .eq('id', parentProfileRowId)
     .is('user_id', null)
 
   supabase.from('profiles')
-    .update({ user_id: childAuthId, email: childEmail })
+    .update({ id: childAuthId, user_id: childAuthId, email: childEmail })
     .eq('id', childProfileRowId)
     .is('user_id', null)
 ```
-- Login and session code resolve the app role with `.eq('user_id', authUser.id)`.
+- Login and session code resolve the app role with `.eq('id', authUser.id)` (equivalent to `user_id` once linked; RLS policies may still reference `user_id`).
 
 ## Switching between parent and child
 - Parent → Child: no password needed, just switch the active role in context

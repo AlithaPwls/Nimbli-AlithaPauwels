@@ -8,6 +8,7 @@ import DashboardKind from './pages/kind/DashboardKind.jsx'
 import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
 import DashboardKine from './pages/kine/DashboardKine.jsx'
 import KineOefeningen from './pages/kine/KineOefeningen.jsx'
+import KineOefeningenEigenVideos from './pages/kine/KineOefeningenEigenVideos.jsx'
 import KineInstellingen from './pages/kine/KineInstellingen.jsx'
 import AddPatient1 from './pages/kine/AddPatient-1.jsx'
 import AddPatient2 from './pages/kine/AddPatient-2.jsx'
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="patienten/nieuw/3" element={<AddPatient3 />} />
         <Route path="patienten/nieuw/4" element={<AddPatient4 />} />
         <Route path="oefeningen" element={<KineOefeningen />} />
+        <Route path="oefeningen/eigen" element={<KineOefeningenEigenVideos />} />
         <Route path="instellingen" element={<KineInstellingen />} />
       </Route>
     </Routes>

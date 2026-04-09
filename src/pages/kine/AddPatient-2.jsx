@@ -3,63 +3,16 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/useAuth.js'
+import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
+import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
 import { readAddPatientDraft, updateAddPatientDraft } from '@/lib/addPatientDraft'
-
-const EXERCISE_IMAGES = {
-  stretchNaarDeSterren: 'https://www.figma.com/api/mcp/asset/5438d5a0-91e7-443a-8a74-459b47d28c5d',
-  superheldPose: 'https://www.figma.com/api/mcp/asset/41b58f5d-d5f8-4287-9f97-43f85d39a174',
-  jumpingJacks: 'https://www.figma.com/api/mcp/asset/d1b0702b-3425-4f95-bc11-f584f6eec1e5',
-  balansBrug: 'https://www.figma.com/api/mcp/asset/b8160196-23cb-48f5-93d3-c5178b032e85',
-}
 
 const FILTERS = [
   { id: 'all', label: 'Alle oefeningen' },
   { id: 'mobiliteit', label: 'Mobiliteit' },
   { id: 'kracht', label: 'Kracht' },
   { id: 'balans', label: 'Balans' },
-]
-
-const EXERCISES = [
-  {
-    id: 'stretch',
-    title: 'Stretch naar de Sterren',
-    category: 'Mobiliteit',
-    categoryTone: 'yellow',
-    difficulty: 'Makkelijk',
-    reps: '10x herhalingen',
-    time: '2 min',
-    imageUrl: EXERCISE_IMAGES.stretchNaarDeSterren,
-  },
-  {
-    id: 'superheld',
-    title: 'Superheld pose',
-    category: 'Balans',
-    categoryTone: 'green',
-    difficulty: 'Moeilijk',
-    reps: '12x herhalingen',
-    time: '2 min',
-    imageUrl: EXERCISE_IMAGES.superheldPose,
-  },
-  {
-    id: 'jumping-jacks',
-    title: 'Jumping Jacks',
-    category: 'Kracht',
-    categoryTone: 'purple',
-    difficulty: 'Gemiddeld',
-    reps: '15x herhalingen',
-    time: '3 min',
-    imageUrl: EXERCISE_IMAGES.jumpingJacks,
-  },
-  {
-    id: 'balans-brug',
-    title: 'Balans Brug',
-    category: 'Balans',
-    categoryTone: 'green',
-    difficulty: 'Moeilijk',
-    reps: '8x herhalingen',
-    time: '4 min',
-    imageUrl: EXERCISE_IMAGES.balansBrug,
-  },
 ]
 
 function StepHeader() {
@@ -91,19 +44,6 @@ function SectionCard({ title, subtitle, children }) {
   )
 }
 
-function toneClasses(tone) {
-  switch (tone) {
-    case 'yellow':
-      return 'bg-[#FBB92A] text-[#302d2d]'
-    case 'green':
-      return 'bg-[#BDE786] text-[#302d2d]'
-    case 'purple':
-      return 'bg-[#E9B5FF] text-[#302d2d]'
-    default:
-      return 'bg-nimbli/15 text-nimbli-ink'
-  }
-}
-
 function ExerciseCard({ exercise, selected, onToggle }) {
   return (
     <button
@@ -130,7 +70,12 @@ function ExerciseCard({ exercise, selected, onToggle }) {
           <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{exercise.title}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <span className={['inline-flex h-5 items-center rounded-full px-2 text-xs', toneClasses(exercise.categoryTone)].join(' ')}>
+            <span
+              className={[
+                'inline-flex h-5 items-center rounded-full px-2 text-xs',
+                categoryToneClasses(exercise.categoryTone),
+              ].join(' ')}
+            >
               {exercise.category}
             </span>
             <span className="text-nimbli-muted">•</span>
@@ -156,6 +101,10 @@ function ExerciseCard({ exercise, selected, onToggle }) {
 
 export default function AddPatient2() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const practiceId = profile?.practice_id ?? null
+  const { exercises, loading, error } = usePracticeExercises(practiceId)
+
   const draft = readAddPatientDraft() ?? {}
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -166,16 +115,17 @@ export default function AddPatient2() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return EXERCISES.filter((e) => {
+    return exercises.filter((e) => {
       const matchQuery = !q || e.title.toLowerCase().includes(q)
+      const cat = e.category.toLowerCase()
       const matchFilter =
         filter === 'all' ||
-        (filter === 'mobiliteit' && e.category === 'Mobiliteit') ||
-        (filter === 'kracht' && e.category === 'Kracht') ||
-        (filter === 'balans' && e.category === 'Balans')
+        (filter === 'mobiliteit' && cat.includes('mobiliteit')) ||
+        (filter === 'kracht' && cat.includes('kracht')) ||
+        (filter === 'balans' && cat.includes('balans'))
       return matchQuery && matchFilter
     })
-  }, [query, filter])
+  }, [query, filter, exercises])
 
   function toggle(id) {
     setSelectedIds((prev) => {
@@ -239,15 +189,39 @@ export default function AddPatient2() {
             })}
           </div>
 
+          {error ? (
+            <div
+              className="mt-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-800"
+              role="alert"
+            >
+              <p className="text-sm font-semibold">Oefeningen laden mislukt</p>
+              <p className="mt-1 font-nimbli-body text-xs leading-snug opacity-90">
+                {error.message || String(error)}
+              </p>
+            </div>
+          ) : null}
+
           <div className="mt-6 grid gap-6 md:grid-cols-2">
-            {filtered.map((exercise) => (
-              <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                selected={selectedIds.has(exercise.id)}
-                onToggle={() => toggle(exercise.id)}
-              />
-            ))}
+            {loading ? (
+              <div className="col-span-full rounded-2xl border-2 border-[#e1dbd3] bg-nimbli-canvas/50 px-4 py-10 text-center text-sm text-nimbli-muted">
+                Oefeningen laden…
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="col-span-full rounded-2xl border-2 border-[#e1dbd3] bg-white px-4 py-10 text-center text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
+                {exercises.length === 0
+                  ? 'Er zijn nog geen oefeningen in je bibliotheek. Voeg oefeningen toe via Oefeningen.'
+                  : 'Geen oefeningen gevonden met deze filters.'}
+              </div>
+            ) : (
+              filtered.map((exercise) => (
+                <ExerciseCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  selected={selectedIds.has(exercise.id)}
+                  onToggle={() => toggle(exercise.id)}
+                />
+              ))
+            )}
           </div>
 
           <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
