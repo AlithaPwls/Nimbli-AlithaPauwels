@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 
@@ -21,6 +21,11 @@ export function usePracticeExercises(practiceId) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [tick, setTick] = useState(0)
+
+  const refetch = useCallback(() => {
+    setTick((t) => t + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -47,7 +52,8 @@ export function usePracticeExercises(practiceId) {
         if (!practiceId) {
           list = []
         } else {
-          list = list.filter((r) => r.practice_id === practiceId)
+          // Include null practice_id only as a safety net; RLS normally hides those until backfilled.
+          list = list.filter((r) => r.practice_id == null || r.practice_id === practiceId)
         }
       }
 
@@ -67,9 +73,9 @@ export function usePracticeExercises(practiceId) {
     return () => {
       cancelled = true
     }
-  }, [practiceId])
+  }, [practiceId, tick])
 
   const exercises = useMemo(() => rows.map((r) => normalizeExerciseRow(r)), [rows])
 
-  return { exercises, loading, error }
+  return { rawRows: rows, exercises, loading, error, refetch }
 }

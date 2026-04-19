@@ -9,6 +9,13 @@ import {
 } from '@/components/ui/dialog'
 import { categoryToneClasses, exerciseDescriptionForDialog } from '@/lib/exerciseDisplay.js'
 
+function isLikelyVideoUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const path = (url.split('?')[0] || url).toLowerCase()
+  if (path.includes('/exercise-videos/')) return true
+  return /\.(mp4|mov|avi|webm|m4v)$/i.test(path)
+}
+
 export default function ExerciseDetailDialog({ exercise, onOpenChange }) {
   const bodyText = useMemo(
     () => (exercise ? exerciseDescriptionForDialog(exercise.description) : ''),
@@ -40,13 +47,23 @@ export default function ExerciseDetailDialog({ exercise, onOpenChange }) {
             </DialogHeader>
 
             <div className="overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
-              <img
-                src={exercise.imageUrl}
-                alt={exercise.title}
-                className="aspect-video w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+              {isLikelyVideoUrl(exercise.imageUrl) ? (
+                <video
+                  src={exercise.imageUrl}
+                  className="aspect-video w-full object-cover"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <img
+                  src={exercise.imageUrl}
+                  alt={exercise.title}
+                  className="aspect-video w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
             </div>
 
             <dl className="grid gap-3 text-sm text-nimbli-ink sm:grid-cols-3">

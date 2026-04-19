@@ -4,7 +4,8 @@ import ExerciseDetailDialog from '@/components/kine/ExerciseDetailDialog.jsx'
 import KineOefeningenModeSwitch from '@/components/kine/KineOefeningenModeSwitch.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
-import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+import { categoryToneClasses, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { rowHasUploadedVideoFile } from '@/lib/eigenExerciseCard.js'
 
 const FILTERS = [
   { id: 'all', label: 'Alle oefeningen' },
@@ -16,14 +17,20 @@ const FILTERS = [
 export default function KineOefeningen() {
   const { profile } = useAuth()
   const practiceId = profile?.practice_id ?? null
-  const { exercises, loading, error } = usePracticeExercises(practiceId)
+  const { rawRows, loading, error } = usePracticeExercises(practiceId)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [selectedExercise, setSelectedExercise] = useState(null)
 
+  const libraryExercises = useMemo(() => {
+    return (rawRows ?? [])
+      .filter((r) => !rowHasUploadedVideoFile(r))
+      .map((r) => normalizeExerciseRow(r))
+  }, [rawRows])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return exercises.filter((e) => {
+    return libraryExercises.filter((e) => {
       const matchQuery = !q || e.title.toLowerCase().includes(q)
       const cat = e.category.toLowerCase()
       const matchCategory =
@@ -33,7 +40,7 @@ export default function KineOefeningen() {
         (category === 'balans' && cat.includes('balans'))
       return matchQuery && matchCategory
     })
-  }, [exercises, query, category])
+  }, [libraryExercises, query, category])
 
   return (
     <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
@@ -112,8 +119,8 @@ export default function KineOefeningen() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="col-span-full rounded-2xl border-2 border-[#e1dbd3] bg-white px-4 py-12 text-center text-sm text-nimbli-muted shadow-[0_2px_0_0_#e1dbd3]">
-              {exercises.length === 0
-                ? 'Nog geen oefeningen. Voeg rijen toe in de tabel exercises (zelfde practice_id).'
+              {libraryExercises.length === 0
+                ? 'Nog geen oefeningen in de bibliotheek.'
                 : 'Geen oefeningen gevonden met deze filters.'}
             </div>
           ) : (
@@ -122,43 +129,42 @@ export default function KineOefeningen() {
                 key={exercise.id}
                 type="button"
                 onClick={() => setSelectedExercise(exercise)}
-                className="w-full cursor-pointer rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+                className="w-full cursor-pointer rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 pt-[25px] text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
               >
                 <div className="flex items-start gap-4">
-                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
+                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
                     <img
                       src={exercise.imageUrl}
                       alt=""
-                      className="h-full w-full object-cover"
+                      className="h-full w-full scale-105 object-cover"
                       loading="lazy"
                       decoding="async"
                     />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{exercise.title}</p>
+                    <p className="font-nimbli-heading text-lg font-bold text-[#1a1a1a]">{exercise.title}</p>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span
                         className={[
-                          'inline-flex h-5 items-center rounded-full px-2 text-xs text-[#302d2d]',
+                          'inline-flex h-5 min-w-[58px] items-center justify-center rounded-full px-2 font-nimbli-heading text-xs font-bold text-[#302d2d]',
                           categoryToneClasses(exercise.categoryTone),
                         ].join(' ')}
                       >
                         {exercise.category}
                       </span>
                       <span className="text-nimbli-muted">•</span>
-                      <span className="text-xs text-nimbli-muted">{exercise.difficulty}</span>
+                      <span className="text-xs text-[#302d2d]">{exercise.difficulty}</span>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-nimbli-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                      <Repeat2 className="size-3.5 shrink-0 text-[#302d2d]" aria-hidden />
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#302d2d]">
+                      <span className="inline-flex items-center gap-1">
+                        <Repeat2 className="size-3.5 shrink-0 text-[#302d2d]" aria-hidden />
                         {exercise.reps}
-                         <span className="text-nimbli-muted">herhalingen</span>
                       </span>
-                      <span aria-hidden>•</span>
-                      <span className="inline-flex items-center gap-1.5">
+                      <span className="text-nimbli-muted">•</span>
+                      <span className="inline-flex items-center gap-1">
                         <Clock className="size-3.5 shrink-0 text-[#302d2d]" aria-hidden />
                         {exercise.time}
                       </span>
