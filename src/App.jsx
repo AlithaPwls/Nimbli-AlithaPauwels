@@ -1,11 +1,15 @@
 import { Routes, Route } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import Login from './pages/loginflow/Login.jsx'
-import LoginWithCode from './pages/loginflow/LoginWithCode.tsx'
-import RegisterOuder from './pages/loginflow/RegisterOuder.tsx'
-import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.tsx'
+import LoginWithCode from './pages/loginflow/LoginWithCode.jsx'
+import RegisterOuder from './pages/loginflow/RegisterOuder.jsx'
+import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.jsx'
 import DashboardKind from './pages/kind/DashboardKind.jsx'
 import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
+import OuderOefenplanning from './pages/ouder/OuderOefenplanning.jsx'
+import OuderInstellingen from './pages/ouder/OuderInstellingen.jsx'
+import OuderAccountEdit from './pages/ouder/OuderAccountEdit.jsx'
+import OuderKindProfielenBeheren from './pages/ouder/OuderKindProfielenBeheren.jsx'
 import DashboardKine from './pages/kine/DashboardKine.jsx'
 import KineOefeningen from './pages/kine/KineOefeningen.jsx'
 import KineOefeningenEigenVideos from './pages/kine/KineOefeningenEigenVideos.jsx'
@@ -35,6 +39,26 @@ export default function App() {
       <Route path="/dashboard/ouder" element={
         <ProtectedRoute allowedRole="parent">
           <DashboardOuder />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/ouder/oefenplanning" element={
+        <ProtectedRoute allowedRole="parent">
+          <OuderOefenplanning />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/ouder/instellingen" element={
+        <ProtectedRoute allowedRole="parent">
+          <OuderInstellingen />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/ouder/account-bewerken" element={
+        <ProtectedRoute allowedRole="parent">
+          <OuderAccountEdit />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/ouder/kindprofielen" element={
+        <ProtectedRoute allowedRole="parent">
+          <OuderKindProfielenBeheren />
         </ProtectedRoute>
       } />
       <Route

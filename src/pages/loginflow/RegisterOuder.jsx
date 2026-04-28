@@ -1,32 +1,30 @@
-import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChoosePasswordForm } from '@/hooks/useChoosePasswordForm'
-import { registerFamily } from '@/hooks/useRegisterFamily'
+import { registerFamily } from '@/hooks/useRegisterFamily.js'
 import supabase from '@/lib/supabaseClient.js'
-import type { ProfileRowRef, RegisterOuderLocationState } from '@/types/register-flow'
 
-function dutchGreeting(): string {
+function dutchGreeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Goedemorgen'
   if (h < 18) return 'Goedemiddag'
   return 'Goedenavond'
 }
 
-function childDisplayName(p: ProfileRowRef) {
-  return `${p.firstname} ${p.lastname}`.trim() || 'je kind'
+function childDisplayName(p) {
+  return `${p?.firstname ?? ''} ${p?.lastname ?? ''}`.trim() || 'je kind'
 }
 
 export default function RegisterOuder() {
   const navigate = useNavigate()
   const location = useLocation()
-  const state = location.state as RegisterOuderLocationState | null
+  const state = location.state ?? null
 
   const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [parentEmail, setParentEmail] = useState<string>('')
+  const [formError, setFormError] = useState(null)
+  const [parentEmail, setParentEmail] = useState('')
 
   const {
     password,
@@ -79,7 +77,7 @@ export default function RegisterOuder() {
   const parentLabel =
     `${state.parentProfile.firstname} ${state.parentProfile.lastname}`.trim() || 'ouder'
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setFormError(null)
     if (!validate()) return
@@ -272,3 +270,4 @@ export default function RegisterOuder() {
     </div>
   )
 }
+

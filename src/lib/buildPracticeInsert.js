@@ -1,38 +1,13 @@
-import type { KinePracticeRegistrationState } from '@/types/practice-registration'
+export function buildPracticeInsert(form) {
+  const emptyToNull = (s) => {
+    const t = String(s ?? '').trim()
+    return t === '' ? null : t
+  }
 
-export type PracticeInsertRow = {
-  name: string
-  phone: string | null
-  email_general: string | null
-  email_invoice: string | null
-  kvk_number: string | null
-  vat_number: string | null
-  street: string | null
-  street_number: string | null
-  city: string | null
-  postal_code: string | null
-  country: string | null
-  invoice_same_as_practice: boolean
-  invoice_name: string | null
-  invoice_street: string | null
-  invoice_street_number: string | null
-  invoice_city: string | null
-  invoice_postal_code: string | null
-  invoice_country: string | null
-  plan: 'free' | 'pro'
-  plan_started_at: string
-}
-
-function emptyToNull(s: string): string | null {
-  const t = s.trim()
-  return t === '' ? null : t
-}
-
-export function buildPracticeInsert(form: KinePracticeRegistrationState): PracticeInsertRow {
   const isFree = form.plan === 'free'
-  const same = isFree ? true : form.invoice_same_as_practice
+  const same = isFree ? true : Boolean(form.invoice_same_as_practice)
   return {
-    name: form.name.trim(),
+    name: String(form.name ?? '').trim(),
     phone: emptyToNull(form.phone),
     email_general: emptyToNull(form.email_general),
     email_invoice: isFree ? null : emptyToNull(form.email_invoice),
@@ -54,3 +29,4 @@ export function buildPracticeInsert(form: KinePracticeRegistrationState): Practi
     plan_started_at: new Date().toISOString(),
   }
 }
+

@@ -147,7 +147,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [videoError, setVideoError] = useState(null)
-  const [saveError, setSaveError] = useState(null)
+  const [saveError,   setSaveError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
 

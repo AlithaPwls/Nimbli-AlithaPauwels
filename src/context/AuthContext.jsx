@@ -6,12 +6,12 @@ import { APP_BUILD_ID } from '../lib/appVersion.js'
 const SESSION_TIMEOUT_MS = 15_000
 const PROFILE_TIMEOUT_MS = 3_000
 const BUILD_ID_STORAGE_KEY = 'nimbli.appBuildId'
-const PROFILE_CACHE_KEY = 'nimbli.profileCache.v1'
+const PROFILE_CACHE_KEY = 'nimbli.profileCache.v2'
 
 async function fetchProfileRow(userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, firstname, lastname, email, role, practice_id')
+    .select('id, firstname, lastname, email, role, practice_id, invite_code')
     .eq('id', userId)
     .maybeSingle()
 

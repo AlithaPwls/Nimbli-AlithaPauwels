@@ -1,4 +1,3 @@
-import type { ChangeEvent, ClipboardEvent, FormEvent, KeyboardEvent } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
@@ -6,24 +5,11 @@ import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useActivationCode } from '@/hooks/useActivationCode'
 import supabase from '@/lib/supabaseClient.js'
-import type { RegisterOuderLocationState } from '@/types/register-flow'
 
 const SLOT_COUNT = 6
 
-function CodeSlots({
-  digits,
-  setRef,
-  onChange,
-  onKeyDown,
-  onPaste,
-}: {
-  digits: string[]
-  setRef: (index: number) => (el: HTMLInputElement | null) => void
-  onChange: (index: number) => (e: ChangeEvent<HTMLInputElement>) => void
-  onKeyDown: (index: number) => (e: KeyboardEvent<HTMLInputElement>) => void
-  onPaste: (e: ClipboardEvent<HTMLInputElement>) => void
-}) {
-  const group = (start: number, len: number) =>
+function CodeSlots({ digits, setRef, onChange, onKeyDown, onPaste }) {
+  const group = (start, len) =>
     Array.from({ length: len }, (_, i) => {
       const idx = start + i
       return (
@@ -51,10 +37,7 @@ function CodeSlots({
       aria-label="Activatiecode, 6 cijfers"
     >
       <div className="flex gap-3 sm:gap-4">{group(0, 3)}</div>
-      <span
-        className="h-0.5 w-6 shrink-0 self-center rounded-full bg-gray-300"
-        aria-hidden
-      />
+      <span className="h-0.5 w-6 shrink-0 self-center rounded-full bg-gray-300" aria-hidden />
       <div className="flex gap-3 sm:gap-4">{group(3, 3)}</div>
     </div>
   )
@@ -63,18 +46,11 @@ function CodeSlots({
 export default function LoginWithCode() {
   const navigate = useNavigate()
   const [checking, setChecking] = useState(false)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const {
-    digits,
-    setRef,
-    handleChange,
-    handleKeyDown,
-    handlePaste,
-    isComplete,
-    code,
-  } = useActivationCode()
+  const [inviteError, setInviteError] = useState(null)
+  const { digits, setRef, handleChange, handleKeyDown, handlePaste, isComplete, code } =
+    useActivationCode()
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!isComplete || checking) return
     setInviteError(null)
@@ -91,7 +67,7 @@ export default function LoginWithCode() {
         return
       }
 
-      const grouped = new Map<string, typeof rows>()
+      const grouped = new Map()
       for (const r of rows ?? []) {
         const key = r.invite_code ?? ''
         const list = grouped.get(key)
@@ -99,8 +75,8 @@ export default function LoginWithCode() {
         else grouped.set(key, [r])
       }
 
-      let child: (typeof rows)[number] | undefined
-      let parent: (typeof rows)[number] | undefined
+      let child
+      let parent
       for (const list of grouped.values()) {
         const c = list.find((r) => r.role === 'child' && r.user_id == null)
         const p = list.find((r) => r.role === 'parent' && r.user_id == null)
@@ -112,11 +88,13 @@ export default function LoginWithCode() {
       }
 
       if (!child || !parent) {
-        setInviteError('Deze code is ongeldig of al gebruikt. Vraag een nieuwe code aan je kinesist.')
+        setInviteError(
+          'Deze code is ongeldig of al gebruikt. Vraag een nieuwe code aan je kinesist.'
+        )
         return
       }
 
-      const next: RegisterOuderLocationState = {
+      const next = {
         inviteCode: code,
         childProfile: {
           id: child.id,
@@ -162,10 +140,7 @@ export default function LoginWithCode() {
             Deze app werkt enkel met een code van je kinesist.
           </p>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-10 flex flex-col items-stretch gap-8"
-          >
+          <form onSubmit={handleSubmit} className="mt-10 flex flex-col items-stretch gap-8">
             <CodeSlots
               digits={digits}
               setRef={setRef}
@@ -219,3 +194,4 @@ export default function LoginWithCode() {
     </div>
   )
 }
+

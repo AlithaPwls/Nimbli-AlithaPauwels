@@ -57,6 +57,7 @@ export function useFinalizeAddPatient() {
       const parentFirstname = normalizeName(draft?.parentFirstname)
       const parentLastname = normalizeName(draft?.parentLastname)
       const parentEmail = normalizeEmail(draft?.parentEmail)
+      const treatmentGoal = normalizeName(draft?.focus)
 
       if (!childFirstname || !childLastname) {
         setError('Vul de voornaam en achternaam van de patiënt in.')
@@ -112,6 +113,7 @@ export function useFinalizeAddPatient() {
             invite_code: code,
             practice_id: practiceId,
             date_of_birth: childDob || null,
+            treatment_goal: treatmentGoal || null,
           },
           {
             id: newId(),

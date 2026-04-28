@@ -1,18 +1,7 @@
-import type { ProfileRowRef } from '@/types/register-flow'
 import supabase from '@/lib/supabaseClient.js'
 
-export type RegisterFamilyInput = {
-  parentEmail: string
-  password: string
-  parentFirstname?: string
-  parentLastname?: string
-  inviteCode: string
-  childProfile: ProfileRowRef
-  parentProfile: ProfileRowRef
-}
-
-function childAuthEmail(inviteCode: string) {
-  const digits = inviteCode.replace(/\D/g, '')
+function childAuthEmail(inviteCode) {
+  const digits = String(inviteCode ?? '').replace(/\D/g, '')
   return `kind.${digits || inviteCode}@nimbli.be`
 }
 
@@ -20,8 +9,8 @@ function childAuthEmail(inviteCode: string) {
  * Parent + synthetic child Auth users, then attach pending profile rows to Auth:
  * set both `id` and `user_id` to the new auth.users.id (same value).
  */
-export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: true } | { ok: false; message: string }> {
-  const email = input.parentEmail.trim()
+export async function registerFamily(input) {
+  const email = String(input.parentEmail ?? '').trim()
   const childEmail = childAuthEmail(input.inviteCode)
 
   const { data: parentAuth, error: parentErr } = await supabase.auth.signUp({
@@ -98,7 +87,10 @@ export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: 
     .is('user_id', null)
 
   if (upChild) {
-    return { ok: false, message: 'Kindprofiel bijwerken mislukt. Neem contact op met je kinesist.' }
+    return {
+      ok: false,
+      message: 'Kindprofiel bijwerken mislukt. Neem contact op met je kinesist.',
+    }
   }
 
   const { error: signInErr } = await supabase.auth.signInWithPassword({
@@ -109,9 +101,11 @@ export async function registerFamily(input: RegisterFamilyInput): Promise<{ ok: 
   if (signInErr) {
     return {
       ok: false,
-      message: 'Registratie gelukt, maar inloggen mislukt. Probeer in te loggen met je e-mail en wachtwoord.',
+      message:
+        'Registratie gelukt, maar inloggen mislukt. Probeer in te loggen met je e-mail en wachtwoord.',
     }
   }
 
   return { ok: true }
 }
+

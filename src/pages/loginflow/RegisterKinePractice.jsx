@@ -1,28 +1,21 @@
-import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Building2, Check, CreditCard, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
-import { useKinePracticeRegistration } from '@/hooks/useKinePracticeRegistration'
-import {
-  initialKinePracticeForm,
-  type KinePracticeRegistrationState,
-  type PracticePlanDb,
-} from '@/types/practice-registration'
+import { useKinePracticeRegistration } from '@/hooks/useKinePracticeRegistration.js'
+import { initialKinePracticeForm } from '@/lib/practiceRegistrationForm.js'
 
 const inputClass =
   'h-12 w-full rounded-lg border border-nimbli-slot-border bg-white px-3 font-nimbli-body text-base font-medium text-nimbli-ink outline-none transition-colors duration-200 placeholder:text-nimbli-slot-border focus-visible:border-nimbli focus-visible:ring-[3px] focus-visible:ring-nimbli/35 motion-reduce:transition-none'
 
-type StepKey = 'plan' | 'practice' | 'payment' | 'account'
-
-const ROLE_PATH: Record<string, string> = {
+const ROLE_PATH = {
   child: '/dashboard/kind',
   parent: '/dashboard/ouder',
   kine: '/dashboard/kine',
 }
 
-function stepLabel(key: StepKey): string {
+function stepLabel(key) {
   switch (key) {
     case 'plan':
       return 'Kies je plan'
@@ -37,19 +30,11 @@ function stepLabel(key: StepKey): string {
   }
 }
 
-function validateStep(
-  key: StepKey,
-  form: KinePracticeRegistrationState,
-  skipAccount: boolean
-): string | null {
+function validateStep(key, form, skipAccount) {
   if (key === 'plan') return null
   if (key === 'practice') {
     if (!form.name.trim()) return 'Vul de naam van je praktijk in.'
-    if (
-      form.plan === 'pro' &&
-      !form.invoice_same_as_practice &&
-      !form.invoice_name.trim()
-    ) {
+    if (form.plan === 'pro' && !form.invoice_same_as_practice && !form.invoice_name.trim()) {
       return 'Vul de factuurnaam in of vink aan dat factuur = praktijk.'
     }
     return null
@@ -74,8 +59,8 @@ function validateStep(
   return null
 }
 
-function buildSteps(plan: PracticePlanDb, skipAccount: boolean): StepKey[] {
-  const s: StepKey[] = ['plan', 'practice']
+function buildSteps(plan, skipAccount) {
+  const s = ['plan', 'practice']
   if (plan === 'pro') s.push('payment')
   if (!skipAccount) s.push('account')
   return s
@@ -86,10 +71,10 @@ export default function RegisterKinePractice() {
   const { user, role, profile, loading: authLoading, refreshProfile } = useAuth()
   const { submit, submitting } = useKinePracticeRegistration()
 
-  const [form, setForm] = useState<KinePracticeRegistrationState>(initialKinePracticeForm)
+  const [form, setForm] = useState(initialKinePracticeForm)
   const [stepIndex, setStepIndex] = useState(0)
-  const [stepError, setStepError] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [stepError, setStepError] = useState(null)
+  const [formError, setFormError] = useState(null)
 
   const skipAccount = Boolean(user && role === 'kine')
   const steps = useMemo(() => buildSteps(form.plan, skipAccount), [form.plan, skipAccount])
@@ -116,30 +101,27 @@ export default function RegisterKinePractice() {
     }
   }, [steps.length, stepIndex])
 
-  const update = useCallback(
-    <K extends keyof KinePracticeRegistrationState>(key: K, value: KinePracticeRegistrationState[K]) => {
-      setForm((f) => {
-        const next = { ...f, [key]: value }
-        if (key === 'plan' && value === 'free') {
-          next.simulatedPaymentConfirmed = false
-          next.email_invoice = ''
-          next.kvk_number = ''
-          next.vat_number = ''
-          next.invoice_same_as_practice = true
-          next.invoice_name = ''
-          next.invoice_street = ''
-          next.invoice_street_number = ''
-          next.invoice_city = ''
-          next.invoice_postal_code = ''
-          next.invoice_country = ''
-        }
-        return next
-      })
-      setStepError(null)
-      setFormError(null)
-    },
-    []
-  )
+  const update = useCallback((key, value) => {
+    setForm((f) => {
+      const next = { ...f, [key]: value }
+      if (key === 'plan' && value === 'free') {
+        next.simulatedPaymentConfirmed = false
+        next.email_invoice = ''
+        next.kvk_number = ''
+        next.vat_number = ''
+        next.invoice_same_as_practice = true
+        next.invoice_name = ''
+        next.invoice_street = ''
+        next.invoice_street_number = ''
+        next.invoice_city = ''
+        next.invoice_postal_code = ''
+        next.invoice_country = ''
+      }
+      return next
+    })
+    setStepError(null)
+    setFormError(null)
+  }, [])
 
   function goNext() {
     const err = validateStep(currentKey, form, skipAccount)
@@ -181,7 +163,7 @@ export default function RegisterKinePractice() {
     }
   }
 
-  function onSubmit(e: FormEvent) {
+  function onSubmit(e) {
     e.preventDefault()
     goNext()
   }
@@ -290,7 +272,10 @@ export default function RegisterKinePractice() {
             {currentKey === 'practice' ? (
               <div className="flex flex-col gap-4">
                 <div>
-                  <label htmlFor="kp-name" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-name"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     Praktijknaam *
                   </label>
                   <input
@@ -303,7 +288,10 @@ export default function RegisterKinePractice() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="kp-phone" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-phone"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     Telefoon
                   </label>
                   <input
@@ -316,7 +304,10 @@ export default function RegisterKinePractice() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="kp-email-gen" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-email-gen"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     E-mail
                   </label>
                   <input
@@ -331,7 +322,10 @@ export default function RegisterKinePractice() {
                 {form.plan === 'pro' ? (
                   <>
                     <div>
-                      <label htmlFor="kp-email-inv" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                      <label
+                        htmlFor="kp-email-inv"
+                        className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                      >
                         Facturatie-e-mail
                       </label>
                       <input
@@ -345,7 +339,10 @@ export default function RegisterKinePractice() {
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="kp-kvk" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                        <label
+                          htmlFor="kp-kvk"
+                          className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                        >
                           KVK-nummer
                         </label>
                         <input
@@ -356,7 +353,10 @@ export default function RegisterKinePractice() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="kp-vat" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                        <label
+                          htmlFor="kp-vat"
+                          className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                        >
                           BTW-nummer
                         </label>
                         <input
@@ -369,10 +369,15 @@ export default function RegisterKinePractice() {
                     </div>
                   </>
                 ) : null}
-                <p className="font-nimbli-heading text-sm font-bold text-nimbli-ink">Adres praktijk</p>
+                <p className="font-nimbli-heading text-sm font-bold text-nimbli-ink">
+                  Adres praktijk
+                </p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="sm:col-span-2">
-                    <label htmlFor="kp-street" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                    <label
+                      htmlFor="kp-street"
+                      className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                    >
                       Straat
                     </label>
                     <input
@@ -384,7 +389,10 @@ export default function RegisterKinePractice() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="kp-num" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                    <label
+                      htmlFor="kp-num"
+                      className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                    >
                       Nr.
                     </label>
                     <input
@@ -397,7 +405,10 @@ export default function RegisterKinePractice() {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="kp-postal" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                    <label
+                      htmlFor="kp-postal"
+                      className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                    >
                       Postcode
                     </label>
                     <input
@@ -409,7 +420,10 @@ export default function RegisterKinePractice() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="kp-city" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                    <label
+                      htmlFor="kp-city"
+                      className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                    >
                       Gemeente
                     </label>
                     <input
@@ -422,7 +436,10 @@ export default function RegisterKinePractice() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="kp-country" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-country"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     Land
                   </label>
                   <input
@@ -450,9 +467,14 @@ export default function RegisterKinePractice() {
 
                     {!form.invoice_same_as_practice ? (
                       <div className="flex flex-col gap-4 rounded-xl border border-nimbli-slot-border bg-white/80 p-4">
-                        <p className="font-nimbli-heading text-sm font-bold text-nimbli-ink">Factuuradres</p>
+                        <p className="font-nimbli-heading text-sm font-bold text-nimbli-ink">
+                          Factuuradres
+                        </p>
                         <div>
-                          <label htmlFor="kp-inv-name" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                          <label
+                            htmlFor="kp-inv-name"
+                            className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                          >
                             Naam op factuur *
                           </label>
                           <input
@@ -464,7 +486,10 @@ export default function RegisterKinePractice() {
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                           <div className="sm:col-span-2">
-                            <label htmlFor="kp-inv-street" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                            <label
+                              htmlFor="kp-inv-street"
+                              className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                            >
                               Straat
                             </label>
                             <input
@@ -475,7 +500,10 @@ export default function RegisterKinePractice() {
                             />
                           </div>
                           <div>
-                            <label htmlFor="kp-inv-num" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                            <label
+                              htmlFor="kp-inv-num"
+                              className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                            >
                               Nr.
                             </label>
                             <input
@@ -488,7 +516,10 @@ export default function RegisterKinePractice() {
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
-                            <label htmlFor="kp-inv-postal" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                            <label
+                              htmlFor="kp-inv-postal"
+                              className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                            >
                               Postcode
                             </label>
                             <input
@@ -499,7 +530,10 @@ export default function RegisterKinePractice() {
                             />
                           </div>
                           <div>
-                            <label htmlFor="kp-inv-city" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                            <label
+                              htmlFor="kp-inv-city"
+                              className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                            >
                               Gemeente
                             </label>
                             <input
@@ -511,7 +545,10 @@ export default function RegisterKinePractice() {
                           </div>
                         </div>
                         <div>
-                          <label htmlFor="kp-inv-country" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                          <label
+                            htmlFor="kp-inv-country"
+                            className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                          >
                             Land
                           </label>
                           <input
@@ -539,7 +576,10 @@ export default function RegisterKinePractice() {
                   opgeslagen.
                 </p>
                 <div>
-                  <label htmlFor="kp-card-name" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-card-name"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     Naam kaarthouder
                   </label>
                   <input
@@ -550,7 +590,10 @@ export default function RegisterKinePractice() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="kp-card-num" className="mb-1 block text-sm font-semibold text-nimbli-ink">
+                  <label
+                    htmlFor="kp-card-num"
+                    className="mb-1 block text-sm font-semibold text-nimbli-ink"
+                  >
                     Kaartnummer (demo)
                   </label>
                   <input
@@ -692,3 +735,4 @@ export default function RegisterKinePractice() {
     </div>
   )
 }
+

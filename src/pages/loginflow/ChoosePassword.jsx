@@ -1,10 +1,9 @@
-import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChoosePasswordForm } from '@/hooks/useChoosePasswordForm'
 
-function dutchGreeting(): string {
+function dutchGreeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Goedemorgen'
   if (h < 18) return 'Goedemiddag'
@@ -28,7 +27,7 @@ export default function ChoosePassword() {
     validate,
   } = useChoosePasswordForm()
 
-  function handleSubmit(e: FormEvent) {
+  function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
   }
@@ -172,3 +171,4 @@ export default function ChoosePassword() {
     </div>
   )
 }
+
