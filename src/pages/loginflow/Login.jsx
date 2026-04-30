@@ -41,7 +41,7 @@ export default function Login() {
       <div className="login-page__panel login-page__panel--form">
         <div className="login-page__inner">
           <p className="login-page__logo">nimbli</p>
-          <h1 className="login-page__title">Samen sterk in thuisrevalidatie.</h1>
+          <h1 className="login-page__title">Samen sterk in de thuisrevalidatie.</h1>
           <p className="login-page__lead">
             Log in of meld je aan met een code die je van de kinesist hebt gekregen.
           </p>
