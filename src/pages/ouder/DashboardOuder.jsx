@@ -11,7 +11,7 @@ import OuderProgressRow from '@/components/ouder/OuderProgressRow.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
 import OuderRecentRow from '@/components/ouder/OuderRecentRow.jsx'
 
-// Avatar fallback is derived from Supabase rows (patients/profiles).
+// Avatar fallback is derived from Supabase `profiles` rows.
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null

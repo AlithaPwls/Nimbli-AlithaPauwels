@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AlarmClock, Check, Lock, Moon, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import pathMainSvg from '@/assets/kind-path-figma.svg'
@@ -90,6 +91,7 @@ function PathSegment({ src, alt }) {
 }
 
 export default function KindProgressPath({ monthLabel = 'Januari' }) {
+  const navigate = useNavigate()
   const [todayPanelOpen, setTodayPanelOpen] = useState(false)
   const [todayAnchorRect, setTodayAnchorRect] = useState(null)
 
@@ -102,6 +104,14 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
     setTodayPanelOpen(false)
     setTodayAnchorRect(null)
   }, [])
+
+  const onStartExercise = useCallback(
+    (exercise) => {
+      closeTodayPanel()
+      navigate('/dashboard/kind/oefening', { state: { exercise } })
+    },
+    [closeTodayPanel, navigate]
+  )
 
   return (
     <div className="flex flex-col items-center px-4 pb-16 pt-4 sm:px-6">
@@ -159,6 +169,7 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
         open={todayPanelOpen}
         anchorRect={todayAnchorRect}
         onClose={closeTodayPanel}
+        onStartExercise={onStartExercise}
       />
 
       <section className="relative -mt-1 w-full max-w-[412px]" aria-label="Eerdere dagen">

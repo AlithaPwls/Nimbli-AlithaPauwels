@@ -34,23 +34,20 @@ function formatRangeLabel(weekStart) {
   return `${start.getDate()}-${end.getDate()} ${month} ${end.getFullYear()}`
 }
 
-function xpFromEvent(ev) {
-  const dur = typeof ev?.duration_seconds === 'number' ? ev.duration_seconds : null
+function xpFromSession(ev) {
   const score = typeof ev?.score === 'number' ? ev.score : null
   if (score != null) return Math.max(50, Math.min(250, Math.round(score)))
-  if (dur != null) return Math.max(50, Math.min(250, Math.round(dur / 2)))
   return 150
 }
 
 function distributeAssignmentsOverWeek(assignments, weekKeys) {
-  // Best-effort distribution:
-  // - if target_per_week is set, place it that many times across the week
-  // - otherwise place it once, on the earliest day
   const result = new Map(weekKeys.map((k) => [k, []]))
   const list = toArray(assignments)
   for (const a of list) {
     const target = typeof a?.target_per_week === 'number' ? Math.max(1, Math.min(7, a.target_per_week)) : 1
-    const slots = Array.from({ length: target }, (_, i) => Math.round((i * (weekKeys.length - 1)) / Math.max(1, target - 1)))
+    const slots = Array.from({ length: target }, (_, i) =>
+      Math.round((i * (weekKeys.length - 1)) / Math.max(1, target - 1))
+    )
     for (const idx of slots) {
       const key = weekKeys[idx] ?? weekKeys[0]
       result.get(key)?.push(a)
@@ -61,6 +58,7 @@ function distributeAssignmentsOverWeek(assignments, weekKeys) {
 
 /**
  * Parent planning data for one child profile + a selected week.
+ * Schema: profiles, exercise_assignments (child_id), exercise_sessions (child_id).
  */
 export function useParentPlanningData(childProfileId, weekStart) {
   const [selectedDayKey, setSelectedDayKey] = useState(null)
@@ -110,32 +108,30 @@ export function useParentPlanningData(childProfileId, weekStart) {
       setLoading(true)
       setError(null)
 
-      const { data: pat, error: patErr } = await supabase
-        .from('patients')
-        .select('id, firstname, lastname, birthdate, avatar_url, focus, created_at')
-        .eq('child_profile_id', childProfileId)
-        .order('created_at', { ascending: false })
-        .limit(1)
+      const { data: prof, error: profErr } = await supabase
+        .from('profiles')
+        .select('id, firstname, lastname, date_of_birth, avatar_url, treatment_goal, created_at')
+        .eq('id', childProfileId)
         .maybeSingle()
 
       if (cancelled) return
-      if (patErr) {
+      if (profErr) {
         setPatient(null)
         setUpcoming([])
         setPlannedByDay({})
         setRecent([])
-        if (patErr?.code === 'PGRST205') {
+        if (profErr?.code === 'PGRST205') {
           setError(null)
           setLoading(false)
           return
         }
-        setError(patErr)
+        setError(profErr)
         setLoading(false)
         return
       }
 
-      setPatient(pat ?? null)
-      if (!pat?.id) {
+      if (!prof?.id) {
+        setPatient(null)
         setUpcoming([])
         setPlannedByDay({})
         setRecent([])
@@ -143,12 +139,21 @@ export function useParentPlanningData(childProfileId, weekStart) {
         return
       }
 
+      setPatient({
+        id: prof.id,
+        firstname: prof.firstname,
+        lastname: prof.lastname,
+        birthdate: prof.date_of_birth,
+        avatar_url: prof.avatar_url,
+        focus: prof.treatment_goal,
+        created_at: prof.created_at,
+      })
+
       const { data: assigns, error: asErr } = await supabase
-        .from('patient_exercises')
-        .select('id, exercise_id, target_per_week, starts_on, ends_on, is_active, assigned_at')
-        .eq('patient_id', pat.id)
-        .eq('is_active', true)
-        .order('assigned_at', { ascending: false })
+        .from('exercise_assignments')
+        .select('id, child_id, exercise_id, reps, rep_unit, created_at')
+        .eq('child_id', prof.id)
+        .order('created_at', { ascending: false })
 
       if (cancelled) return
       if (asErr) {
@@ -167,7 +172,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
       if (exerciseIds.length > 0) {
         const { data: exRows, error: exErr } = await supabase
           .from('exercises')
-          .select('id, title, media_url')
+          .select('id, title, media_url, focus, duration_seconds')
           .in('id', exerciseIds)
 
         if (cancelled) return
@@ -186,9 +191,10 @@ export function useParentPlanningData(childProfileId, weekStart) {
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
           const title = ex?.title ?? 'Oefening'
-          const goal = pat?.focus?.trim() || 'Oefening'
-          const tw = typeof a?.target_per_week === 'number' ? a.target_per_week : null
-          const meta = tw ? `• ${tw}x per week` : '• Start binnenkort'
+          const goal = ex?.focus?.trim() || prof?.treatment_goal?.trim() || 'Oefening'
+          const reps = typeof a?.reps === 'number' ? a.reps : null
+          const unit = a?.rep_unit ? String(a.rep_unit) : null
+          const meta = reps != null ? `• ${reps}${unit ? ` ${unit}` : ''}` : '• Start binnenkort'
           return { id: a.id, exerciseId: a.exercise_id, title, goal, meta }
         })
         .slice(0, 3)
@@ -196,11 +202,11 @@ export function useParentPlanningData(childProfileId, weekStart) {
       setUpcoming(upcomingList)
 
       const { data: weekEv, error: weekEvErr } = await supabase
-        .from('exercise_events')
-        .select('id, exercise_id, happened_at')
-        .eq('patient_id', pat.id)
-        .gte('happened_at', weekStart0.toISOString())
-        .lt('happened_at', weekEnd0.toISOString())
+        .from('exercise_sessions')
+        .select('id, exercise_id, completed_at')
+        .eq('child_id', prof.id)
+        .gte('completed_at', weekStart0.toISOString())
+        .lt('completed_at', weekEnd0.toISOString())
 
       if (cancelled) return
       if (weekEvErr) {
@@ -213,7 +219,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
 
       const doneByDayExercise = new Set()
       for (const ev of toArray(weekEv)) {
-        const k = dateKeyLocal(ev.happened_at)
+        const k = dateKeyLocal(ev.completed_at)
         if (!k || !ev.exercise_id) continue
         doneByDayExercise.add(`${k}:${ev.exercise_id}`)
       }
@@ -228,8 +234,11 @@ export function useParentPlanningData(childProfileId, weekStart) {
           const ex = exercisesById.get(a.exercise_id) ?? null
           const title = ex?.title ?? 'Oefening'
           const imageUrl = ex?.media_url || null
-          const reps = 10
-          const minutes = 2
+          const reps = typeof a?.reps === 'number' ? a.reps : 10
+          const minutes =
+            typeof ex?.duration_seconds === 'number'
+              ? Math.max(1, Math.round(ex.duration_seconds / 60))
+              : 2
           const done = doneByDayExercise.has(`${dayKey}:${a.exercise_id}`)
           return { id: a.id, exerciseId: a.exercise_id, title, imageUrl, reps, minutes, done }
         })
@@ -238,10 +247,10 @@ export function useParentPlanningData(childProfileId, weekStart) {
       setPlannedByDay(nextPlanned)
 
       const { data: recentEv, error: recentEvErr } = await supabase
-        .from('exercise_events')
-        .select('id, exercise_id, happened_at, duration_seconds, score')
-        .eq('patient_id', pat.id)
-        .order('happened_at', { ascending: false })
+        .from('exercise_sessions')
+        .select('id, exercise_id, completed_at, score')
+        .eq('child_id', prof.id)
+        .order('completed_at', { ascending: false })
         .limit(10)
 
       if (cancelled) return
@@ -280,8 +289,8 @@ export function useParentPlanningData(childProfileId, weekStart) {
           return {
             id: ev.id,
             title: ex?.title ?? 'Oefening',
-            time: ev?.happened_at ? new Date(ev.happened_at).toLocaleString('nl-BE') : '',
-            xp: xpFromEvent(ev),
+            time: ev?.completed_at ? new Date(ev.completed_at).toLocaleString('nl-BE') : '',
+            xp: xpFromSession(ev),
           }
         })
       )
@@ -309,4 +318,3 @@ export function useParentPlanningData(childProfileId, weekStart) {
     weekStart: weekStart0,
   }
 }
-

@@ -32,15 +32,25 @@ function newId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function uniqueExerciseIdsFromDraft(draft) {
+  const raw = draft?.selectedExerciseIds
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  return [...new Set(raw.map((x) => String(x).trim()).filter(Boolean))]
+}
+
 export function useFinalizeAddPatient() {
   const { profile } = useAuth()
   const practiceId = profile?.practice_id ?? null
+  const kineProfileId = profile?.id ?? null
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [inviteCode, setInviteCode] = useState(null)
 
-  const canFinalize = useMemo(() => Boolean(practiceId), [practiceId])
+  const canFinalize = useMemo(
+    () => Boolean(practiceId && kineProfileId),
+    [practiceId, kineProfileId]
+  )
 
   const finalize = useCallback(
     async (draft) => {
@@ -49,6 +59,10 @@ export function useFinalizeAddPatient() {
 
       if (!practiceId) {
         setError('Je praktijk is nog niet gekoppeld. Rond eerst je praktijkregistratie af.')
+        return { ok: false }
+      }
+      if (!kineProfileId) {
+        setError('Je profiel is niet geladen. Vernieuw de pagina en probeer opnieuw.')
         return { ok: false }
       }
 
@@ -103,9 +117,12 @@ export function useFinalizeAddPatient() {
 
         const childEmailPlaceholder = `kind.${code}@pending.local`
 
+        const childProfileId = newId()
+        const parentProfileId = newId()
+
         const rows = [
           {
-            id: newId(),
+            id: childProfileId,
             firstname: childFirstname,
             lastname: childLastname,
             email: childEmailPlaceholder,
@@ -116,7 +133,7 @@ export function useFinalizeAddPatient() {
             treatment_goal: treatmentGoal || null,
           },
           {
-            id: newId(),
+            id: parentProfileId,
             firstname: parentFirstname,
             lastname: parentLastname,
             email: parentEmail,
@@ -132,6 +149,32 @@ export function useFinalizeAddPatient() {
           return { ok: false }
         }
 
+        const { error: relErr } = await supabase.from('child_parent_relations').insert({
+          parent_id: parentProfileId,
+          child_id: childProfileId,
+        })
+        if (relErr) {
+          setError('Koppeling ouder-kind mislukt. Probeer opnieuw.')
+          return { ok: false }
+        }
+
+        const exerciseIds = uniqueExerciseIdsFromDraft(draft)
+        if (exerciseIds.length > 0) {
+          const assignmentRows = exerciseIds.map((exerciseId) => ({
+            child_id: childProfileId,
+            exercise_id: exerciseId,
+            assigned_by: kineProfileId,
+          }))
+
+          const { error: assignErr } = await supabase.from('exercise_assignments').insert(assignmentRows)
+          if (assignErr) {
+            setError(
+              'Oefeningen koppelen mislukt. Profielen zijn wel aangemaakt; wijs oefeningen later opnieuw toe.'
+            )
+            return { ok: false }
+          }
+        }
+
         setInviteCode(code)
         return { ok: true, inviteCode: code }
       } catch {
@@ -141,9 +184,8 @@ export function useFinalizeAddPatient() {
         setLoading(false)
       }
     },
-    [practiceId]
+    [practiceId, kineProfileId]
   )
 
   return { finalize, loading, error, inviteCode, canFinalize }
 }
-
