@@ -11,8 +11,9 @@ const ROLE_PATH = {
  * @param {object} props
  * @param {import('react').ReactNode} props.children
  * @param {'child' | 'parent' | 'kine'} [props.allowedRole] — if set, wrong role → redirect to their dashboard or login
+ * @param {Array<'child' | 'parent' | 'kine'>} [props.allowedRoles] — if set, role must be in list
  */
-export default function ProtectedRoute({ children, allowedRole }) {
+export default function ProtectedRoute({ children, allowedRole, allowedRoles }) {
   const { user, role, loading } = useAuth()
 
   if (loading) {
@@ -32,7 +33,13 @@ export default function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to="/login" replace />
   }
 
-  if (allowedRole && role !== allowedRole) {
+  const allowed = Array.isArray(allowedRoles) && allowedRoles.length > 0 ? allowedRoles : null
+  if (allowed && !allowed.includes(role)) {
+    const fallback = ROLE_PATH[role] ?? '/login'
+    return <Navigate to={fallback} replace />
+  }
+
+  if (!allowed && allowedRole && role !== allowedRole) {
     const fallback = ROLE_PATH[role] ?? '/login'
     return <Navigate to={fallback} replace />
   }
