@@ -32,7 +32,7 @@ export default function App() {
       <Route path="/loginwithcode" element={<Navigate to="/register" replace />} />
       <Route path="/choose-password" element={<Navigate to="/register" replace />} />
       <Route path="/dashboard/kind" element={
-        <ProtectedRoute allowedRole="child">
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
           <DashboardKind />
         </ProtectedRoute>
       } />
@@ -61,6 +61,7 @@ export default function App() {
           <OuderKindProfielenBeheren />
         </ProtectedRoute>
       } />
+      
       <Route
         path="/dashboard/kine"
         element={
