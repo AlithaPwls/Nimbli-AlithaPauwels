@@ -108,7 +108,10 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
   const onStartExercise = useCallback(
     (exercise) => {
       closeTodayPanel()
-      navigate('/dashboard/kind/oefening', { state: { exercise } })
+      const qs = new URLSearchParams()
+      qs.set('exerciseId', exercise.id)
+      if (exercise.assignmentId) qs.set('assignmentId', exercise.assignmentId)
+      navigate({ pathname: '/dashboard/kind/oefening', search: `?${qs.toString()}` }, { state: { exercise } })
     },
     [closeTodayPanel, navigate]
   )
