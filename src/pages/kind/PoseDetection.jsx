@@ -48,6 +48,8 @@ export default function PoseDetection() {
   const [hint, setHint] = useState('Camera starten…')
   /** Dutch overlay copy + progress for `routine=stretchSterren` (throttled from rAF). */
   const [poseUi, setPoseUi] = useState(null)
+  const didNavigateRewardRef = useRef(false)
+  const lastLoggedRepRef = useRef(0)
 
   const backToExercise = () => {
     const qs = new URLSearchParams()
@@ -163,6 +165,24 @@ export default function PoseDetection() {
 
           if (stretchRt && result.landmarks[0]) {
             const ui = stepStretchSterren(stretchRt, result.landmarks[0], now)
+
+            // One console log per completed rep.
+            if (ui.repsCompleted > (lastLoggedRepRef.current ?? 0) && ui.lastRepScore != null) {
+              lastLoggedRepRef.current = ui.repsCompleted
+              console.log(`[stretchSterren] rep ${ui.repsCompleted}/${ui.repsTarget}: score=${ui.lastRepScore}%`)
+            }
+
+            if (!didNavigateRewardRef.current && ui.phase === 'complete') {
+              didNavigateRewardRef.current = true
+              const qs = new URLSearchParams()
+              if (exerciseId) qs.set('exerciseId', exerciseId)
+              if (assignmentId) qs.set('assignmentId', assignmentId)
+              qs.set('xp', '50')
+              qs.set('accuracy', String(ui.averageScore ?? 0))
+              navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
+              return
+            }
+
             const phaseChanged = ui.phase !== lastPhaseRef.current
             if (phaseChanged || now - lastUiAtRef.current > 120) {
               lastPhaseRef.current = ui.phase
@@ -191,8 +211,10 @@ export default function PoseDetection() {
       if (s) s.getTracks().forEach((t) => t.stop())
       video.srcObject = null
       setPoseUi(null)
+      didNavigateRewardRef.current = false
+      lastLoggedRepRef.current = 0
     }
-  }, [routine])
+  }, [routine, exerciseId, assignmentId, navigate])
 
   const showRoutineOverlay = routine === 'stretchSterren' && poseUi
 

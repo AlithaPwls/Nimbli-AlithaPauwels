@@ -12,7 +12,7 @@ export default function KindTodayExerciseRow({ exercise, onStart }) {
     <div className="flex items-start gap-2.5 bg-kind-white px-2.5 py-2.5">
       <div className="relative size-8 shrink-0 overflow-hidden rounded-sm ring-1 ring-black/5">
         <img
-          src={exercise.image}
+          src={exercise.thumbnailUrl}
           alt=""
           className="absolute inset-0 size-full max-w-none object-cover object-top"
           width={64}

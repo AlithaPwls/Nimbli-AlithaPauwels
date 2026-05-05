@@ -7,6 +7,7 @@ import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.jsx'
 import DashboardKind from './pages/kind/DashboardKind.jsx'
 import Exercise from './pages/kind/Exercise.jsx'
 import PoseDetection from './pages/kind/PoseDetection.jsx'
+import Reward from './pages/kind/Reward.jsx'
 import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
 import OuderOefenplanning from './pages/ouder/OuderOefenplanning.jsx'
 import OuderInstellingen from './pages/ouder/OuderInstellingen.jsx'
@@ -46,6 +47,11 @@ export default function App() {
       <Route path="/dashboard/kind/oefening/pose" element={
         <ProtectedRoute allowedRoles={['child', 'parent']}>
           <PoseDetection />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/oefening/reward" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <Reward />
         </ProtectedRoute>
       } />
       <Route path="/dashboard/ouder" element={
