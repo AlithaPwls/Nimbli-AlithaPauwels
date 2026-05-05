@@ -92,6 +92,12 @@ export function useKindExerciseDetail(exerciseId, assignmentId) {
         category: norm.category,
         difficulty: norm.difficulty,
         repsLine,
+        repsTarget:
+          typeof assignment?.reps === 'number' && Number.isFinite(assignment.reps)
+            ? Math.round(assignment.reps)
+            : typeof ex.reps === 'number' && Number.isFinite(ex.reps)
+              ? Math.round(ex.reps)
+              : null,
         imageUrl: norm.imageUrl,
         descriptionDisplay,
         mediaUrl: typeof ex.media_url === 'string' && ex.media_url.trim() ? ex.media_url.trim() : null,

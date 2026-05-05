@@ -17,7 +17,8 @@ const LM = {
 /** MediaPipe pose: left/right eye inner, eye, outer (y = smallest is highest on screen). */
 const EYE_INDICES = [1, 2, 3, 4, 5, 6]
 
-const TARGET_REPS = 4
+// Default target reps; overridden by `createStretchSterrenRuntime({ targetReps })`.
+const DEFAULT_TARGET_REPS = 10
 const VIS_MIN = 0.55
 /** Elbows and wrists must sit this clearly above the eye reference line (smaller y). */
 const ABOVE_EYES_DELTA = 0.04
@@ -27,7 +28,7 @@ const ARMS_DOWN_MIN_DELTA = 0.045
 const STABLE_UP_MS = 280
 /** Brief dip while holding does not reset the timer. */
 const HOLD_GRACE_MS = 450
-const HOLD_REQUIRED_MS = 5000
+const HOLD_REQUIRED_MS = 2000
 /** Arms down must look stable before we count the rep. */
 const STABLE_DOWN_MS = 350
 /** After a rep: show feedback before asking for rest again. */
@@ -85,6 +86,12 @@ export function armsDownRest(lm) {
   return leftDown && rightDown
 }
 
+function normalizeTargetReps(raw) {
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(n)) return DEFAULT_TARGET_REPS
+  return Math.max(1, Math.min(50, Math.round(n)))
+}
+
 function resetCycleTimers(rt) {
   rt.upStableStartMs = null
   rt.holdStartMs = null
@@ -95,10 +102,12 @@ function resetCycleTimers(rt) {
 /**
  * @returns {object} mutable state bag; pass same reference each frame.
  */
-export function createStretchSterrenRuntime() {
+export function createStretchSterrenRuntime(options = {}) {
+  const repsTarget = normalizeTargetReps(options.targetReps)
   return {
     phase: 'wait_arms_up',
     repsCompleted: 0,
+    repsTarget,
     lastRepScore: null,
     score: {
       tracker: createRepScoreTracker({ expectedWindowMs: HOLD_REQUIRED_MS }),
@@ -201,7 +210,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
         rt.downStableStartMs = null
         resetCycleTimers(rt)
 
-        if (rt.repsCompleted >= TARGET_REPS) {
+        if (rt.repsCompleted >= (rt.repsTarget ?? DEFAULT_TARGET_REPS)) {
           rt.phase = 'complete'
         } else {
           rt.phase = 'between_reps'
@@ -224,35 +233,36 @@ function buildUi(rt, nowMs, up, down) {
   let line2 = ''
   let progress = 0
   const done = rt.repsCompleted ?? 0
-  const nextRep = Math.min(TARGET_REPS, done + 1)
+  const repsTarget = rt.repsTarget ?? DEFAULT_TARGET_REPS
+  const nextRep = Math.min(repsTarget, done + 1)
 
   const holdFrac =
     rt.phase === 'holding' && rt.holdStartMs != null
       ? Math.min(1, Math.max(0, nowMs - rt.holdStartMs) / HOLD_REQUIRED_MS)
       : 0
-  const sessionProgress01 = Math.min(1, (done + holdFrac) / TARGET_REPS)
+  const sessionProgress01 = Math.min(1, (done + holdFrac) / repsTarget)
   const avgScore = rt.score?.tracker ? averageScore(rt.score.tracker.repScores) : 0
 
   if (rt.phase === 'between_reps') {
-    line1 = `Rep ${done} van ${TARGET_REPS} — goed zo!`
-    line2 = `Nog ${TARGET_REPS - done} herhaling${TARGET_REPS - done === 1 ? '' : 'en'} te gaan. Straks: rustpositie, daarna rep ${nextRep}.`
+    line1 = `Rep ${done} van ${repsTarget} — goed zo!`
+    line2 = `Nog ${repsTarget - done} herhaling${repsTarget - done === 1 ? '' : 'en'} te gaan. Straks: rustpositie, daarna rep ${nextRep}.`
   } else if (rt.phase === 'wait_rest') {
     line1 = 'Rustpositie'
-    line2 = `Laat je armen langs je zij hangen. Daarna: rep ${nextRep} van ${TARGET_REPS} (ellebogen en polsen boven je ogen).`
+    line2 = `Laat je armen langs je zij hangen. Daarna: rep ${nextRep} van ${repsTarget} (ellebogen en polsen boven je ogen).`
   } else if (rt.phase === 'wait_arms_up') {
     line1 = 'Stretch naar de sterren'
-    line2 = `Rep ${nextRep} van ${TARGET_REPS} — strek omhoog: ellebogen én polsen boven je ogen.`
+    line2 = `Rep ${nextRep} van ${repsTarget} — strek omhoog: ellebogen én polsen boven je ogen.`
   } else if (rt.phase === 'holding') {
-    line1 = `Rep ${nextRep} van ${TARGET_REPS} — houd vol!`
+    line1 = `Rep ${nextRep} van ${repsTarget} — houd vol!`
     const elapsed = rt.holdStartMs != null ? Math.min(HOLD_REQUIRED_MS, Math.max(0, nowMs - rt.holdStartMs)) : 0
     progress = elapsed / HOLD_REQUIRED_MS
     const left = Math.max(0, Math.ceil((HOLD_REQUIRED_MS - elapsed) / 1000))
     line2 = left >= 1 ? `Nog ${left} s — ellebogen en polsen boven je ogen houden.` : 'Bijna…'
   } else if (rt.phase === 'wait_arms_down') {
-    line1 = `Rep ${nextRep} van ${TARGET_REPS}`
+    line1 = `Rep ${nextRep} van ${repsTarget}`
     line2 = 'Laat je armen rustig terug naar je zij zakken (rust voor de volgende rep).'
   } else if (rt.phase === 'complete') {
-    line1 = `Alle ${TARGET_REPS} herhalingen klaar!`
+    line1 = `Alle ${repsTarget} herhalingen klaar!`
     line2 = 'Super gedaan — je hebt de stretch volbracht.'
     progress = 1
   }
@@ -266,8 +276,8 @@ function buildUi(rt, nowMs, up, down) {
     averageScore: avgScore,
     lastRepScore: rt.lastRepScore,
     repsCompleted: done,
-    repsTarget: TARGET_REPS,
-    currentRep: rt.phase === 'complete' ? TARGET_REPS : nextRep,
+    repsTarget,
+    currentRep: rt.phase === 'complete' ? repsTarget : nextRep,
     flags: { armsUp: up, armsDown: down },
   }
 }

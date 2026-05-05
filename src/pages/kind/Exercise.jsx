@@ -49,6 +49,9 @@ export default function Exercise() {
     if (assignmentId) qs.set('assignmentId', assignmentId)
     const routine = routineFromExerciseTitle(data?.title)
     if (routine) qs.set('routine', routine)
+    if (data?.repsTarget != null && Number.isFinite(Number(data.repsTarget))) {
+      qs.set('reps', String(Math.max(1, Math.round(Number(data.repsTarget)))))
+    }
     navigate({ pathname: '/dashboard/kind/oefening/pose', search: `?${qs.toString()}` })
   }
 

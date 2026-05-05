@@ -14,6 +14,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { cn } from '@/lib/utils'
 import { createStretchSterrenRuntime, stepStretchSterren } from '@/lib/kind/stretchNaarDeSterrenPose.js'
+import supabase from '@/lib/supabaseClient.js'
+import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 
 const TASKS_VISION_VERSION = '0.10.35'
 const VISION_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`
@@ -38,6 +40,8 @@ export default function PoseDetection() {
   const exerciseId = searchParams.get('exerciseId')
   const assignmentId = searchParams.get('assignmentId')
   const routine = searchParams.get('routine')
+  const repsParam = searchParams.get('reps')
+  const { childId } = useActiveChildId()
 
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -50,6 +54,7 @@ export default function PoseDetection() {
   const [poseUi, setPoseUi] = useState(null)
   const didNavigateRewardRef = useRef(false)
   const lastLoggedRepRef = useRef(0)
+  const sessionStartMsRef = useRef(null)
 
   const backToExercise = () => {
     const qs = new URLSearchParams()
@@ -74,7 +79,8 @@ export default function PoseDetection() {
       return undefined
     }
 
-    const stretchRt = routine === 'stretchSterren' ? createStretchSterrenRuntime() : null
+    const stretchRt =
+      routine === 'stretchSterren' ? createStretchSterrenRuntime({ targetReps: repsParam }) : null
     const lastPhaseRef = { current: '' }
     const lastUiAtRef = { current: 0 }
 
@@ -166,6 +172,11 @@ export default function PoseDetection() {
           if (stretchRt && result.landmarks[0]) {
             const ui = stepStretchSterren(stretchRt, result.landmarks[0], now)
 
+            // Start timer when the first hold begins.
+            if (sessionStartMsRef.current == null && ui.phase === 'holding') {
+              sessionStartMsRef.current = now
+            }
+
             // One console log per completed rep.
             if (ui.repsCompleted > (lastLoggedRepRef.current ?? 0) && ui.lastRepScore != null) {
               lastLoggedRepRef.current = ui.repsCompleted
@@ -174,12 +185,35 @@ export default function PoseDetection() {
 
             if (!didNavigateRewardRef.current && ui.phase === 'complete') {
               didNavigateRewardRef.current = true
-              const qs = new URLSearchParams()
-              if (exerciseId) qs.set('exerciseId', exerciseId)
-              if (assignmentId) qs.set('assignmentId', assignmentId)
-              qs.set('xp', '50')
-              qs.set('accuracy', String(ui.averageScore ?? 0))
-              navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
+
+              // Persist + navigate asynchronously (do not block rAF).
+              void (async () => {
+                if (exerciseId && childId) {
+                  const started = sessionStartMsRef.current ?? now
+                  const durationSeconds = Math.max(0, Math.round((now - started) / 1000))
+                  const payload = {
+                    child_id: childId,
+                    exercise_id: exerciseId,
+                    assignment_id: assignmentId || null,
+                    completed_at: new Date().toISOString(),
+                    success: ui.repsCompleted === ui.repsTarget,
+                    score: typeof ui.averageScore === 'number' ? Math.round(ui.averageScore) : 0,
+                    duration: durationSeconds,
+                  }
+                  const { error: insErr } = await supabase.from('exercise_sessions').insert(payload)
+                  if (insErr) {
+                    console.warn('[exercise_sessions] insert failed', insErr)
+                  }
+                }
+
+                const qs = new URLSearchParams()
+                if (exerciseId) qs.set('exerciseId', exerciseId)
+                if (assignmentId) qs.set('assignmentId', assignmentId)
+                qs.set('xp', '50')
+                qs.set('accuracy', String(ui.averageScore ?? 0))
+                navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
+              })()
+
               return
             }
 
@@ -213,8 +247,9 @@ export default function PoseDetection() {
       setPoseUi(null)
       didNavigateRewardRef.current = false
       lastLoggedRepRef.current = 0
+      sessionStartMsRef.current = null
     }
-  }, [routine, exerciseId, assignmentId, navigate])
+  }, [routine, exerciseId, assignmentId, childId, navigate])
 
   const showRoutineOverlay = routine === 'stretchSterren' && poseUi
 
