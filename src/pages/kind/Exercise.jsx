@@ -4,6 +4,28 @@ import { cn } from '@/lib/utils'
 import { useKindExerciseDetail } from '@/hooks/kind/useKindExerciseDetail.js'
 import { routineFromExerciseTitle } from '@/lib/kind/routineFromExerciseTitle.js'
 
+function isYouTubeUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const u = url.toLowerCase()
+  return u.includes('youtu.be') || u.includes('youtube.com')
+}
+
+function youtubeEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return null
+  const t = url.trim()
+  const m1 = t.match(/youtu\.be\/([^?]+)/)
+  const m2 = t.match(/[?&]v=([^&]+)/)
+  const id = (m1?.[1] || m2?.[1] || '').trim()
+  if (!id) return null
+  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`
+}
+
+function isDirectVideoUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const u = url.trim().toLowerCase()
+  return u.endsWith('.mp4') || u.endsWith('.webm') || u.endsWith('.mov') || u.includes('/storage/v1/object/')
+}
+
 function formatDurationLabel(seconds) {
   if (seconds == null || !Number.isFinite(seconds)) return '—'
   const m = Math.max(1, Math.ceil(seconds / 60))
@@ -42,6 +64,10 @@ export default function Exercise() {
   const durationLabel = formatDurationLabel(data?.durationSeconds)
 
   const posterSrc = data?.thumbnailUrl || data?.mediaUrl || data?.imageUrl
+  const mediaUrl = data?.mediaUrl || null
+  const showYouTube = Boolean(mediaUrl && isYouTubeUrl(mediaUrl) && youtubeEmbedUrl(mediaUrl))
+  const showDirectVideo = Boolean(mediaUrl && !showYouTube && isDirectVideoUrl(mediaUrl))
+  const ytEmbed = showYouTube ? youtubeEmbedUrl(mediaUrl) : null
 
   const goToPoseDetection = () => {
     const qs = new URLSearchParams()
@@ -51,6 +77,9 @@ export default function Exercise() {
     if (routine) qs.set('routine', routine)
     if (data?.repsTarget != null && Number.isFinite(Number(data.repsTarget))) {
       qs.set('reps', String(Math.max(1, Math.round(Number(data.repsTarget)))))
+    }
+    if (data?.xpValue != null && Number.isFinite(Number(data.xpValue))) {
+      qs.set('xp', String(Math.max(0, Math.round(Number(data.xpValue)))))
     }
     navigate({ pathname: '/dashboard/kind/oefening/pose', search: `?${qs.toString()}` })
   }
@@ -98,7 +127,24 @@ export default function Exercise() {
 
             <div className="flex w-full flex-col items-center gap-[30px]">
               <div className="relative flex aspect-[780/404] w-full max-h-[min(50vh,404px)] min-h-[200px] items-center justify-center overflow-hidden rounded-[24px] bg-[#6c6c6c] sm:max-h-[404px] sm:min-h-[280px]">
-                {posterSrc ? (
+                {showYouTube && ytEmbed ? (
+                  <iframe
+                    title="Oefenvideo"
+                    className="absolute inset-0 size-full"
+                    src={ytEmbed}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : showDirectVideo ? (
+                  <video
+                    className="absolute inset-0 size-full object-cover"
+                    src={mediaUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={posterSrc || undefined}
+                  />
+                ) : posterSrc ? (
                   <img
                     src={posterSrc}
                     alt=""
@@ -107,18 +153,16 @@ export default function Exercise() {
                     height={404}
                   />
                 ) : null}
-                <button
-                  type="button"
-                  className="relative z-10 grid size-[136px] shrink-0 place-items-center rounded-full bg-white/20 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#6c6c6c]"
-                  aria-label="Video afspelen"
-                >
-                  <Play
-                    className="ml-1 size-16 text-white drop-shadow-sm"
-                    fill="currentColor"
-                    strokeWidth={0}
+
+                {/* If we’re not showing a playable video, keep the visual play affordance. */}
+                {!showYouTube && !showDirectVideo ? (
+                  <div
+                    className="relative z-10 grid size-[136px] shrink-0 place-items-center rounded-full bg-white/20"
                     aria-hidden
-                  />
-                </button>
+                  >
+                    <Play className="ml-1 size-16 text-white drop-shadow-sm" fill="currentColor" strokeWidth={0} />
+                  </div>
+                ) : null}
               </div>
 
               <div className="w-full rounded-2xl border-l-2 border-kind-border bg-kind-white py-[30px] pl-10 pr-8 shadow-[0px_2px_0px_#e1dbd3]">

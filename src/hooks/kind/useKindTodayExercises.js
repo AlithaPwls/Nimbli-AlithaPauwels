@@ -105,6 +105,25 @@ export function useKindTodayExercises() {
     const assignmentRows = toArray(assigns)
     const exerciseIds = Array.from(new Set(assignmentRows.map((r) => r?.exercise_id).filter(Boolean)))
 
+    let doneByExerciseId = new Set()
+    if (exerciseIds.length > 0) {
+      const { data: sessRows, error: sessErr } = await supabase
+        .from('exercise_sessions')
+        .select('exercise_id, success')
+        .eq('child_id', childId)
+        .in('exercise_id', exerciseIds)
+        .eq('success', true)
+
+      if (sessErr) {
+        setRows([])
+        setError(sessErr)
+        setAssignmentsLoading(false)
+        return
+      }
+
+      doneByExerciseId = new Set(toArray(sessRows).map((r) => r?.exercise_id).filter(Boolean))
+    }
+
     let exercisesById = new Map()
     if (exerciseIds.length > 0) {
       const { data: exRows, error: exErr } = await supabase
@@ -136,9 +155,10 @@ export function useKindTodayExercises() {
           categoryClass: categoryToneClasses(norm.categoryTone),
           difficulty: norm.difficulty,
           reps: formatRepsLine(a, ex),
-          image: norm.imageUrl,
+          thumbnailUrl: norm.imageUrl,
           description: ex.description ?? undefined,
           media_url: ex.media_url ?? undefined,
+          done: doneByExerciseId.has(ex.id),
         }
       })
       .filter(Boolean)

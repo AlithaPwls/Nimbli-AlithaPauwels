@@ -1,6 +1,27 @@
 const PLACEHOLDER_IMG =
   'https://placehold.co/96x96/faf5ee/6b7280/png?text=%E2%80%A2&font=raleway'
 
+function isProbablyImageUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const u = url.trim().toLowerCase()
+  if (!u) return false
+  if (u.startsWith('data:image/')) return true
+  // Quick blocklist for common video providers / formats used in this project.
+  if (u.includes('youtu.be') || u.includes('youtube.com')) return false
+  if (u.endsWith('.mp4') || u.endsWith('.webm') || u.endsWith('.mov')) return false
+  return true
+}
+
+function youtubeThumb(url) {
+  if (!url || typeof url !== 'string') return null
+  const t = url.trim()
+  const m1 = t.match(/youtu\.be\/([^?]+)/)
+  const m2 = t.match(/[?&]v=([^&]+)/)
+  const id = (m1?.[1] || m2?.[1] || '').trim()
+  if (!id) return null
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+}
+
 function tryParseDescriptionMeta(description) {
   if (!description || typeof description !== 'string') return null
   const t = description.trim()
@@ -114,8 +135,15 @@ export function normalizeExerciseRow(row) {
     time = meta.time
   }
 
+  const thumb =
+    [row.thumbnail_url, row.image_url].find((u) => typeof u === 'string' && u.trim())?.trim() || null
+  const media = typeof row.media_url === 'string' ? row.media_url.trim() : null
+  const yt = youtubeThumb(media)
+
   const imageUrl =
-    [row.media_url, row.image_url, row.thumbnail_url].find((u) => typeof u === 'string' && u.trim())?.trim() ||
+    (thumb && isProbablyImageUrl(thumb) ? thumb : null) ||
+    (yt ? yt : null) ||
+    (media && isProbablyImageUrl(media) ? media : null) ||
     PLACEHOLDER_IMG
 
   const tone = inferCategoryTone(category)

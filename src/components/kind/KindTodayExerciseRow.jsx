@@ -8,6 +8,7 @@ function MetaDot() {
  * One row in the “oefeningen van vandaag” popover (Figma node 43:1736 / Component 11).
  */
 export default function KindTodayExerciseRow({ exercise, onStart }) {
+  const done = Boolean(exercise?.done)
   return (
     <div className="flex items-start gap-2.5 bg-kind-white px-2.5 py-2.5">
       <div className="relative size-8 shrink-0 overflow-hidden rounded-sm ring-1 ring-black/5">
@@ -38,10 +39,17 @@ export default function KindTodayExerciseRow({ exercise, onStart }) {
       </div>
       <button
         type="button"
-        className="flex h-[30px] w-[62px] shrink-0 flex-col items-center justify-center rounded-md border-0 bg-kind-green-primary px-2 font-nimbli-heading text-[11px] font-black text-kind-canvas shadow-[0_2px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2"
-        onClick={() => onStart?.(exercise)}
+        disabled={done}
+        aria-disabled={done}
+        className={cn(
+          'flex h-[30px] w-[62px] shrink-0 flex-col items-center justify-center rounded-md border-0 px-2 font-nimbli-heading text-[11px] font-black shadow-[0_2px_0_0_#1e7a6a] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2',
+          done
+            ? 'cursor-not-allowed bg-kind-light-gray text-kind-gray shadow-none'
+            : 'bg-kind-green-primary text-kind-canvas hover:bg-kind-green-primary/90'
+        )}
+        onClick={() => (done ? null : onStart?.(exercise))}
       >
-        <span className="whitespace-nowrap">Start</span>
+        <span className="whitespace-nowrap">{done ? 'DONE' : 'Start'}</span>
       </button>
     </div>
   )

@@ -41,6 +41,7 @@ export default function PoseDetection() {
   const assignmentId = searchParams.get('assignmentId')
   const routine = searchParams.get('routine')
   const repsParam = searchParams.get('reps')
+  const xpParam = searchParams.get('xp')
   const { childId } = useActiveChildId()
 
   const videoRef = useRef(null)
@@ -209,7 +210,7 @@ export default function PoseDetection() {
                 const qs = new URLSearchParams()
                 if (exerciseId) qs.set('exerciseId', exerciseId)
                 if (assignmentId) qs.set('assignmentId', assignmentId)
-                qs.set('xp', '50')
+                if (xpParam) qs.set('xp', xpParam)
                 qs.set('accuracy', String(ui.averageScore ?? 0))
                 navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
               })()
