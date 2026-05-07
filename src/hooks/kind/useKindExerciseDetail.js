@@ -44,7 +44,7 @@ export function useKindExerciseDetail(exerciseId, assignmentId) {
       const { data: ex, error: exErr } = await supabase
         .from('exercises')
         .select(
-          'id, title, name, description, duration_seconds, difficulty, focus, media_url, thumbnail_url, reps, xp_value'
+          'id, title, name, description, duration_seconds, difficulty, focus, media_url, thumbnail_url, reps, xp_value, pose_enabled, pose_config'
         )
         .eq('id', exerciseId)
         .maybeSingle()
@@ -91,6 +91,8 @@ export function useKindExerciseDetail(exerciseId, assignmentId) {
         title: norm.title,
         category: norm.category,
         difficulty: norm.difficulty,
+        poseEnabled: Boolean(ex.pose_enabled),
+        poseConfig: ex.pose_config ?? null,
         repsLine,
         repsTarget:
           typeof assignment?.reps === 'number' && Number.isFinite(assignment.reps)

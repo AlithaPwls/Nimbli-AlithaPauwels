@@ -36,17 +36,83 @@ const BETWEEN_REPS_MS = 1600
 /** Before rep 2+: arms must be clearly at rest for this long (new rep only from rust). */
 const REST_STABLE_MS = 320
 
-function visibleEnough(lm, idx) {
+function resolveStretchConfig(poseConfig) {
+  const thresholds = poseConfig?.thresholds && typeof poseConfig.thresholds === 'object'
+    ? poseConfig.thresholds
+    : null
+  const timing = poseConfig?.timing && typeof poseConfig.timing === 'object' ? poseConfig.timing : null
+  const requiredLandmarks = Array.isArray(poseConfig?.requiredLandmarks)
+    ? poseConfig.requiredLandmarks.filter((n) => Number.isFinite(Number(n))).map((n) => Number(n))
+    : null
+
+  // If someone stores a separate eye index list later, prefer it; otherwise fall back to defaults.
+  const eyes = Array.isArray(poseConfig?.eyesIndices)
+    ? poseConfig.eyesIndices.filter((n) => Number.isFinite(Number(n))).map((n) => Number(n))
+    : EYE_INDICES
+
+  const visMinRaw = thresholds?.visMin
+  const visMin = typeof visMinRaw === 'number' && Number.isFinite(visMinRaw) ? visMinRaw : VIS_MIN
+
+  const aboveEyesDeltaRaw = thresholds?.aboveEyesDelta
+  const aboveEyesDelta =
+    typeof aboveEyesDeltaRaw === 'number' && Number.isFinite(aboveEyesDeltaRaw)
+      ? aboveEyesDeltaRaw
+      : ABOVE_EYES_DELTA
+
+  const armsDownMinDeltaRaw = thresholds?.armsDownMinDelta
+  const armsDownMinDelta =
+    typeof armsDownMinDeltaRaw === 'number' && Number.isFinite(armsDownMinDeltaRaw)
+      ? armsDownMinDeltaRaw
+      : ARMS_DOWN_MIN_DELTA
+
+  const stableUpMsRaw = timing?.stableUpMs
+  const stableUpMs =
+    typeof stableUpMsRaw === 'number' && Number.isFinite(stableUpMsRaw) ? stableUpMsRaw : STABLE_UP_MS
+
+  const holdGraceMsRaw = timing?.holdGraceMs
+  const holdGraceMs =
+    typeof holdGraceMsRaw === 'number' && Number.isFinite(holdGraceMsRaw) ? holdGraceMsRaw : HOLD_GRACE_MS
+
+  const holdRequiredMsRaw = timing?.holdRequiredMs
+  const holdRequiredMs =
+    typeof holdRequiredMsRaw === 'number' && Number.isFinite(holdRequiredMsRaw)
+      ? holdRequiredMsRaw
+      : HOLD_REQUIRED_MS
+
+  const stableDownMsRaw = timing?.stableDownMs
+  const stableDownMs =
+    typeof stableDownMsRaw === 'number' && Number.isFinite(stableDownMsRaw) ? stableDownMsRaw : STABLE_DOWN_MS
+
+  const betweenRepsMsRaw = timing?.betweenRepsMs
+  const betweenRepsMs =
+    typeof betweenRepsMsRaw === 'number' && Number.isFinite(betweenRepsMsRaw)
+      ? betweenRepsMsRaw
+      : BETWEEN_REPS_MS
+
+  const restStableMsRaw = timing?.restStableMs
+  const restStableMs =
+    typeof restStableMsRaw === 'number' && Number.isFinite(restStableMsRaw) ? restStableMsRaw : REST_STABLE_MS
+
+  return {
+    eyesIndices: eyes,
+    thresholds: { visMin, aboveEyesDelta, armsDownMinDelta },
+    timing: { stableUpMs, holdGraceMs, holdRequiredMs, stableDownMs, betweenRepsMs, restStableMs },
+    requiredLandmarks,
+  }
+}
+
+function visibleEnough(lm, idx, cfg) {
   const v = lm[idx]?.visibility
-  return (v == null ? 1 : v) >= VIS_MIN
+  return (v == null ? 1 : v) >= (cfg?.thresholds?.visMin ?? VIS_MIN)
 }
 
 /** Hoogste zichtbare oog‑regio in beeld (kleinste y); nodig om “boven de ogen” te meten. */
-function eyesReferenceY(lm) {
+function eyesReferenceY(lm, cfg) {
+  const eyeIndices = cfg?.eyesIndices ?? EYE_INDICES
   let minY = Infinity
-  for (const idx of EYE_INDICES) {
+  for (const idx of eyeIndices) {
     const p = lm[idx]
-    if (!p || !visibleEnough(lm, idx)) continue
+    if (!p || !visibleEnough(lm, idx, cfg)) continue
     if (p.y < minY) minY = p.y
   }
   return Number.isFinite(minY) ? minY : null
@@ -56,33 +122,36 @@ function eyesReferenceY(lm) {
  * “Armen omhoog”: beide **ellebogen** en beide **polsen** duidelijk boven de **ooglijn**
  * (kleinere y dan de hoogste zichtbare oogpunten). Zonder betrouwbare ogen in beeld: geen “omhoog”.
  */
-export function armsRaisedHigh(lm) {
+export function armsRaisedHigh(lm, poseConfig) {
+  const cfg = resolveStretchConfig(poseConfig)
   if (!lm?.length) return false
   const le = lm[LM.LEFT_ELBOW]
   const re = lm[LM.RIGHT_ELBOW]
   const lw = lm[LM.LEFT_WRIST]
   const rw = lm[LM.RIGHT_WRIST]
   if (!le || !re || !lw || !rw) return false
-  if (!visibleEnough(lm, LM.LEFT_ELBOW) || !visibleEnough(lm, LM.RIGHT_ELBOW)) return false
-  if (!visibleEnough(lm, LM.LEFT_WRIST) || !visibleEnough(lm, LM.RIGHT_WRIST)) return false
+  if (!visibleEnough(lm, LM.LEFT_ELBOW, cfg) || !visibleEnough(lm, LM.RIGHT_ELBOW, cfg)) return false
+  if (!visibleEnough(lm, LM.LEFT_WRIST, cfg) || !visibleEnough(lm, LM.RIGHT_WRIST, cfg)) return false
 
-  const eyeY = eyesReferenceY(lm)
+  const eyeY = eyesReferenceY(lm, cfg)
   if (eyeY == null) return false
 
-  const above = (p) => p.y < eyeY - ABOVE_EYES_DELTA
+  const above = (p) => p.y < eyeY - (cfg.thresholds.aboveEyesDelta ?? ABOVE_EYES_DELTA)
   return above(le) && above(re) && above(lw) && above(rw)
 }
 
-export function armsDownRest(lm) {
+export function armsDownRest(lm, poseConfig) {
+  const cfg = resolveStretchConfig(poseConfig)
   if (!lm?.length) return false
   const ls = lm[LM.LEFT_SHOULDER]
   const rs = lm[LM.RIGHT_SHOULDER]
   const lw = lm[LM.LEFT_WRIST]
   const rw = lm[LM.RIGHT_WRIST]
   if (!ls || !rs || !lw || !rw) return false
-  if (!visibleEnough(lm, LM.LEFT_WRIST) || !visibleEnough(lm, LM.RIGHT_WRIST)) return false
-  const leftDown = lw.y > ls.y + ARMS_DOWN_MIN_DELTA
-  const rightDown = rw.y > rs.y + ARMS_DOWN_MIN_DELTA
+  if (!visibleEnough(lm, LM.LEFT_WRIST, cfg) || !visibleEnough(lm, LM.RIGHT_WRIST, cfg)) return false
+  const minDelta = cfg.thresholds.armsDownMinDelta ?? ARMS_DOWN_MIN_DELTA
+  const leftDown = lw.y > ls.y + minDelta
+  const rightDown = rw.y > rs.y + minDelta
   return leftDown && rightDown
 }
 
@@ -127,9 +196,10 @@ export function createStretchSterrenRuntime(options = {}) {
  * @param {Array<{ x: number; y: number; z?: number; visibility?: number }>} lm single pose
  * @param {number} nowMs `performance.now()`
  */
-export function stepStretchSterren(rt, lm, nowMs) {
-  const up = armsRaisedHigh(lm)
-  const down = armsDownRest(lm)
+export function stepStretchSterren(rt, lm, nowMs, poseConfig) {
+  const cfg = resolveStretchConfig(poseConfig)
+  const up = armsRaisedHigh(lm, poseConfig)
+  const down = armsDownRest(lm, poseConfig)
 
   // Rep scoring uses dt between steps; only active during the "holding" phase.
   const prevNow = rt.score?.lastNowMs
@@ -148,7 +218,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
   if (rt.phase === 'wait_rest') {
     if (down) {
       if (rt.restStableStartMs == null) rt.restStableStartMs = nowMs
-      if (nowMs - rt.restStableStartMs >= REST_STABLE_MS) {
+      if (nowMs - rt.restStableStartMs >= cfg.timing.restStableMs) {
         rt.phase = 'wait_arms_up'
         rt.restStableStartMs = null
         resetCycleTimers(rt)
@@ -162,7 +232,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
   if (rt.phase === 'wait_arms_up') {
     if (up) {
       if (rt.upStableStartMs == null) rt.upStableStartMs = nowMs
-      if (nowMs - rt.upStableStartMs >= STABLE_UP_MS) {
+      if (nowMs - rt.upStableStartMs >= cfg.timing.stableUpMs) {
         rt.phase = 'holding'
         rt.holdStartMs = nowMs
         rt.lastArmsUpMs = nowMs
@@ -180,7 +250,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
     if (rt.score?.tracker) sample(rt.score.tracker, Boolean(up), dt)
     if (up) rt.lastArmsUpMs = nowMs
 
-    if (rt.holdStartMs != null && nowMs - rt.holdStartMs >= HOLD_REQUIRED_MS) {
+    if (rt.holdStartMs != null && nowMs - rt.holdStartMs >= cfg.timing.holdRequiredMs) {
       rt.phase = 'wait_arms_down'
       rt.downStableStartMs = null
       rt.holdStartMs = null
@@ -188,7 +258,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
       return buildUi(rt, nowMs, up, down)
     }
 
-    const lostLongEnough = rt.lastArmsUpMs != null && nowMs - rt.lastArmsUpMs > HOLD_GRACE_MS
+    const lostLongEnough = rt.lastArmsUpMs != null && nowMs - rt.lastArmsUpMs > cfg.timing.holdGraceMs
     if (lostLongEnough) {
       rt.phase = 'wait_arms_up'
       resetCycleTimers(rt)
@@ -203,7 +273,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
   if (rt.phase === 'wait_arms_down') {
     if (down) {
       if (rt.downStableStartMs == null) rt.downStableStartMs = nowMs
-      if (nowMs - rt.downStableStartMs >= STABLE_DOWN_MS) {
+      if (nowMs - rt.downStableStartMs >= cfg.timing.stableDownMs) {
         rt.repsCompleted = (rt.repsCompleted ?? 0) + 1
         const repScore = rt.score?.tracker ? completeRep(rt.score.tracker) : 0
         rt.lastRepScore = repScore
@@ -214,7 +284,7 @@ export function stepStretchSterren(rt, lm, nowMs) {
           rt.phase = 'complete'
         } else {
           rt.phase = 'between_reps'
-          rt.betweenRepsUntilMs = nowMs + BETWEEN_REPS_MS
+          rt.betweenRepsUntilMs = nowMs + cfg.timing.betweenRepsMs
           // Prepare next rep scoring window.
           if (rt.score?.tracker) startRep(rt.score.tracker)
         }
@@ -242,6 +312,7 @@ function buildUi(rt, nowMs, up, down) {
       : 0
   const sessionProgress01 = Math.min(1, (done + holdFrac) / repsTarget)
   const avgScore = rt.score?.tracker ? averageScore(rt.score.tracker.repScores) : 0
+  const score01 = Math.max(0, Math.min(1, (typeof avgScore === 'number' ? avgScore : 0) / 100))
 
   if (rt.phase === 'between_reps') {
     line1 = `Rep ${done} van ${repsTarget} — goed zo!`
@@ -254,9 +325,11 @@ function buildUi(rt, nowMs, up, down) {
     line2 = `Rep ${nextRep} van ${repsTarget} — strek omhoog: ellebogen én polsen boven je ogen.`
   } else if (rt.phase === 'holding') {
     line1 = `Rep ${nextRep} van ${repsTarget} — houd vol!`
-    const elapsed = rt.holdStartMs != null ? Math.min(HOLD_REQUIRED_MS, Math.max(0, nowMs - rt.holdStartMs)) : 0
-    progress = elapsed / HOLD_REQUIRED_MS
-    const left = Math.max(0, Math.ceil((HOLD_REQUIRED_MS - elapsed) / 1000))
+    const holdRequired = HOLD_REQUIRED_MS
+    const elapsed =
+      rt.holdStartMs != null ? Math.min(holdRequired, Math.max(0, nowMs - rt.holdStartMs)) : 0
+    progress = elapsed / holdRequired
+    const left = Math.max(0, Math.ceil((holdRequired - elapsed) / 1000))
     line2 = left >= 1 ? `Nog ${left} s — ellebogen en polsen boven je ogen houden.` : 'Bijna…'
   } else if (rt.phase === 'wait_arms_down') {
     line1 = `Rep ${nextRep} van ${repsTarget}`
@@ -273,6 +346,7 @@ function buildUi(rt, nowMs, up, down) {
     line2,
     progress,
     sessionProgress01,
+    score01,
     averageScore: avgScore,
     lastRepScore: rt.lastRepScore,
     repsCompleted: done,

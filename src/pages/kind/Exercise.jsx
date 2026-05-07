@@ -4,6 +4,13 @@ import { cn } from '@/lib/utils'
 import { useKindExerciseDetail } from '@/hooks/kind/useKindExerciseDetail.js'
 import { routineFromExerciseTitle } from '@/lib/kind/routineFromExerciseTitle.js'
 
+function routineFromPoseConfig(poseEnabled, poseConfig) {
+  if (!poseEnabled || !poseConfig) return null
+  const type = typeof poseConfig?.type === 'string' ? poseConfig.type : null
+  if (type === 'stretch_sterren') return 'stretchSterren'
+  return null
+}
+
 function isYouTubeUrl(url) {
   if (!url || typeof url !== 'string') return false
   const u = url.toLowerCase()
@@ -73,7 +80,9 @@ export default function Exercise() {
     const qs = new URLSearchParams()
     qs.set('exerciseId', exerciseId)
     if (assignmentId) qs.set('assignmentId', assignmentId)
-    const routine = routineFromExerciseTitle(data?.title)
+    const routine =
+      routineFromPoseConfig(data?.poseEnabled, data?.poseConfig) ??
+      routineFromExerciseTitle(data?.title)
     if (routine) qs.set('routine', routine)
     if (data?.repsTarget != null && Number.isFinite(Number(data.repsTarget))) {
       qs.set('reps', String(Math.max(1, Math.round(Number(data.repsTarget)))))

@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { cn } from '@/lib/utils'
 import { createStretchSterrenRuntime, stepStretchSterren } from '@/lib/kind/stretchNaarDeSterrenPose.js'
+import { createFlamingoRuntime, stepFlamingo } from '@/lib/kind/flamingoPose.js'
 import supabase from '@/lib/supabaseClient.js'
 import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 
@@ -51,11 +52,44 @@ export default function PoseDetection() {
 
   const [error, setError] = useState(null)
   const [hint, setHint] = useState('Camera starten…')
+  const [poseConfig, setPoseConfig] = useState(null)
+  const [poseType, setPoseType] = useState(null)
   /** Dutch overlay copy + progress for `routine=stretchSterren` (throttled from rAF). */
   const [poseUi, setPoseUi] = useState(null)
   const didNavigateRewardRef = useRef(false)
   const lastLoggedRepRef = useRef(0)
   const sessionStartMsRef = useRef(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!exerciseId) {
+        setPoseConfig(null)
+        setPoseType(null)
+        return
+      }
+      const { data, error: exErr } = await supabase
+        .from('exercises')
+        .select('pose_enabled, pose_config')
+        .eq('id', exerciseId)
+        .maybeSingle()
+      if (cancelled) return
+      if (exErr) {
+        setPoseConfig(null)
+        setPoseType(null)
+        return
+      }
+      const enabled = Boolean(data?.pose_enabled)
+      const cfg = enabled ? (data?.pose_config ?? null) : null
+      const type = typeof cfg?.type === 'string' ? cfg.type : null
+      setPoseConfig(cfg)
+      setPoseType(type)
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [exerciseId])
 
   const backToExercise = () => {
     const qs = new URLSearchParams()
@@ -81,7 +115,13 @@ export default function PoseDetection() {
     }
 
     const stretchRt =
-      routine === 'stretchSterren' ? createStretchSterrenRuntime({ targetReps: repsParam }) : null
+      poseType === 'stretch_sterren' || routine === 'stretchSterren'
+        ? createStretchSterrenRuntime({ targetReps: repsParam })
+        : null
+    const flamingoRt =
+      poseType === 'flamingo_left_90'
+        ? createFlamingoRuntime({ holdRequiredMs: poseConfig?.timing?.holdRequiredMs })
+        : null
     const lastPhaseRef = { current: '' }
     const lastUiAtRef = { current: 0 }
 
@@ -170,18 +210,22 @@ export default function PoseDetection() {
             drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS)
           }
 
-          if (stretchRt && result.landmarks[0]) {
-            const ui = stepStretchSterren(stretchRt, result.landmarks[0], now)
+          if ((stretchRt || flamingoRt) && result.landmarks[0]) {
+            const ui = stretchRt
+              ? stepStretchSterren(stretchRt, result.landmarks[0], now, poseConfig)
+              : stepFlamingo(flamingoRt, result.landmarks[0], now, poseConfig)
+
+            const score01 =
+              typeof ui?.score01 === 'number' && Number.isFinite(ui.score01)
+                ? Math.max(0, Math.min(1, ui.score01))
+                : typeof ui?.averageScore === 'number' && Number.isFinite(ui.averageScore)
+                  ? Math.max(0, Math.min(1, ui.averageScore / 100))
+                  : 0
+            const scorePct = Math.round(score01 * 100)
 
             // Start timer when the first hold begins.
             if (sessionStartMsRef.current == null && ui.phase === 'holding') {
               sessionStartMsRef.current = now
-            }
-
-            // One console log per completed rep.
-            if (ui.repsCompleted > (lastLoggedRepRef.current ?? 0) && ui.lastRepScore != null) {
-              lastLoggedRepRef.current = ui.repsCompleted
-              console.log(`[stretchSterren] rep ${ui.repsCompleted}/${ui.repsTarget}: score=${ui.lastRepScore}%`)
             }
 
             if (!didNavigateRewardRef.current && ui.phase === 'complete') {
@@ -198,7 +242,7 @@ export default function PoseDetection() {
                     assignment_id: assignmentId || null,
                     completed_at: new Date().toISOString(),
                     success: ui.repsCompleted === ui.repsTarget,
-                    score: typeof ui.averageScore === 'number' ? Math.round(ui.averageScore) : 0,
+                    score: scorePct,
                     duration: durationSeconds,
                   }
                   const { error: insErr } = await supabase.from('exercise_sessions').insert(payload)
@@ -211,7 +255,7 @@ export default function PoseDetection() {
                 if (exerciseId) qs.set('exerciseId', exerciseId)
                 if (assignmentId) qs.set('assignmentId', assignmentId)
                 if (xpParam) qs.set('xp', xpParam)
-                qs.set('accuracy', String(ui.averageScore ?? 0))
+                qs.set('accuracy', String(scorePct))
                 navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
               })()
 
@@ -250,9 +294,13 @@ export default function PoseDetection() {
       lastLoggedRepRef.current = 0
       sessionStartMsRef.current = null
     }
-  }, [routine, exerciseId, assignmentId, childId, navigate])
+  }, [routine, poseType, poseConfig, exerciseId, assignmentId, childId, navigate])
 
-  const showRoutineOverlay = routine === 'stretchSterren' && poseUi
+  const showRoutineOverlay =
+    (poseType === 'stretch_sterren' ||
+      routine === 'stretchSterren' ||
+      poseType === 'flamingo_left_90') &&
+    poseUi
 
   return (
     <div className="flex min-h-svh flex-col bg-kind-canvas" data-page="kind-pose-detection">
