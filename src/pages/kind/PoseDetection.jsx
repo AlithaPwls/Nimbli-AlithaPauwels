@@ -5,16 +5,21 @@
  * 1. Load WASM + pose model → create PoseLandmarker (VIDEO mode).
  * 2. Open webcam → attach stream to <video>, wait until frames have a size.
  * 3. Each animation frame: run detectForVideo(video, timestamp) → draw landmarks on <canvas>.
- * 4. Optional `?routine=stretchSterren`: state machine for “stretch naar de sterren”.
- * 5. On unmount: stop camera, cancel rAF, close landmarker (frees GPU/WASM).
+ * 4. “Stretch naar de sterren”: zelfde als `rules_engine_v1` — volledige `pose_config` in Supabase (`pose_enabled`).
+ * 5. Andere oefeningen: `pose_config.type === "rules_engine_v1"` + `rules` / `copy` in DB.
+ * 6. On unmount: stop camera, cancel rAF, close landmarker (frees GPU/WASM).
  */
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { cn } from '@/lib/utils'
-import { createStretchSterrenRuntime, stepStretchSterren } from '@/lib/kind/stretchNaarDeSterrenPose.js'
 import { createFlamingoRuntime, stepFlamingo } from '@/lib/kind/flamingoPose.js'
+import {
+  RULES_ENGINE_POSE_TYPE,
+  createRulesEngineRuntime,
+  stepRulesEngine,
+} from '@/lib/kind/rulesEngineRoutine.js'
 import supabase from '@/lib/supabaseClient.js'
 import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 
@@ -114,20 +119,45 @@ export default function PoseDetection() {
       return undefined
     }
 
-    const stretchRt =
-      poseType === 'stretch_sterren' || routine === 'stretchSterren'
-        ? createStretchSterrenRuntime({ targetReps: repsParam })
-        : null
+    const isStretchSterren = poseType === 'stretch_sterren' || routine === 'stretchSterren'
+    const hasDbRulesEngine =
+      poseConfig?.type === RULES_ENGINE_POSE_TYPE &&
+      Array.isArray(poseConfig?.rules?.up) &&
+      poseConfig.rules.up.length > 0
+    const rulesEnginePoseConfig = hasDbRulesEngine ? poseConfig : null
+
     const flamingoRt =
       poseType === 'flamingo_left_90'
         ? createFlamingoRuntime({ holdRequiredMs: poseConfig?.timing?.holdRequiredMs })
         : null
+    let rulesRt = null
+    if (rulesEnginePoseConfig?.rules?.up) {
+      try {
+        rulesRt = createRulesEngineRuntime({ targetReps: repsParam, poseConfig: rulesEnginePoseConfig })
+      } catch (e) {
+        console.warn('[PoseDetection] rules_engine runtime failed', e)
+      }
+    }
     const lastPhaseRef = { current: '' }
     const lastUiAtRef = { current: 0 }
 
     async function run() {
       setError(null)
       setHint('Camera starten…')
+
+      const needsRulesEngine = poseType === RULES_ENGINE_POSE_TYPE || isStretchSterren
+      if (needsRulesEngine) {
+        if (!rulesEnginePoseConfig?.rules?.up) {
+          setError('Deze pose-oefening mist configuratie (pose_config.rules.up).')
+          setHint('')
+          return
+        }
+        if (!rulesRt) {
+          setError('Pose-oefening kon niet starten (controleer pose_config).')
+          setHint('')
+          return
+        }
+      }
 
       let stream = null
       try {
@@ -210,10 +240,10 @@ export default function PoseDetection() {
             drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS)
           }
 
-          if ((stretchRt || flamingoRt) && result.landmarks[0]) {
-            const ui = stretchRt
-              ? stepStretchSterren(stretchRt, result.landmarks[0], now, poseConfig)
-              : stepFlamingo(flamingoRt, result.landmarks[0], now, poseConfig)
+          if ((flamingoRt || rulesRt) && result.landmarks[0]) {
+            const ui = flamingoRt
+              ? stepFlamingo(flamingoRt, result.landmarks[0], now, poseConfig)
+              : stepRulesEngine(rulesRt, result.landmarks[0], now, rulesEnginePoseConfig)
 
             const score01 =
               typeof ui?.score01 === 'number' && Number.isFinite(ui.score01)
@@ -294,12 +324,13 @@ export default function PoseDetection() {
       lastLoggedRepRef.current = 0
       sessionStartMsRef.current = null
     }
-  }, [routine, poseType, poseConfig, exerciseId, assignmentId, childId, navigate])
+  }, [routine, poseType, poseConfig, repsParam, exerciseId, assignmentId, childId, navigate])
 
   const showRoutineOverlay =
     (poseType === 'stretch_sterren' ||
       routine === 'stretchSterren' ||
-      poseType === 'flamingo_left_90') &&
+      poseType === 'flamingo_left_90' ||
+      poseType === RULES_ENGINE_POSE_TYPE) &&
     poseUi
 
   return (
