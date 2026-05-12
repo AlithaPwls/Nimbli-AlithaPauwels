@@ -1,5 +1,5 @@
 import supabase from '@/lib/supabaseClient.js'
-import { categoryFromGoalId, difficultyLabelFromId } from '@/lib/kineExerciseFormConstants.js'
+import { categoryFromGoalId, difficultyIdToInt } from '@/lib/kineExerciseFormConstants.js'
 
 const BUCKET = 'exercise-videos'
 const MAX_BYTES = 50 * 1024 * 1024
@@ -8,20 +8,6 @@ function sanitizeFileName(name) {
   const base = typeof name === 'string' && name.trim() ? name.trim() : 'video.mp4'
   const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, '_')
   return cleaned.slice(0, 120) || 'video.mp4'
-}
-
-function buildDescriptionJson({ goalId, difficultyId, repsCount, durationMinutes }) {
-  const cat = categoryFromGoalId(goalId)
-  const diffLabel = difficultyLabelFromId(difficultyId)
-  const reps = `${repsCount}x herhalingen`
-  const time = `${durationMinutes} min`
-  return JSON.stringify({
-    category: cat.categoryLabel,
-    categoryId: cat.id,
-    difficulty: diffLabel,
-    reps,
-    time,
-  })
 }
 
 function friendlyStorageMessage(message) {
@@ -33,17 +19,29 @@ function friendlyStorageMessage(message) {
   return 'Upload mislukt. Probeer opnieuw.'
 }
 
+function hasDbPoseConfig(poseConfig) {
+  return (
+    poseConfig != null &&
+    typeof poseConfig === 'object' &&
+    !Array.isArray(poseConfig) &&
+    typeof poseConfig.version === 'number'
+  )
+}
+
 /**
  * Inserts `exercises`, optionally uploads video to `exercise-videos`, updates `media_url`.
+ * Optional `poseConfig`: when present with numeric `version`, sets `pose_enabled` and stores JSON.
  */
 export async function createPracticeExercise({
   practiceId,
   title,
+  description,
   goalId,
   difficultyId,
   repsCount,
   durationMinutes,
   file,
+  poseConfig = null,
 }) {
   if (!practiceId) {
     return { ok: false, message: 'Geen praktijk gekoppeld aan je profiel.' }
@@ -58,20 +56,30 @@ export async function createPracticeExercise({
     return { ok: false, message: 'Video is te groot (max. 50 MB).' }
   }
 
-  const description = buildDescriptionJson({
-    goalId,
-    difficultyId,
-    repsCount,
-    durationMinutes,
-  })
+  const trimmedDescription =
+    typeof description === 'string' && description.trim() ? description.trim() : null
+  const focusId = categoryFromGoalId(goalId).id
+  const difficultyInt = difficultyIdToInt(difficultyId)
+  const reps = Number.isFinite(Number(repsCount)) ? Math.max(1, Math.floor(Number(repsCount))) : null
+  const durationSeconds = Number.isFinite(Number(durationMinutes))
+    ? Math.max(1, Math.floor(Number(durationMinutes))) * 60
+    : null
+
+  const poseEnabled = hasDbPoseConfig(poseConfig)
 
   const { data: inserted, error: insErr } = await supabase
     .from('exercises')
     .insert({
       practice_id: practiceId,
       title: trimmed,
-      description,
+      description: trimmedDescription,
+      focus: focusId,
+      difficulty: difficultyInt,
+      reps,
+      duration_seconds: durationSeconds,
       media_url: null,
+      pose_enabled: poseEnabled,
+      pose_config: poseEnabled ? poseConfig : null,
     })
     .select('id')
     .single()
@@ -125,7 +133,22 @@ export async function createPracticeExercise({
     .maybeSingle()
 
   if (fetchErr || !fullRow) {
-    return { ok: true, row: { id: exerciseId, practice_id: practiceId, title: trimmed, description, media_url: null } }
+    return {
+      ok: true,
+      row: {
+        id: exerciseId,
+        practice_id: practiceId,
+        title: trimmed,
+        description: trimmedDescription,
+        focus: focusId,
+        difficulty: difficultyInt,
+        reps,
+        duration_seconds: durationSeconds,
+        media_url: null,
+        pose_enabled: poseEnabled,
+        pose_config: poseEnabled ? poseConfig : null,
+      },
+    }
   }
 
   return { ok: true, row: fullRow }

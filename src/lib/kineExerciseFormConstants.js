@@ -25,3 +25,13 @@ export function categoryFromGoalId(goalId) {
 export function difficultyLabelFromId(difficultyId) {
   return DIFFICULTY_OPTIONS.find((o) => o.id === difficultyId)?.label ?? 'Gemiddeld'
 }
+
+const DIFFICULTY_ID_TO_INT = {
+  makkelijk: 1,
+  gemiddeld: 2,
+  moeilijk: 3,
+}
+
+export function difficultyIdToInt(difficultyId) {
+  return DIFFICULTY_ID_TO_INT[difficultyId] ?? 2
+}

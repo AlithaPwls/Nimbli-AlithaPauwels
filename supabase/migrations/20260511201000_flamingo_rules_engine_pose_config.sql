@@ -1,5 +1,5 @@
--- Flamingo (linkerbeen): zelfde logica als `flamingoPose.js` via rules_engine_v1 + nieuwe op `yWithin`.
--- Zet `pose_config.type` op `rules_engine_v1` (niet `flamingo_left_90`), `pose_enabled = true`.
+-- Flamingo (linkerbeen): rules_engine_v1 met op `yWithin` (knie ~ heuphoogte) + hoek heup–knie–enkel.
+-- Vereist `pose_config.type` = `rules_engine_v1`, `pose_enabled = true`.
 -- Pas de WHERE-clause aan als jullie titel anders is.
 
 update public.exercises

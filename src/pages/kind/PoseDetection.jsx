@@ -14,7 +14,6 @@ import { ArrowLeft } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { cn } from '@/lib/utils'
-import { createFlamingoRuntime, stepFlamingo } from '@/lib/kind/flamingoPose.js'
 import {
   RULES_ENGINE_POSE_TYPE,
   createRulesEngineRuntime,
@@ -22,11 +21,7 @@ import {
 } from '@/lib/kind/rulesEngineRoutine.js'
 import supabase from '@/lib/supabaseClient.js'
 import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
-
-const TASKS_VISION_VERSION = '0.10.35'
-const VISION_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VISION_VERSION}/wasm`
-const POSE_MODEL_LITE =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'
+import { POSE_MODEL_LITE, VISION_WASM } from '@/lib/kind/poseConstants.js'
 
 async function createPoseLandmarker(delegate = 'GPU') {
   const vision = await FilesetResolver.forVisionTasks(VISION_WASM)
@@ -126,10 +121,6 @@ export default function PoseDetection() {
       poseConfig.rules.up.length > 0
     const rulesEnginePoseConfig = hasDbRulesEngine ? poseConfig : null
 
-    const flamingoRt =
-      poseType === 'flamingo_left_90'
-        ? createFlamingoRuntime({ holdRequiredMs: poseConfig?.timing?.holdRequiredMs })
-        : null
     let rulesRt = null
     if (rulesEnginePoseConfig?.rules?.up) {
       try {
@@ -240,10 +231,8 @@ export default function PoseDetection() {
             drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS)
           }
 
-          if ((flamingoRt || rulesRt) && result.landmarks[0]) {
-            const ui = flamingoRt
-              ? stepFlamingo(flamingoRt, result.landmarks[0], now, poseConfig)
-              : stepRulesEngine(rulesRt, result.landmarks[0], now, rulesEnginePoseConfig)
+          if (rulesRt && result.landmarks[0]) {
+            const ui = stepRulesEngine(rulesRt, result.landmarks[0], now, rulesEnginePoseConfig)
 
             const score01 =
               typeof ui?.score01 === 'number' && Number.isFinite(ui.score01)
@@ -329,7 +318,6 @@ export default function PoseDetection() {
   const showRoutineOverlay =
     (poseType === 'stretch_sterren' ||
       routine === 'stretchSterren' ||
-      poseType === 'flamingo_left_90' ||
       poseType === RULES_ENGINE_POSE_TYPE) &&
     poseUi
 
