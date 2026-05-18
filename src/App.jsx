@@ -21,6 +21,7 @@ import AddPatient1 from './pages/kine/AddPatient-1.jsx'
 import AddPatient2 from './pages/kine/AddPatient-2.jsx'
 import AddPatient3 from './pages/kine/AddPatient-3.jsx'
 import AddPatient4 from './pages/kine/AddPatient-4.jsx'
+import KinePatientDetail from './pages/kine/KinePatientDetail.jsx'
 import KineLayout from './components/kine/KineLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="patienten/nieuw/2" element={<AddPatient2 />} />
         <Route path="patienten/nieuw/3" element={<AddPatient3 />} />
         <Route path="patienten/nieuw/4" element={<AddPatient4 />} />
+        <Route path="patienten/:patientId" element={<KinePatientDetail />} />
         <Route path="oefeningen" element={<KineOefeningen />} />
         <Route path="oefeningen/eigen" element={<KineOefeningenEigenVideos />} />
         <Route path="instellingen" element={<KineInstellingen />} />

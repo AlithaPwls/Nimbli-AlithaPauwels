@@ -1,8 +1,22 @@
 import supabase from '@/lib/supabaseClient.js'
 import { categoryFromGoalId, difficultyIdToInt } from '@/lib/kineExerciseFormConstants.js'
+import { fileToJpegThumbnailBlob } from '@/lib/kine/exerciseVideoThumbnail.js'
 
 const BUCKET = 'exercise-videos'
 const MAX_BYTES = 50 * 1024 * 1024
+
+const XP_MIN = 10
+const XP_MAX = 150
+const XP_STEP = 10
+const XP_DEFAULT = 50
+
+/** @param {unknown} raw */
+function normalizeExerciseXpValue(raw) {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return XP_DEFAULT
+  const stepped = Math.round(n / XP_STEP) * XP_STEP
+  return Math.min(XP_MAX, Math.max(XP_MIN, stepped))
+}
 
 function sanitizeFileName(name) {
   const base = typeof name === 'string' && name.trim() ? name.trim() : 'video.mp4'
@@ -30,7 +44,9 @@ function hasDbPoseConfig(poseConfig) {
 
 /**
  * Inserts `exercises`, optionally uploads video to `exercise-videos`, updates `media_url`.
+ * With a video file, tries to build a JPEG thumbnail (client-side) and sets `thumbnail_url`.
  * Optional `poseConfig`: when present with numeric `version`, sets `pose_enabled` and stores JSON.
+ * `xpValue` is normalized and stored as `xp_value` (10–150, steps of 10).
  */
 export async function createPracticeExercise({
   practiceId,
@@ -42,6 +58,7 @@ export async function createPracticeExercise({
   durationMinutes,
   file,
   poseConfig = null,
+  xpValue,
 }) {
   if (!practiceId) {
     return { ok: false, message: 'Geen praktijk gekoppeld aan je profiel.' }
@@ -66,6 +83,7 @@ export async function createPracticeExercise({
     : null
 
   const poseEnabled = hasDbPoseConfig(poseConfig)
+  const xp_value = normalizeExerciseXpValue(xpValue)
 
   const { data: inserted, error: insErr } = await supabase
     .from('exercises')
@@ -80,6 +98,7 @@ export async function createPracticeExercise({
       media_url: null,
       pose_enabled: poseEnabled,
       pose_config: poseEnabled ? poseConfig : null,
+      xp_value,
     })
     .select('id')
     .single()
@@ -116,9 +135,30 @@ export async function createPracticeExercise({
       return { ok: false, message: 'Kon geen URL voor de video ophalen.' }
     }
 
+    let thumbnailUrl = null
+    try {
+      const thumbBlob = await fileToJpegThumbnailBlob(file)
+      const thumbPath = `${practiceId}/${exerciseId}/thumbnail.jpg`
+      const { error: thumbUpErr } = await supabase.storage.from(BUCKET).upload(thumbPath, thumbBlob, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      })
+      if (!thumbUpErr) {
+        const { data: thumbPub } = supabase.storage.from(BUCKET).getPublicUrl(thumbPath)
+        thumbnailUrl = typeof thumbPub?.publicUrl === 'string' ? thumbPub.publicUrl : null
+      }
+    } catch {
+      // Exercise still valid without thumbnail
+    }
+
+    const mediaPatch = { media_url: publicUrl }
+    if (thumbnailUrl) {
+      mediaPatch.thumbnail_url = thumbnailUrl
+    }
+
     const { error: updErr } = await supabase
       .from('exercises')
-      .update({ media_url: publicUrl })
+      .update(mediaPatch)
       .eq('id', exerciseId)
 
     if (updErr) {
@@ -147,6 +187,7 @@ export async function createPracticeExercise({
         media_url: null,
         pose_enabled: poseEnabled,
         pose_config: poseEnabled ? poseConfig : null,
+        xp_value,
       },
     }
   }

@@ -16,6 +16,17 @@ import {
 
 const EMPTY_LANDMARKS = Object.freeze({ rest: null, target: null })
 
+const XP_MIN = 10
+const XP_MAX = 150
+const XP_STEP = 10
+const XP_DEFAULT = 50
+
+function snapExerciseXp(n) {
+  if (!Number.isFinite(n)) return XP_DEFAULT
+  const stepped = Math.round(n / XP_STEP) * XP_STEP
+  return Math.min(XP_MAX, Math.max(XP_MIN, stepped))
+}
+
 function clampInt(n, min, max) {
   if (!Number.isFinite(n)) return min
   return Math.min(max, Math.max(min, Math.floor(n)))
@@ -152,6 +163,67 @@ function CounterField({ label, htmlFor, value, onChange, min, max }) {
   )
 }
 
+function XpField({ label, htmlFor, value, onChange }) {
+  function setSnapped(next) {
+    const n = typeof next === 'number' ? next : parseInt(String(next), 10)
+    onChange(snapExerciseXp(n))
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-nimbli-ink">
+        {label}
+      </label>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="XP verlagen"
+          disabled={value <= XP_MIN}
+          onClick={() => setSnapped(value - XP_STEP)}
+          className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-[#e1dbd3] bg-white text-nimbli-ink transition-colors duration-200 motion-reduce:transition-none hover:bg-nimbli-canvas/80 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
+        >
+          <Minus className="size-4" strokeWidth={2.25} aria-hidden />
+        </button>
+        <input
+          id={htmlFor}
+          inputMode="numeric"
+          autoComplete="off"
+          required
+          min={XP_MIN}
+          max={XP_MAX}
+          step={XP_STEP}
+          value={String(value)}
+          aria-valuenow={value}
+          aria-valuemin={XP_MIN}
+          aria-valuemax={XP_MAX}
+          onChange={(e) => {
+            const raw = e.target.value.replace(/\D/g, '')
+            if (raw === '') {
+              onChange(XP_MIN)
+              return
+            }
+            setSnapped(parseInt(raw, 10))
+          }}
+          onBlur={() => onChange(snapExerciseXp(value))}
+          className="h-9 w-14 rounded-md border border-[#e1dbd3] bg-white text-center font-nimbli-body text-sm font-semibold text-nimbli-ink tabular-nums transition-colors duration-200 motion-reduce:transition-none [appearance:textfield] focus:border-nimbli focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <button
+          type="button"
+          aria-label="XP verhogen"
+          disabled={value >= XP_MAX}
+          onClick={() => setSnapped(value + XP_STEP)}
+          className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-[#e1dbd3] bg-white text-nimbli-ink transition-colors duration-200 motion-reduce:transition-none hover:bg-nimbli-canvas/80 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
+        >
+          <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+        </button>
+      </div>
+      <p className="text-[11px] leading-snug text-nimbli-muted">
+        Beloning voor het kind: {XP_MIN}–{XP_MAX} XP, per {XP_STEP}.
+      </p>
+    </div>
+  )
+}
+
 /**
  * Compact modal: nieuwe oefening (clean layout, Nimbli tokens, Lucide icons).
  */
@@ -166,6 +238,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
   const [repsCount, setRepsCount] = useState(10)
   const [difficultyId, setDifficultyId] = useState('gemiddeld')
   const [durationMinutes, setDurationMinutes] = useState(5)
+  const [xpValue, setXpValue] = useState(XP_DEFAULT)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [videoError, setVideoError] = useState(null)
@@ -206,6 +279,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
     setRepsCount(10)
     setDifficultyId('gemiddeld')
     setDurationMinutes(5)
+    setXpValue(XP_DEFAULT)
     setVideoError(null)
     setDragActive(false)
     setPreviewUrl((prev) => {
@@ -229,6 +303,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       setRepsCount(10)
       setDifficultyId('gemiddeld')
       setDurationMinutes(5)
+      setXpValue(XP_DEFAULT)
       setVideoError(null)
       setDragActive(false)
     }
@@ -341,6 +416,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
         durationMinutes: durationN,
         file: fileToUpload,
         poseConfig: generatedPoseConfig,
+        xpValue,
       })
 
       if (!result.ok) {
@@ -365,6 +441,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
   const idGoalGroup = `${baseId}-goal`
   const idReps = `${baseId}-reps`
   const idDuration = `${baseId}-duration`
+  const idXp = `${baseId}-xp`
   const idDiffGroup = `${baseId}-difficulty`
   const idFile = `${baseId}-file`
 
@@ -375,7 +452,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
         className="grid-rows-[auto_minmax(0,1fr)] max-h-[min(92vh,720px)] max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-xl border border-[#e1dbd3] bg-white p-0 shadow-sm ring-0 sm:max-w-2xl"
       >
         <DialogDescription className="sr-only">
-          Formulier: naam, omschrijving, doel (categorie), herhalingen, moeilijkheid, duur, optioneel video.
+          Formulier: naam, omschrijving, doel (categorie), herhalingen, moeilijkheid, duur, XP, optioneel video.
         </DialogDescription>
 
         <header className="flex items-start justify-between gap-3 border-b border-[#e1dbd3] px-5 py-4">
@@ -441,6 +518,12 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                 onChange={setDurationMinutes}
                 min={1}
                 max={240}
+              />
+              <XpField
+                label="XP-beloning *"
+                htmlFor={idXp}
+                value={xpValue}
+                onChange={setXpValue}
               />
             </div>
 

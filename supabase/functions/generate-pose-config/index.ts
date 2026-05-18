@@ -4,12 +4,19 @@
 // and asks OpenRouter to produce a `pose_config` JSON in `rules_engine_v1`
 // shape. The API key stays server-side via Supabase Secrets.
 
+// Supabase Edge runtime injects `Deno`; declare locally so editor TS (which
+// does not load Deno types) stops flagging it as unknown.
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void
+  env: { get: (key: string) => string | undefined }
+}
+
 import { corsHeaders } from '../_shared/cors.ts'
 import { buildSystemPrompt, buildUserPrompt } from './prompt.ts'
 import { validatePoseConfig } from './validatePoseConfig.ts'
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const DEFAULT_MODEL = 'openai/gpt-5-nano'
+const DEFAULT_MODEL = 'openai/gpt-4o-mini'
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
 type AiCallResult =

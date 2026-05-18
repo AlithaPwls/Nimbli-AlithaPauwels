@@ -33,7 +33,7 @@ export function useKinePatients({ practiceId, query = '' }) {
 
       const { data, error: qErr } = await supabase
         .from('profiles')
-        .select('id, firstname, lastname, date_of_birth, avatar_url, created_at')
+        .select('id, firstname, lastname, date_of_birth, avatar_url, treatment_goal, created_at')
         .eq('practice_id', practiceId)
         .eq('role', 'child')
         .order('created_at', { ascending: false })
@@ -71,7 +71,7 @@ export function useKinePatients({ practiceId, query = '' }) {
         name,
         age: age ?? '—',
         avatarUrl: r.avatar_url || 'https://placehold.co/96x96?text=%20',
-        focus: '—',
+        focus: r.treatment_goal?.trim() || '—',
         lastSession: '—',
         progress: 0,
         delta: '',

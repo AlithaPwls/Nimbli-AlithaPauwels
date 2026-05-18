@@ -26,6 +26,7 @@ export default function DashboardKine() {
   }, [profile?.firstname, profile?.lastname])
 
   const goAddPatient = () => navigate('/dashboard/kine/patienten/nieuw')
+  const goPatientDetail = (patient) => navigate(`/dashboard/kine/patienten/${patient.id}`)
 
   const totalPatients = kpis.totalPatients
   const adherenceDisplay =
@@ -121,7 +122,7 @@ export default function DashboardKine() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {patients.map((patient) => (
-                <KinePatientCard key={patient.id} patient={patient} />
+                <KinePatientCard key={patient.id} patient={patient} onSelect={goPatientDetail} />
               ))}
             </div>
           )}
