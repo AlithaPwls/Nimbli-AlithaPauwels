@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
+import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -43,6 +44,26 @@ function addDaysLocal(d, days) {
 
 function dayLabelShort(d) {
   return new Date(d).toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '')
+}
+
+function formatSessionTime(completedAt) {
+  if (!completedAt) return '—'
+  const d = new Date(completedAt)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('nl-BE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatAssignmentReps(reps, repUnit) {
+  if (reps == null || !Number.isFinite(Number(reps))) return null
+  const n = Number(reps)
+  const unit = repUnit?.trim()
+  return unit ? `${n} ${unit}` : `${n}×`
 }
 
 function normalizeWeeklyCounts(counts) {
@@ -103,9 +124,18 @@ export function useKinePatientDetail({ patientId, practiceId }) {
   const [childRow, setChildRow] = useState(null)
   const [parentRow, setParentRow] = useState(null)
   const [weeklyChart, setWeeklyChart] = useState(EMPTY_WEEKLY)
+  const [sessions, setSessions] = useState([])
+  const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(Boolean(patientId))
   const [error, setError] = useState(null)
   const [notFound, setNotFound] = useState(false)
+  const [tick, setTick] = useState(0)
+  const silentRefetchRef = useRef(false)
+
+  const refetch = useCallback((options = {}) => {
+    silentRefetchRef.current = Boolean(options.silent)
+    setTick((t) => t + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -115,13 +145,17 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         setChildRow(null)
         setParentRow(null)
         setWeeklyChart(EMPTY_WEEKLY)
+        setSessions([])
+        setAssignments([])
         setNotFound(!patientId)
         setError(null)
         setLoading(false)
         return
       }
 
-      setLoading(true)
+      const silent = silentRefetchRef.current
+      silentRefetchRef.current = false
+      if (!silent) setLoading(true)
       setError(null)
       setNotFound(false)
 
@@ -140,6 +174,8 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         setChildRow(null)
         setParentRow(null)
         setWeeklyChart(EMPTY_WEEKLY)
+        setSessions([])
+        setAssignments([])
         setError(childErr)
         setNotFound(false)
         setLoading(false)
@@ -150,6 +186,8 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         setChildRow(null)
         setParentRow(null)
         setWeeklyChart(EMPTY_WEEKLY)
+        setSessions([])
+        setAssignments([])
         setNotFound(true)
         setLoading(false)
         return
@@ -229,6 +267,114 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         points: normalizeWeeklyCounts(rawCounts),
         days: dayLabels,
       })
+
+      const { data: sessionRows, error: sessionsErr } = await supabase
+        .from('exercise_sessions')
+        .select('id, exercise_id, completed_at, score, success')
+        .eq('child_id', child.id)
+        .order('completed_at', { ascending: false })
+        .limit(50)
+
+      if (cancelled) return
+
+      if (sessionsErr) {
+        setSessions([])
+        setError(sessionsErr)
+        setLoading(false)
+        return
+      }
+
+      const events = toArray(sessionRows)
+      const exerciseIds = Array.from(new Set(events.map((e) => e.exercise_id).filter(Boolean)))
+
+      let exercisesById = new Map()
+      if (exerciseIds.length > 0) {
+        const { data: exRows, error: exErr } = await supabase
+          .from('exercises')
+          .select('id, title, name')
+          .in('id', exerciseIds)
+
+        if (cancelled) return
+
+        if (exErr) {
+          setSessions([])
+          setError(exErr)
+          setLoading(false)
+          return
+        }
+
+        exercisesById = new Map(toArray(exRows).map((r) => [r.id, r]))
+      }
+
+      const sessionList = events.map((ev) => {
+        const ex = exercisesById.get(ev.exercise_id) ?? null
+        const title = ex?.title ?? ex?.name ?? 'Oefening'
+        return {
+          id: ev.id,
+          title,
+          time: formatSessionTime(ev.completed_at),
+          score: typeof ev.score === 'number' ? ev.score : null,
+          success: ev.success ?? null,
+        }
+      })
+
+      setSessions(sessionList)
+
+      const { data: assignRows, error: assignErr } = await supabase
+        .from('exercise_assignments')
+        .select('id, exercise_id, reps, rep_unit, created_at')
+        .eq('child_id', child.id)
+        .order('created_at', { ascending: false })
+
+      if (cancelled) return
+
+      if (assignErr) {
+        setAssignments([])
+        setError(assignErr)
+        setLoading(false)
+        return
+      }
+
+      const assignmentList = toArray(assignRows)
+      const assignExerciseIds = Array.from(
+        new Set(assignmentList.map((a) => a.exercise_id).filter(Boolean))
+      )
+
+      let assignExercisesById = new Map()
+      if (assignExerciseIds.length > 0) {
+        const { data: assignExRows, error: assignExErr } = await supabase
+          .from('exercises')
+          .select('*')
+          .in('id', assignExerciseIds)
+
+        if (cancelled) return
+
+        if (assignExErr) {
+          setAssignments([])
+          setError(assignExErr)
+          setLoading(false)
+          return
+        }
+
+        assignExercisesById = new Map(
+          toArray(assignExRows).map((r) => [r.id, normalizeExerciseRow(r)])
+        )
+      }
+
+      const exercises = assignmentList
+        .map((a) => {
+          const base = assignExercisesById.get(a.exercise_id)
+          if (!base) return null
+          const repsOverride = formatAssignmentReps(a.reps, a.rep_unit)
+          return {
+            assignmentId: a.id,
+            ...base,
+            reps: repsOverride ?? base.reps,
+          }
+        })
+        .filter(Boolean)
+
+      setAssignments(exercises)
       setLoading(false)
     }
 
@@ -237,10 +383,10 @@ export function useKinePatientDetail({ patientId, practiceId }) {
     return () => {
       cancelled = true
     }
-  }, [patientId, practiceId])
+  }, [patientId, practiceId, tick])
 
   const patient = useMemo(() => mapChildProfile(childRow), [childRow])
   const parent = useMemo(() => mapParentProfile(parentRow), [parentRow])
 
-  return { patient, parent, weeklyChart, loading, error, notFound }
+  return { patient, parent, weeklyChart, sessions, assignments, loading, error, notFound, refetch }
 }

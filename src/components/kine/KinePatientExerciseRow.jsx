@@ -1,0 +1,50 @@
+import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+
+export default function KinePatientExerciseRow({ exercise }) {
+  return (
+    <article className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
+      <div className="flex items-start gap-4">
+        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
+          <img
+            src={exercise.imageUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{exercise.title}</p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span
+              className={[
+                'inline-flex h-5 items-center rounded-full px-2 text-xs',
+                categoryToneClasses(exercise.categoryTone),
+              ].join(' ')}
+            >
+              {exercise.category}
+            </span>
+            <span className="text-nimbli-muted" aria-hidden>
+              •
+            </span>
+            <span className="text-xs text-nimbli-ink">{exercise.difficulty}</span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-nimbli-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden>↻</span>
+              {exercise.reps}
+            </span>
+            <span aria-hidden>•</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden>⏱</span>
+              {exercise.time}
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
