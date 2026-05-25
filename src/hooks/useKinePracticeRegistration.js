@@ -3,6 +3,37 @@ import supabase from '@/lib/supabaseClient.js'
 import { buildPracticeInsert } from '@/lib/buildPracticeInsert.js'
 
 const MIN_PASSWORD = 8
+const REGISTER_KINE_PRACTICE_FUNCTION = 'register-kine-practice'
+
+async function registrationErrorMessage(error) {
+  let details = ''
+  let status = null
+
+  try {
+    status = error?.context?.status ?? null
+    const payload = await error?.context?.json?.()
+    details = String(payload?.details ?? payload?.error ?? '')
+  } catch {
+    details = ''
+  }
+
+  const raw = `${details} ${error?.message ?? ''}`.toLowerCase()
+  if (
+    status === 409 ||
+    raw.includes('already') ||
+    raw.includes('registered') ||
+    raw.includes('exists') ||
+    raw.includes('duplicate')
+  ) {
+    return 'Dit e-mailadres is al geregistreerd.'
+  }
+
+  if (raw.includes('server_misconfigured') || raw.includes('not found')) {
+    return 'Registratie-service is nog niet beschikbaar. Neem contact op met support.'
+  }
+
+  return 'Registratie mislukt. Probeer opnieuw.'
+}
 
 function validateSubmit(form, mode) {
   if (!String(form.name ?? '').trim()) return 'Vul de naam van je praktijk in.'
@@ -41,54 +72,33 @@ export function useKinePracticeRegistration() {
 
       if (mode === 'new_kine') {
         const email = String(form.kineEmail ?? '').trim()
-        const { data: signUpData, error: signErr } = await supabase.auth.signUp({
-          email,
-          password: form.kinePassword,
-        })
-        if (signErr) {
+        const { error: registerErr } = await supabase.functions.invoke(
+          REGISTER_KINE_PRACTICE_FUNCTION,
+          {
+            body: {
+              practice: row,
+              kine: {
+                firstname: String(form.kineFirstname ?? '').trim(),
+                lastname: String(form.kineLastname ?? '').trim(),
+                email,
+                password: form.kinePassword,
+              },
+            },
+          }
+        )
+
+        if (registerErr) {
           return {
             ok: false,
-            message: signErr.message.toLowerCase().includes('already')
-              ? 'Dit e-mailadres is al geregistreerd.'
-              : 'Registratie mislukt. Probeer opnieuw.',
+            message: await registrationErrorMessage(registerErr),
           }
-        }
-        const uid = signUpData.user?.id
-        if (!uid) {
-          return {
-            ok: false,
-            message: 'Account niet volledig aangemaakt. Controleer je e-mail of probeer opnieuw.',
-          }
-        }
-
-        const { data: practiceRow, error: prErr } = await supabase
-          .from('practices')
-          .insert(row)
-          .select('id')
-          .single()
-
-        if (prErr || !practiceRow) {
-          return { ok: false, message: 'Praktijk aanmaken mislukt. Probeer later opnieuw.' }
-        }
-
-        const { error: insProf } = await supabase.from('profiles').insert({
-          id: uid,
-          firstname: String(form.kineFirstname ?? '').trim(),
-          lastname: String(form.kineLastname ?? '').trim(),
-          email,
-          role: 'kine',
-          user_id: uid,
-          practice_id: practiceRow.id,
-        })
-
-        if (insProf) {
-          return { ok: false, message: 'Profiel aanmaken mislukt. Neem contact op met support.' }
         }
 
         const { error: signInErr } = await supabase.auth.signInWithPassword({
           email,
           password: form.kinePassword,
         })
+
         if (signInErr) {
           return {
             ok: false,
