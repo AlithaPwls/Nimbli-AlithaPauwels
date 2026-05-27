@@ -35,6 +35,11 @@ function SidebarItem({ active, Icon, iconClassName, children, onClick }) {
   )
 }
 
+const KIND_ROUTES = {
+  oefeningen: '/dashboard/kind',
+  overzicht: '/dashboard/kind/overzicht',
+}
+
 export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen', onNavigate }) {
   const { logout, loading: logoutLoading } = useLogout()
   const navigate = useNavigate()
@@ -46,6 +51,15 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
   const [switchError, setSwitchError] = useState(null)
 
   const canSwitchToParent = useMemo(() => Boolean(profile?.invite_code), [profile?.invite_code])
+
+  function goTo(section) {
+    if (onNavigate) {
+      onNavigate(section)
+      return
+    }
+    const path = KIND_ROUTES[section]
+    if (path) navigate(path)
+  }
 
   const doSwitchToParent = useCallback(async () => {
     if (!canSwitchToParent) return
@@ -178,7 +192,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           active={active === 'oefeningen'}
           Icon={Star}
           iconClassName="fill-kind-red text-kind-red"
-          onClick={() => onNavigate?.('oefeningen')}
+          onClick={() => goTo('oefeningen')}
         >
           Oefeningen
         </SidebarItem>
@@ -186,7 +200,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           active={active === 'overzicht'}
           Icon={Trophy}
           iconClassName="text-kind-yellow"
-          onClick={() => onNavigate?.('overzicht')}
+          onClick={() => goTo('overzicht')}
         >
           Overzicht
         </SidebarItem>
@@ -194,7 +208,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           active={active === 'profiel'}
           Icon={Award}
           iconClassName="text-kind-blue"
-          onClick={() => onNavigate?.('profiel')}
+          onClick={() => goTo('profiel')}
         >
           Mijn profiel
         </SidebarItem>

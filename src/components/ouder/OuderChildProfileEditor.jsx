@@ -8,15 +8,6 @@ import {
   profileInitials,
 } from '@/lib/profileDisplay.js'
 
-function InfoRow({ label, value }) {
-  return (
-    <div className="rounded-[10px] bg-[#faf8f5] px-4 py-3">
-      <p className="text-xs font-medium text-[#6b7280]">{label}</p>
-      <p className="mt-1 font-nimbli-heading text-sm font-bold text-[#1a1a1a]">{value}</p>
-    </div>
-  )
-}
-
 export default function OuderChildProfileEditor({
   child,
   avatarUrl,
@@ -80,12 +71,6 @@ export default function OuderChildProfileEditor({
             {avatarError}
           </p>
         ) : null}
-
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <InfoRow label="Voornaam" value={child?.firstname?.trim() || '—'} />
-          <InfoRow label="Achternaam" value={child?.lastname?.trim() || '—'} />
-          {birthLabel ? <InfoRow label="Geboortedatum" value={birthLabel} /> : null}
-        </div>
       </div>
     </OuderSettingsCard>
   )

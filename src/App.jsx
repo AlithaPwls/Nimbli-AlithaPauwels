@@ -5,6 +5,7 @@ import LoginWithCode from './pages/loginflow/LoginWithCode.jsx'
 import RegisterOuder from './pages/loginflow/RegisterOuder.jsx'
 import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.jsx'
 import DashboardKind from './pages/kind/DashboardKind.jsx'
+import KindOverzicht from './pages/kind/KindOverzicht.jsx'
 import Exercise from './pages/kind/Exercise.jsx'
 import PoseDetection from './pages/kind/PoseDetection.jsx'
 import Reward from './pages/kind/Reward.jsx'
@@ -39,6 +40,11 @@ export default function App() {
       <Route path="/dashboard/kind" element={
         <ProtectedRoute allowedRoles={['child', 'parent']}>
           <DashboardKind />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/overzicht" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <KindOverzicht />
         </ProtectedRoute>
       } />
       <Route path="/dashboard/kind/oefening" element={
