@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import supabase from '@/lib/supabaseClient.js'
 
 function toArray(x) {
@@ -173,7 +173,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
       if (exerciseIds.length > 0) {
         const { data: exRows, error: exErr } = await supabase
           .from('exercises')
-          .select('id, title, description, media_url, focus, duration_seconds')
+          .select(EXERCISE_THUMBNAIL_SELECT)
           .in('id', exerciseIds)
 
         if (cancelled) return
@@ -271,7 +271,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
         .select('id, exercise_id, completed_at, score')
         .eq('child_id', prof.id)
         .order('completed_at', { ascending: false })
-        .limit(10)
+        .limit(5)
 
       if (cancelled) return
       if (recentEvErr) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
-import { categoryToneClasses, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { categoryToneClasses, EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 
 function toArray(v) {
   if (v == null) return []
@@ -128,9 +128,7 @@ export function useKindTodayExercises() {
     if (exerciseIds.length > 0) {
       const { data: exRows, error: exErr } = await supabase
         .from('exercises')
-        .select(
-          'id, title, name, description, duration_seconds, difficulty, focus, media_url, thumbnail_url, reps'
-        )
+        .select(`${EXERCISE_THUMBNAIL_SELECT}, difficulty, reps`)
         .in('id', exerciseIds)
 
       if (exErr) {

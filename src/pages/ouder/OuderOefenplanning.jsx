@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderWeekStrip from '@/components/ouder/OuderWeekStrip.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
-import OuderRecentRow from '@/components/ouder/OuderRecentRow.jsx'
+import OuderRecentSection from '@/components/ouder/OuderRecentSection.jsx'
 import OuderPlannedExerciseRow from '@/components/ouder/OuderPlannedExerciseRow.jsx'
 import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
 import { useParentPlanningData } from '@/hooks/ouder/useParentPlanningData.js'
@@ -163,18 +163,11 @@ export default function OuderOefenplanning() {
                 </div>
               </section>
 
-              <section className="rounded-lg border-2 border-[#e1dbd3] bg-white px-[21px] pb-[22px] pt-[21px] shadow-[0_2px_0_0_#e1dbd3]">
-                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Recent</p>
-                <div className="mt-4 flex flex-col gap-3">
-                  {planning.loading ? (
-                    <div className="text-sm text-nimbli-muted">Laden…</div>
-                  ) : (
-                    (planning.recent ?? []).map((r) => (
-                      <OuderRecentRow key={r.id} title={r.title} time={r.time} xp={r.xp} />
-                    ))
-                  )}
-                </div>
-              </section>
+              <OuderRecentSection
+                items={planning.recent ?? []}
+                loading={planning.loading}
+                className="rounded-lg"
+              />
             </div>
           </div>
         </div>

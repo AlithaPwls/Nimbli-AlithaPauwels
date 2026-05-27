@@ -1,5 +1,5 @@
 import { Clock, Repeat2 } from 'lucide-react'
-import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+import { categoryToneClasses, EXERCISE_PLACEHOLDER_IMG } from '@/lib/exerciseDisplay.js'
 import { cn } from '@/lib/utils'
 
 function MetaDot() {
@@ -18,7 +18,7 @@ export default function OuderUpcomingExercise({
     <div className="flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-white px-3 py-3">
       <div className="size-10 shrink-0 overflow-hidden rounded-md bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
         <img
-          src={imageUrl}
+          src={imageUrl || EXERCISE_PLACEHOLDER_IMG}
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
@@ -56,12 +56,6 @@ export default function OuderUpcomingExercise({
           ) : null}
         </div>
       </div>
-      <button
-        type="button"
-        className="inline-flex h-7 shrink-0 items-center justify-center rounded bg-nimbli px-3 font-nimbli-heading text-[10px] font-black text-[#faf5ee] shadow-[0_2px_0_0_#1e7a6a] transition-colors hover:opacity-95"
-      >
-        Start
-      </button>
     </div>
   )
 }

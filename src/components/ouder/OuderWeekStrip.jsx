@@ -9,7 +9,7 @@ export default function OuderWeekStrip({
   rangeLabel = '—',
 }) {
   return (
-    <section className="h-fit w-full max-w-full self-start rounded-xl border-2 border-nimbli-slot-border/70 bg-white shadow-[0_2px_0_0_#e1dbd3]">
+    <section className="h-fit w-full max-w-full self-start rounded-lg border-2 border-[#e1dbd3] bg-white shadow-[0_2px_0_0_#e1dbd3]">
       <div className="px-3 py-3 sm:px-4">
         <p className="truncate text-center text-sm font-semibold text-[#302d2d]">{rangeLabel}</p>
 

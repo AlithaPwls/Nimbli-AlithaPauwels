@@ -1,5 +1,11 @@
-const PLACEHOLDER_IMG =
+export const EXERCISE_PLACEHOLDER_IMG =
   'https://placehold.co/96x96/faf5ee/6b7280/png?text=%E2%80%A2&font=raleway'
+
+/** PostgREST select for list/card views that need thumbnails. */
+export const EXERCISE_THUMBNAIL_SELECT =
+  'id, title, name, description, media_url, thumbnail_url, video_url, focus, duration_seconds'
+
+const PLACEHOLDER_IMG = EXERCISE_PLACEHOLDER_IMG
 
 function isProbablyImageUrl(url) {
   if (!url || typeof url !== 'string') return false
@@ -135,15 +141,30 @@ export function normalizeExerciseRow(row) {
     time = meta.time
   }
 
+  const thumbCandidates = [
+    row.thumbnail_url,
+    row.image_url,
+    meta?.thumbnail_url,
+    meta?.thumbnailUrl,
+    meta?.image_url,
+    meta?.imageUrl,
+  ]
   const thumb =
-    [row.thumbnail_url, row.image_url].find((u) => typeof u === 'string' && u.trim())?.trim() || null
-  const media = typeof row.media_url === 'string' ? row.media_url.trim() : null
-  const yt = youtubeThumb(media)
+    thumbCandidates.find((u) => typeof u === 'string' && u.trim())?.trim() || null
+
+  const mediaCandidates = [row.media_url, row.video_url, meta?.media_url, meta?.video_url]
+    .filter((u) => typeof u === 'string' && u.trim())
+    .map((u) => u.trim())
+
+  const yt =
+    mediaCandidates.map((url) => youtubeThumb(url)).find(Boolean) || null
+
+  const imageFromMedia = mediaCandidates.find((url) => isProbablyImageUrl(url)) || null
 
   const imageUrl =
     (thumb && isProbablyImageUrl(thumb) ? thumb : null) ||
-    (yt ? yt : null) ||
-    (media && isProbablyImageUrl(media) ? media : null) ||
+    yt ||
+    imageFromMedia ||
     PLACEHOLDER_IMG
 
   const tone = inferCategoryTone(category)
@@ -161,6 +182,6 @@ export function normalizeExerciseRow(row) {
     time,
     imageUrl,
     description: row.description,
-    mediaUrl: media,
+    mediaUrl: mediaCandidates[0] ?? null,
   }
 }

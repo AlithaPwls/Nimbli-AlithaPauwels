@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, Repeat2 } from 'lucide-react'
-import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+import { categoryToneClasses, EXERCISE_PLACEHOLDER_IMG } from '@/lib/exerciseDisplay.js'
 import { cn } from '@/lib/utils'
 
 function MetaDot() {
@@ -16,10 +16,21 @@ export default function OuderPlannedExerciseRow({
   done = false,
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-[#eef2f7] bg-white px-5 py-4">
+    <div
+      className={cn(
+        'flex items-center justify-between rounded-lg border px-5 py-4',
+        done ? 'border-nimbli/25 bg-nimbli/10' : 'border-[#eef2f7] bg-white'
+      )}
+    >
       <div className="flex min-w-0 items-center gap-4">
         <div className="size-10 shrink-0 overflow-hidden rounded-md bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+          <img
+            src={imageUrl || EXERCISE_PLACEHOLDER_IMG}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[#0a0a0a]">{title}</p>
@@ -47,7 +58,12 @@ export default function OuderPlannedExerciseRow({
       </div>
 
       {done ? (
-        <CheckCircle2 className="size-6 shrink-0 text-[#22c55e]" aria-hidden />
+        <span
+          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white"
+          aria-label="Voltooid"
+        >
+          <CheckCircle2 className="size-6 text-nimbli" aria-hidden />
+        </span>
       ) : (
         <span className="size-6 shrink-0" aria-hidden />
       )}
