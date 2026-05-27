@@ -158,7 +158,7 @@ export function useParentDashboardData(childProfileId) {
       // 2) assignments
       const { data: assigns, error: asErr } = await supabase
         .from('exercise_assignments')
-        .select('id, child_id, exercise_id, reps, rep_unit, created_at')
+        .select('id, child_id, exercise_id, reps, rep_unit, created_at, schedule_days')
         .eq('child_id', prof.id)
         .order('created_at', { ascending: false })
 

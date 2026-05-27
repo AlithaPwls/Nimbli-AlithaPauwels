@@ -51,7 +51,7 @@ export default function KinePatientCard({ patient, onSelect }) {
               className="h-2 flex-1 overflow-hidden rounded-full bg-nimbli-canvas accent-[#82B3E1]"
               value={barValue}
               max={100}
-              aria-label={`Voortgang ${patient.name} ${barValue}%`}
+              aria-label={`Weekvoortgang ${patient.name}: ${barValue}% van toegewezen oefeningen`}
             />
             <p className="w-10 text-right text-[11px] font-semibold text-nimbli-muted">{pct}</p>
           </div>

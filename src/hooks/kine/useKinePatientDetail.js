@@ -42,8 +42,17 @@ function addDaysLocal(d, days) {
   return dt
 }
 
+function startOfWeekMonday(d) {
+  const dt = startOfDayLocal(d)
+  const mondayOffset = (dt.getDay() + 6) % 7
+  dt.setDate(dt.getDate() - mondayOffset)
+  return dt
+}
+
 function dayLabelShort(d) {
-  return new Date(d).toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '')
+  const raw = new Date(d).toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '')
+  const two = raw.slice(0, 2)
+  return two.charAt(0).toUpperCase() + two.slice(1)
 }
 
 function formatSessionTime(completedAt) {
@@ -227,15 +236,15 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         setParentRow(null)
       }
 
-      const today0 = startOfDayLocal(new Date())
-      const windowStart = addDaysLocal(today0, -6)
+      const weekStart = startOfWeekMonday(new Date())
+      const weekEnd = addDaysLocal(weekStart, 7)
 
       const { data: weekRows, error: weekErr } = await supabase
         .from('exercise_sessions')
         .select('id, completed_at')
         .eq('child_id', child.id)
-        .gte('completed_at', windowStart.toISOString())
-        .lt('completed_at', addDaysLocal(today0, 1).toISOString())
+        .gte('completed_at', weekStart.toISOString())
+        .lt('completed_at', weekEnd.toISOString())
 
       if (cancelled) return
 
@@ -250,18 +259,12 @@ export function useKinePatientDetail({ patientId, practiceId }) {
       for (const ev of toArray(weekRows)) {
         const k = dateKeyLocal(ev.completed_at)
         if (!k) continue
-        const dt = new Date(ev.completed_at)
-        if (dt >= windowStart && dt < addDaysLocal(today0, 1)) {
-          countsByDay.set(k, (countsByDay.get(k) ?? 0) + 1)
-        }
+        countsByDay.set(k, (countsByDay.get(k) ?? 0) + 1)
       }
 
-      const days = Array.from({ length: 7 }, (_, i) => addDaysLocal(windowStart, i))
+      const days = Array.from({ length: 7 }, (_, i) => addDaysLocal(weekStart, i))
       const rawCounts = days.map((d) => countsByDay.get(dateKeyLocal(d)) ?? 0)
-      const dayLabels = days.map((d) => {
-        const label = dayLabelShort(d)
-        return label.charAt(0).toUpperCase() + label.slice(1, 2)
-      })
+      const dayLabels = days.map((d) => dayLabelShort(d))
 
       setWeeklyChart({
         points: normalizeWeeklyCounts(rawCounts),
@@ -322,7 +325,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
 
       const { data: assignRows, error: assignErr } = await supabase
         .from('exercise_assignments')
-        .select('id, exercise_id, reps, rep_unit, created_at')
+        .select('id, exercise_id, reps, rep_unit, created_at, schedule_days')
         .eq('child_id', child.id)
         .order('created_at', { ascending: false })
 

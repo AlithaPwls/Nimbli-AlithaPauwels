@@ -1,5 +1,25 @@
+import { normalizeScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
+
 function toArray(x) {
   return Array.isArray(x) ? x : []
+}
+
+/** Monday = 0 … Sunday = 6. */
+export function weekdayIndexMondayZero(d) {
+  const dt = new Date(d)
+  if (Number.isNaN(dt.getTime())) return null
+  return (dt.getDay() + 6) % 7
+}
+
+export function parseScheduleDays(row) {
+  const raw = row?.schedule_days ?? row?.scheduleDays
+  return normalizeScheduleDays(raw)
+}
+
+export function isAssignmentScheduledOnDate(assignment, date) {
+  const idx = weekdayIndexMondayZero(date)
+  if (idx == null) return false
+  return parseScheduleDays(assignment).includes(idx)
 }
 
 /** When no exercises are planned for a day, Figma uses a daily target of 5. */
@@ -60,20 +80,35 @@ export function formatKindWeekRange(weekStart) {
   return `${startPart} – ${endPart}`
 }
 
-export function distributeAssignmentsOverWeek(assignments, weekKeys) {
-  const result = new Map(weekKeys.map((k) => [k, []]))
+/** Map date keys (YYYY-MM-DD) to assignments scheduled on that weekday. */
+export function distributeAssignmentsByScheduleDays(assignments, weekDays) {
+  const days = toArray(weekDays)
+  const result = new Map()
+  for (let i = 0; i < days.length; i += 1) {
+    const key = dateKeyLocal(days[i])
+    if (key) result.set(key, [])
+  }
+
   for (const a of toArray(assignments)) {
-    const target =
-      typeof a?.target_per_week === 'number' ? Math.max(1, Math.min(7, a.target_per_week)) : 1
-    const slots = Array.from({ length: target }, (_, i) =>
-      Math.round((i * (weekKeys.length - 1)) / Math.max(1, target - 1))
-    )
-    for (const idx of slots) {
-      const key = weekKeys[idx] ?? weekKeys[0]
-      result.get(key)?.push(a)
+    const scheduled = parseScheduleDays(a)
+    for (let i = 0; i < days.length; i += 1) {
+      if (!scheduled.includes(i)) continue
+      const key = dateKeyLocal(days[i])
+      if (key) result.get(key)?.push(a)
     }
   }
+
   return result
+}
+
+/** @deprecated Use distributeAssignmentsByScheduleDays */
+export function distributeAssignmentsOverWeek(assignments, weekKeys) {
+  const weekDays = weekKeys.map((key, i) => {
+    const parts = String(key).split('-').map(Number)
+    if (parts.length !== 3) return addDaysLocal(startOfWeekMonday(new Date()), i)
+    return new Date(parts[0], parts[1] - 1, parts[2])
+  })
+  return distributeAssignmentsByScheduleDays(assignments, weekDays)
 }
 
 /**
@@ -81,8 +116,7 @@ export function distributeAssignmentsOverWeek(assignments, weekKeys) {
  */
 export function buildWeekBarsFromData(weekStart, assignmentRows, sessionRows) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDaysLocal(weekStart, i))
-  const weekKeys = weekDays.map((d) => dateKeyLocal(d)).filter(Boolean)
-  const distributed = distributeAssignmentsOverWeek(assignmentRows, weekKeys)
+  const distributed = distributeAssignmentsByScheduleDays(assignmentRows, weekDays)
 
   const sessionsByDay = new Map()
   for (const ev of toArray(sessionRows)) {

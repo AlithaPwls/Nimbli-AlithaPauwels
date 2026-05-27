@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { distributeAssignmentsByScheduleDays } from '@/lib/kind/weekCalendar.js'
 import supabase from '@/lib/supabaseClient.js'
 
 function toArray(x) {
@@ -39,22 +40,6 @@ function xpFromSession(ev) {
   const score = typeof ev?.score === 'number' ? ev.score : null
   if (score != null) return Math.max(50, Math.min(250, Math.round(score)))
   return 150
-}
-
-function distributeAssignmentsOverWeek(assignments, weekKeys) {
-  const result = new Map(weekKeys.map((k) => [k, []]))
-  const list = toArray(assignments)
-  for (const a of list) {
-    const target = typeof a?.target_per_week === 'number' ? Math.max(1, Math.min(7, a.target_per_week)) : 1
-    const slots = Array.from({ length: target }, (_, i) =>
-      Math.round((i * (weekKeys.length - 1)) / Math.max(1, target - 1))
-    )
-    for (const idx of slots) {
-      const key = weekKeys[idx] ?? weekKeys[0]
-      result.get(key)?.push(a)
-    }
-  }
-  return result
 }
 
 /**
@@ -152,7 +137,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
 
       const { data: assigns, error: asErr } = await supabase
         .from('exercise_assignments')
-        .select('id, child_id, exercise_id, reps, rep_unit, created_at')
+        .select('id, child_id, exercise_id, reps, rep_unit, created_at, schedule_days')
         .eq('child_id', prof.id)
         .order('created_at', { ascending: false })
 
@@ -236,7 +221,8 @@ export function useParentPlanningData(childProfileId, weekStart) {
       }
 
       const weekKeys = days.map((d) => d.key).filter(Boolean)
-      const distributed = distributeAssignmentsOverWeek(assignmentRows, weekKeys)
+      const weekDayDates = days.map((d) => d.date)
+      const distributed = distributeAssignmentsByScheduleDays(assignmentRows, weekDayDates)
       const nextPlanned = {}
 
       for (const dayKey of weekKeys) {

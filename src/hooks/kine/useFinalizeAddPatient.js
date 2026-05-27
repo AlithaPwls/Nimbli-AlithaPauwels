@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
+import { defaultExerciseScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
 
 function onlyDigits(value) {
   return String(value ?? '').replace(/\D/g, '')
@@ -164,6 +165,7 @@ export function useFinalizeAddPatient() {
             child_id: childProfileId,
             exercise_id: exerciseId,
             assigned_by: kineProfileId,
+            schedule_days: defaultExerciseScheduleDays(),
           }))
 
           const { error: assignErr } = await supabase.from('exercise_assignments').insert(assignmentRows)

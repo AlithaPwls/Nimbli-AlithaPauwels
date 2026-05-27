@@ -1,10 +1,14 @@
+import { useId } from 'react'
+
 const Y_LABELS = [100, 75, 50, 25, 0]
 const W = 520
 const H = 200
-const PAD_LEFT = 48
+/** Matches Tailwind w-11 / pl-11 (44px) beside the chart. */
+const PAD_LEFT = 44
 const PAD_RIGHT = 18
 const PAD_TOP = 16
 const PAD_BOTTOM = 28
+const DAY_COUNT = 7
 
 function toInt(n) {
   const v = Number(n)
@@ -12,20 +16,20 @@ function toInt(n) {
   return Math.max(0, Math.min(100, Math.round(v)))
 }
 
-import { useId } from 'react'
-
 const FALLBACK_POINTS = [0, 0, 0, 0, 0, 0, 0]
 const FALLBACK_DAYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
 export default function KinePatientProgressChart({ points = FALLBACK_POINTS, days = FALLBACK_DAYS }) {
   const gradientId = useId()
   const safePoints =
-    Array.isArray(points) && points.length === 7 ? points.map(toInt) : FALLBACK_POINTS
-  const safeDays = Array.isArray(days) && days.length === 7 ? days : FALLBACK_DAYS
+    Array.isArray(points) && points.length === DAY_COUNT ? points.map(toInt) : FALLBACK_POINTS
+  const safeDays = Array.isArray(days) && days.length === DAY_COUNT ? days : FALLBACK_DAYS
 
   const chartW = W - PAD_LEFT - PAD_RIGHT
   const chartH = H - PAD_TOP - PAD_BOTTOM
-  const sx = (i) => PAD_LEFT + (i * chartW) / (safePoints.length - 1)
+
+  /** Center of each day column (aligns with grid-cols-7 below). */
+  const sx = (i) => PAD_LEFT + ((i + 0.5) / DAY_COUNT) * chartW
   const sy = (v) => PAD_TOP + (1 - v / 100) * chartH
   const poly = safePoints.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')
   const areaPoly = `${PAD_LEFT},${PAD_TOP + chartH} ${poly} ${PAD_LEFT + chartW},${PAD_TOP + chartH}`

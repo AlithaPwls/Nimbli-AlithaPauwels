@@ -9,8 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import AssignExerciseScheduleDays from '@/components/kine/AssignExerciseScheduleDays.jsx'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { categoryToneClasses, exerciseDescriptionForDialog } from '@/lib/exerciseDisplay.js'
+import {
+  defaultExerciseScheduleDays,
+  normalizeScheduleDays,
+  scheduleDaysSummary,
+} from '@/lib/kine/exerciseScheduleDays.js'
 
 const FILTERS = [
   { id: 'all', label: 'Alle' },
@@ -28,7 +34,7 @@ function matchesFilter(category, filter) {
   return true
 }
 
-function PickExerciseCard({ exercise, selected, disabled, onToggle }) {
+function PickExerciseCard({ exercise, selected, scheduleDays, disabled, onToggle }) {
   return (
     <button
       type="button"
@@ -37,7 +43,7 @@ function PickExerciseCard({ exercise, selected, disabled, onToggle }) {
       className={[
         'w-full rounded-2xl border-2 bg-white p-4 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
-        disabled ? 'cursor-not-allowed opacity-60' : '',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
         selected ? 'border-nimbli' : 'border-[#e1dbd3] hover:border-nimbli/50',
       ].join(' ')}
     >
@@ -67,7 +73,12 @@ function PickExerciseCard({ exercise, selected, disabled, onToggle }) {
               <span className="font-semibold text-nimbli-muted">Al toegewezen</span>
             ) : null}
             {selected ? (
-              <span className="ml-auto font-semibold text-nimbli">Geselecteerd</span>
+              <span className="ml-auto text-right font-semibold text-nimbli">
+                Geselecteerd
+                <span className="block text-[10px] font-normal text-nimbli-muted">
+                  {scheduleDaysSummary(scheduleDays)}
+                </span>
+              </span>
             ) : null}
           </div>
         </div>
@@ -113,6 +124,8 @@ export default function AssignPatientExercisesDialog({
   const [activeId, setActiveId] = useState(null)
   const [selectedById, setSelectedById] = useState(() => ({}))
   const [activeReps, setActiveReps] = useState('10')
+  const [activeScheduleDays, setActiveScheduleDays] = useState(defaultExerciseScheduleDays)
+  const [scheduleError, setScheduleError] = useState(null)
 
   const assignedSet = useMemo(
     () => new Set(assignedExerciseIds.filter(Boolean)),
@@ -126,6 +139,8 @@ export default function AssignPatientExercisesDialog({
       setActiveId(null)
       setSelectedById({})
       setActiveReps('10')
+      setActiveScheduleDays(defaultExerciseScheduleDays())
+      setScheduleError(null)
     }
   }, [open])
 
@@ -155,6 +170,24 @@ export default function AssignPatientExercisesDialog({
     const existing = selectedById[exercise.id]
     const reps = existing?.reps ?? exerciseDefaultReps(exercise)
     setActiveReps(String(reps))
+    setActiveScheduleDays(
+      normalizeScheduleDays(existing?.scheduleDays ?? defaultExerciseScheduleDays())
+    )
+    setScheduleError(null)
+  }
+
+  function setScheduleDaysForActive(nextDays) {
+    const normalized = normalizeScheduleDays(nextDays)
+    setActiveScheduleDays(normalized)
+    setScheduleError(null)
+    if (!activeExercise?.id || !selectedById[activeExercise.id]) return
+    setSelectedById((prev) => ({
+      ...prev,
+      [activeExercise.id]: {
+        ...prev[activeExercise.id],
+        scheduleDays: normalized,
+      },
+    }))
   }
 
   function toggleSelected() {
@@ -162,13 +195,21 @@ export default function AssignPatientExercisesDialog({
     if (assignedSet.has(activeExercise.id)) return
 
     const nextReps = clampReps(activeReps)
+    const nextDays = normalizeScheduleDays(activeScheduleDays)
     setActiveReps(String(nextReps))
+
     setSelectedById((prev) => {
       const next = { ...prev }
       if (next[activeExercise.id]) {
         delete next[activeExercise.id]
+        setScheduleError(null)
       } else {
-        next[activeExercise.id] = { reps: nextReps }
+        if (nextDays.length === 0) {
+          setScheduleError('Selecteer minstens één dag.')
+          return prev
+        }
+        next[activeExercise.id] = { reps: nextReps, scheduleDays: nextDays }
+        setScheduleError(null)
       }
       return next
     })
@@ -181,7 +222,13 @@ export default function AssignPatientExercisesDialog({
     const nextReps = clampReps(nextValue)
     setSelectedById((prev) => ({
       ...prev,
-      [activeExercise.id]: { reps: nextReps },
+      [activeExercise.id]: {
+        ...prev[activeExercise.id],
+        reps: nextReps,
+        scheduleDays: normalizeScheduleDays(
+          prev[activeExercise.id]?.scheduleDays ?? activeScheduleDays
+        ),
+      },
     }))
   }
 
@@ -189,6 +236,7 @@ export default function AssignPatientExercisesDialog({
     const selections = Object.entries(selectedById).map(([exerciseId, value]) => ({
       exerciseId,
       reps: clampReps(value?.reps ?? 10),
+      scheduleDays: normalizeScheduleDays(value?.scheduleDays),
     }))
     onConfirm({ selections })
   }
@@ -277,16 +325,20 @@ export default function AssignPatientExercisesDialog({
               </p>
             ) : (
               <ul className="flex flex-col gap-3">
-                {filtered.map((exercise) => (
-                  <li key={exercise.id}>
-                    <PickExerciseCard
-                      exercise={exercise}
-                      selected={Boolean(selectedById[exercise.id])}
-                      disabled={assignedSet.has(exercise.id)}
-                      onToggle={() => openExercise(exercise)}
-                    />
-                  </li>
-                ))}
+                {filtered.map((exercise) => {
+                  const selection = selectedById[exercise.id]
+                  return (
+                    <li key={exercise.id}>
+                      <PickExerciseCard
+                        exercise={exercise}
+                        selected={Boolean(selection)}
+                        scheduleDays={selection?.scheduleDays}
+                        disabled={assignedSet.has(exercise.id)}
+                        onToggle={() => openExercise(exercise)}
+                      />
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>
@@ -406,6 +458,13 @@ export default function AssignPatientExercisesDialog({
                     </Button>
                   </div>
                 </div>
+
+                <AssignExerciseScheduleDays
+                  value={activeScheduleDays}
+                  onChange={setScheduleDaysForActive}
+                  disabled={assignedSet.has(activeExercise.id)}
+                  error={scheduleError}
+                />
 
                 <Button
                   type="button"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
+import { addDaysLocal, startOfWeekMonday } from '@/lib/kind/weekCalendar.js'
 
 function calcAge(dob) {
   if (!dob) return null
@@ -12,9 +13,68 @@ function calcAge(dob) {
   return age < 0 ? null : age
 }
 
+function toArray(x) {
+  return Array.isArray(x) ? x : []
+}
+
+function formatLastSession(completedAt) {
+  if (!completedAt) return '—'
+  const d = new Date(completedAt)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('nl-BE', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function computeWeekProgress(childId, assignments, sessions, weekStart, weekEnd) {
+  const childAssignments = assignments.filter((a) => a.child_id === childId)
+  const total = childAssignments.length
+  if (total === 0) return 0
+
+  const assignmentIds = new Set(childAssignments.map((a) => a.id))
+  const exerciseToAssignment = new Map(childAssignments.map((a) => [a.exercise_id, a.id]))
+  const completed = new Set()
+
+  for (const s of sessions) {
+    if (s.child_id !== childId || s.success !== true) continue
+    const dt = new Date(s.completed_at)
+    if (Number.isNaN(dt.getTime()) || dt < weekStart || dt >= weekEnd) continue
+
+    if (s.assignment_id && assignmentIds.has(s.assignment_id)) {
+      completed.add(s.assignment_id)
+    } else if (s.exercise_id && exerciseToAssignment.has(s.exercise_id)) {
+      completed.add(exerciseToAssignment.get(s.exercise_id))
+    }
+  }
+
+  return completed.size / total
+}
+
+function buildPatientExtras(childIds, assignments, sessions) {
+  const weekStart = startOfWeekMonday(new Date())
+  const weekEnd = addDaysLocal(weekStart, 7)
+  const extras = {}
+
+  for (const childId of childIds) {
+    const childSessions = sessions.filter((s) => s.child_id === childId)
+    const last = childSessions[0]
+    extras[childId] = {
+      lastSession: formatLastSession(last?.completed_at),
+      progress: computeWeekProgress(childId, assignments, sessions, weekStart, weekEnd),
+    }
+  }
+
+  return extras
+}
+
 export function useKinePatients({ practiceId, query = '' }) {
   const [rows, setRows] = useState([])
+  const [extras, setExtras] = useState({})
   const [loading, setLoading] = useState(false)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -23,7 +83,9 @@ export function useKinePatients({ practiceId, query = '' }) {
     async function run() {
       if (!practiceId) {
         setRows([])
+        setExtras({})
         setLoading(false)
+        setDetailsLoading(false)
         setError(null)
         return
       }
@@ -42,8 +104,10 @@ export function useKinePatients({ practiceId, query = '' }) {
 
       if (qErr) {
         setRows([])
+        setExtras({})
         setError(qErr)
         setLoading(false)
+        setDetailsLoading(false)
         return
       }
 
@@ -58,6 +122,52 @@ export function useKinePatients({ practiceId, query = '' }) {
     }
   }, [practiceId])
 
+  useEffect(() => {
+    let cancelled = false
+    const childIds = rows.map((r) => r.id).filter(Boolean)
+
+    if (childIds.length === 0) {
+      setExtras({})
+      setDetailsLoading(false)
+      return
+    }
+
+    async function run() {
+      setDetailsLoading(true)
+
+      const [assignRes, sessionRes] = await Promise.all([
+        supabase
+          .from('exercise_assignments')
+          .select('id, child_id, exercise_id, schedule_days')
+          .in('child_id', childIds),
+        supabase
+          .from('exercise_sessions')
+          .select('child_id, assignment_id, exercise_id, completed_at, success')
+          .in('child_id', childIds)
+          .order('completed_at', { ascending: false }),
+      ])
+
+      if (cancelled) return
+
+      if (assignRes.error || sessionRes.error) {
+        setExtras({})
+        setDetailsLoading(false)
+        return
+      }
+
+      setExtras(
+        buildPatientExtras(childIds, toArray(assignRes.data), toArray(sessionRes.data))
+      )
+      setDetailsLoading(false)
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [rows])
+
   const patients = useMemo(() => {
     const q = query.trim().toLowerCase()
     const normalized = rows.map((r) => {
@@ -65,6 +175,7 @@ export function useKinePatients({ practiceId, query = '' }) {
       const lastname = r.lastname?.trim() ?? ''
       const name = [firstname, lastname].filter(Boolean).join(' ').trim() || 'Onbekend'
       const age = calcAge(r.date_of_birth)
+      const meta = extras[r.id] ?? { lastSession: '—', progress: 0 }
 
       return {
         id: r.id,
@@ -72,16 +183,20 @@ export function useKinePatients({ practiceId, query = '' }) {
         age: age ?? '—',
         avatarUrl: r.avatar_url || 'https://placehold.co/96x96?text=%20',
         focus: r.treatment_goal?.trim() || '—',
-        lastSession: '—',
-        progress: 0,
+        lastSession: meta.lastSession,
+        progress: meta.progress,
         delta: '',
       }
     })
 
     if (!q) return normalized
     return normalized.filter((p) => p.name.toLowerCase().includes(q))
-  }, [rows, query])
+  }, [rows, query, extras])
 
-  return { patients, loading, error, total: rows.length }
+  return {
+    patients,
+    loading: loading || detailsLoading,
+    error,
+    total: rows.length,
+  }
 }
-

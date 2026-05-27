@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
+import { normalizeScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
 
 /**
  * Inserts exercise_assignments for a child (skips ids already assigned).
@@ -24,6 +25,7 @@ export function useAssignPatientExercises() {
           .map((a) => ({
             exerciseId: a?.exerciseId ?? null,
             reps: a?.reps ?? null,
+            scheduleDays: Array.isArray(a?.scheduleDays) ? a.scheduleDays : null,
           }))
           .filter((a) => a.exerciseId && !assigned.has(a.exerciseId))
       : []
@@ -55,12 +57,16 @@ export function useAssignPatientExercises() {
       return Number.isFinite(n) ? Math.min(99, Math.max(1, Math.round(n))) : defaultRepsValue
     }
 
-    const rows = uniqueIds.map((exerciseId) => ({
-      child_id: childId,
-      exercise_id: exerciseId,
-      assigned_by: assignedBy ?? null,
-      reps: repsFor(exerciseId),
-    }))
+    const rows = uniqueIds.map((exerciseId) => {
+      const match = normalizedAssignments.find((a) => a.exerciseId === exerciseId)
+      return {
+        child_id: childId,
+        exercise_id: exerciseId,
+        assigned_by: assignedBy ?? null,
+        reps: repsFor(exerciseId),
+        schedule_days: normalizeScheduleDays(match?.scheduleDays),
+      }
+    })
 
     const { error: insertErr } = await supabase.from('exercise_assignments').insert(rows)
 

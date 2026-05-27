@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
 import { categoryToneClasses, EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { isAssignmentScheduledOnDate } from '@/lib/kind/weekCalendar.js'
 
 function toArray(v) {
   if (v == null) return []
@@ -91,7 +92,7 @@ export function useKindTodayExercises() {
     setError(null)
     const { data: assigns, error: asErr } = await supabase
       .from('exercise_assignments')
-      .select('id, child_id, exercise_id, reps, rep_unit, created_at')
+      .select('id, child_id, exercise_id, reps, rep_unit, created_at, schedule_days')
       .eq('child_id', childId)
       .order('created_at', { ascending: false })
 
@@ -102,7 +103,8 @@ export function useKindTodayExercises() {
       return
     }
 
-    const assignmentRows = toArray(assigns)
+    const today = new Date()
+    const assignmentRows = toArray(assigns).filter((a) => isAssignmentScheduledOnDate(a, today))
     const exerciseIds = Array.from(new Set(assignmentRows.map((r) => r?.exercise_id).filter(Boolean)))
 
     let doneByExerciseId = new Set()

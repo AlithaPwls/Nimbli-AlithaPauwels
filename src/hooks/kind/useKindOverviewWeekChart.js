@@ -49,7 +49,7 @@ export function useKindOverviewWeekChart() {
       const [assignRes, sessionRes] = await Promise.all([
         supabase
           .from('exercise_assignments')
-          .select('id, exercise_id, created_at')
+          .select('id, exercise_id, created_at, schedule_days')
           .eq('child_id', childId),
         supabase
           .from('exercise_sessions')
