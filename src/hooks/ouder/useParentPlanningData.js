@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import supabase from '@/lib/supabaseClient.js'
 
 function toArray(x) {
@@ -172,7 +173,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
       if (exerciseIds.length > 0) {
         const { data: exRows, error: exErr } = await supabase
           .from('exercises')
-          .select('id, title, media_url, focus, duration_seconds')
+          .select('id, title, description, media_url, focus, duration_seconds')
           .in('id', exerciseIds)
 
         if (cancelled) return
@@ -190,12 +191,22 @@ export function useParentPlanningData(childProfileId, weekStart) {
       const upcomingList = assignmentRows
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
-          const title = ex?.title ?? 'Oefening'
-          const goal = ex?.focus?.trim() || prof?.treatment_goal?.trim() || 'Oefening'
+          const norm = ex ? normalizeExerciseRow(ex) : null
           const reps = typeof a?.reps === 'number' ? a.reps : null
-          const unit = a?.rep_unit ? String(a.rep_unit) : null
-          const meta = reps != null ? `• ${reps}${unit ? ` ${unit}` : ''}` : '• Start binnenkort'
-          return { id: a.id, exerciseId: a.exercise_id, title, goal, meta }
+          const minutes =
+            ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
+              ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))
+              : null
+          return {
+            id: a.id,
+            exerciseId: a.exercise_id,
+            title: norm?.title ?? 'Oefening',
+            focus: norm?.category ?? 'Oefening',
+            categoryTone: norm?.categoryTone ?? 'default',
+            reps,
+            minutes,
+            imageUrl: norm?.imageUrl,
+          }
         })
         .slice(0, 3)
 
@@ -232,15 +243,24 @@ export function useParentPlanningData(childProfileId, weekStart) {
         const list = distributed.get(dayKey) ?? []
         nextPlanned[dayKey] = list.map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
-          const title = ex?.title ?? 'Oefening'
-          const imageUrl = ex?.media_url || null
+          const norm = ex ? normalizeExerciseRow(ex) : null
           const reps = typeof a?.reps === 'number' ? a.reps : 10
           const minutes =
-            typeof ex?.duration_seconds === 'number'
-              ? Math.max(1, Math.round(ex.duration_seconds / 60))
+            ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
+              ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))
               : 2
           const done = doneByDayExercise.has(`${dayKey}:${a.exercise_id}`)
-          return { id: a.id, exerciseId: a.exercise_id, title, imageUrl, reps, minutes, done }
+          return {
+            id: a.id,
+            exerciseId: a.exercise_id,
+            title: norm?.title ?? 'Oefening',
+            focus: norm?.category ?? 'Oefening',
+            categoryTone: norm?.categoryTone ?? 'default',
+            imageUrl: norm?.imageUrl,
+            reps,
+            minutes,
+            done,
+          }
         })
       }
 

@@ -161,5 +161,6 @@ export function normalizeExerciseRow(row) {
     time,
     imageUrl,
     description: row.description,
+    mediaUrl: media,
   }
 }

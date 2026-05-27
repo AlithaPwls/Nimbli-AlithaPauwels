@@ -61,6 +61,10 @@ function num(v, fallback) {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback
 }
 
+function clamp01(n) {
+  return Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0
+}
+
 function normalizeTargetReps(raw) {
   const n = typeof raw === 'number' ? raw : Number(raw)
   if (!Number.isFinite(n)) return DEFAULT_TARGET_REPS
@@ -152,13 +156,28 @@ function buildUi(rt, nowMs, up, down, poseConfig) {
   const elapsedHold =
     rt.phase === 'holding' && rt.holdStartMs != null ? Math.min(holdRequired, Math.max(0, nowMs - rt.holdStartMs)) : 0
   const secondsLeft = Math.max(0, Math.ceil((holdRequired - elapsedHold) / 1000))
-
+  const betweenRemainingMs =
+    rt.phase === 'between_reps' && rt.betweenRepsUntilMs != null
+      ? Math.max(0, rt.betweenRepsUntilMs - nowMs)
+      : 0
+  const secondsUntilNext = Math.max(0, Math.ceil(betweenRemainingMs / 1000))
+  const betweenRepsProgress01 =
+    rt.phase === 'between_reps' ? clamp01(1 - betweenRemainingMs / timing.betweenRepsMs) : 0
+  const restProgress01 =
+    rt.phase === 'wait_rest' && down && rt.restStableStartMs != null
+      ? clamp01((nowMs - rt.restStableStartMs) / timing.restStableMs)
+      : 0
+  const downProgress01 =
+    rt.phase === 'wait_arms_down' && down && rt.downStableStartMs != null
+      ? clamp01((nowMs - rt.downStableStartMs) / timing.stableDownMs)
+      : 0
   const vars = {
     nextRep,
     repsTarget,
     done,
     remaining,
     secondsLeft,
+    secondsUntilNext,
   }
 
   if (rt.phase === 'between_reps') {
@@ -207,11 +226,25 @@ function buildUi(rt, nowMs, up, down, poseConfig) {
     ))
   }
 
+  const phaseProgress01 =
+    rt.phase === 'holding'
+      ? progress
+      : rt.phase === 'between_reps'
+        ? betweenRepsProgress01
+        : rt.phase === 'wait_rest'
+          ? restProgress01
+          : rt.phase === 'wait_arms_down'
+            ? downProgress01
+            : rt.phase === 'complete'
+              ? 1
+              : 0
+
   return {
     phase: rt.phase,
     line1,
     line2,
     progress,
+    phaseProgress01,
     sessionProgress01,
     score01,
     averageScore: avgScore,
@@ -219,6 +252,12 @@ function buildUi(rt, nowMs, up, down, poseConfig) {
     repsCompleted: done,
     repsTarget,
     currentRep: rt.phase === 'complete' ? repsTarget : nextRep,
+    secondsLeft,
+    secondsUntilNext,
+    restRequiredSeconds: Math.max(1, Math.ceil(timing.restStableMs / 1000)),
+    restProgress01,
+    betweenRepsProgress01,
+    downProgress01,
     flags: { armsUp: up, armsDown: down },
   }
 }

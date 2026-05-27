@@ -28,23 +28,23 @@ export function useKindExerciseDetail(exerciseId, assignmentId) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!exerciseId) {
-      setData(null)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
     let cancelled = false
 
     async function run() {
+      if (!exerciseId) {
+        setData(null)
+        setLoading(false)
+        setError(null)
+        return
+      }
+
       setLoading(true)
       setError(null)
 
       const { data: ex, error: exErr } = await supabase
         .from('exercises')
         .select(
-          'id, title, name, description, duration_seconds, difficulty, focus, media_url, thumbnail_url, reps, xp_value, pose_enabled, pose_config'
+          'id, title, name, description, duration_seconds, difficulty, focus, video_url, media_url, thumbnail_url, reps, xp_value, pose_enabled, pose_config'
         )
         .eq('id', exerciseId)
         .maybeSingle()
@@ -102,6 +102,7 @@ export function useKindExerciseDetail(exerciseId, assignmentId) {
               : null,
         imageUrl: norm.imageUrl,
         descriptionDisplay,
+        videoUrl: typeof ex.video_url === 'string' && ex.video_url.trim() ? ex.video_url.trim() : null,
         mediaUrl: typeof ex.media_url === 'string' && ex.media_url.trim() ? ex.media_url.trim() : null,
         thumbnailUrl:
           typeof ex.thumbnail_url === 'string' && ex.thumbnail_url.trim()

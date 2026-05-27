@@ -17,7 +17,7 @@ export default function KinePatientHeaderCard({ patient, parent, onQrClick, qrDi
   return (
     <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3]">
       <div className="flex items-start justify-between gap-6">
-        <div className="flex min-w-0 flex-1 gap-5">
+        <div className="flex min-w-0 flex-1 items-start gap-5">
           <img
             src={patient?.avatarUrl}
             alt={patient?.name ? `Profielfoto van ${patient.name}` : ''}

@@ -103,67 +103,79 @@ export default function OuderOefenplanning() {
             Oefenplanning
           </h1>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[590px_313px]">
-            <OuderWeekStrip
-              days={planning.days}
-              activeKey={planning.selectedDayKey}
-              onSelectDay={planning.setSelectedDayKey}
-              onPrevWeek={() => setWeekStart((d) => startOfWeekLocal(addDaysLocal(d, -7)))}
-              onNextWeek={() => setWeekStart((d) => startOfWeekLocal(addDaysLocal(d, 7)))}
-              rangeLabel={planning.rangeLabel}
-            />
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-[590px_313px]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <OuderWeekStrip
+                days={planning.days}
+                activeKey={planning.selectedDayKey}
+                onSelectDay={planning.setSelectedDayKey}
+                onPrevWeek={() => setWeekStart((d) => startOfWeekLocal(addDaysLocal(d, -7)))}
+                onNextWeek={() => setWeekStart((d) => startOfWeekLocal(addDaysLocal(d, 7)))}
+                rangeLabel={planning.rangeLabel}
+              />
 
-            <section className="rounded-lg border-2 border-[#e1dbd3] bg-white px-[21px] pb-[22px] pt-[25px] shadow-[0_2px_0_0_#e1dbd3]">
-              <p className="font-nimbli-heading text-lg font-bold text-[#1a1a1a]">Aankomende oefeningen</p>
-              <div className="mt-5 flex flex-col gap-3">
-                {planning.loading ? (
-                  <div className="text-sm text-nimbli-muted">Laden…</div>
-                ) : (
-                  (planning.upcoming ?? []).map((u) => (
-                    <OuderUpcomingExercise key={u.id} title={u.title} goal={u.goal} meta={u.meta} />
-                  ))
-                )}
-              </div>
-            </section>
-          </div>
+              <section className="rounded-lg border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
+                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">
+                  {selectedDay?.date ? formatDayHeader(selectedDay.date) : '—'}
+                </p>
+                <div className="mt-4 flex flex-col gap-3">
+                  {planning.loading || childrenLoading ? (
+                    <div className="text-sm text-nimbli-muted">Laden…</div>
+                  ) : plannedForSelectedDay.length === 0 ? (
+                    <div className="text-sm text-nimbli-muted">Geen oefeningen gepland.</div>
+                  ) : (
+                    plannedForSelectedDay.map((p) => (
+                      <OuderPlannedExerciseRow
+                        key={`${p.id}-${p.exerciseId}`}
+                        title={p.title}
+                        focus={p.focus}
+                        categoryTone={p.categoryTone}
+                        reps={p.reps}
+                        minutes={p.minutes}
+                        imageUrl={p.imageUrl}
+                        done={p.done}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[590px_313px]">
-            <section className="rounded-lg border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
-              <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">
-                {selectedDay?.date ? formatDayHeader(selectedDay.date) : '—'}
-              </p>
-              <div className="mt-4 flex flex-col gap-3">
-                {planning.loading || childrenLoading ? (
-                  <div className="text-sm text-nimbli-muted">Laden…</div>
-                ) : plannedForSelectedDay.length === 0 ? (
-                  <div className="text-sm text-nimbli-muted">Geen oefeningen gepland.</div>
-                ) : (
-                  plannedForSelectedDay.map((p) => (
-                    <OuderPlannedExerciseRow
-                      key={`${p.id}-${p.exerciseId}`}
-                      title={p.title}
-                      reps={p.reps}
-                      minutes={p.minutes}
-                      imageUrl={p.imageUrl}
-                      done={p.done}
-                    />
-                  ))
-                )}
-              </div>
-            </section>
+            <div className="flex flex-col gap-6">
+              <section className="rounded-lg border-2 border-[#e1dbd3] bg-white px-[21px] pb-[22px] pt-[25px] shadow-[0_2px_0_0_#e1dbd3]">
+                <p className="font-nimbli-heading text-lg font-bold text-[#1a1a1a]">Aankomende oefeningen</p>
+                <div className="mt-5 flex flex-col gap-3">
+                  {planning.loading ? (
+                    <div className="text-sm text-nimbli-muted">Laden…</div>
+                  ) : (
+                    (planning.upcoming ?? []).map((u) => (
+                      <OuderUpcomingExercise
+                        key={u.id}
+                        title={u.title}
+                        focus={u.focus}
+                        categoryTone={u.categoryTone}
+                        reps={u.reps}
+                        minutes={u.minutes}
+                        imageUrl={u.imageUrl}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
 
-            <section className="rounded-lg border-2 border-[#e1dbd3] bg-white px-[21px] pb-[22px] pt-[21px] shadow-[0_2px_0_0_#e1dbd3]">
-              <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Recent</p>
-              <div className="mt-4 flex flex-col gap-3">
-                {planning.loading ? (
-                  <div className="text-sm text-nimbli-muted">Laden…</div>
-                ) : (
-                  (planning.recent ?? []).map((r) => (
-                    <OuderRecentRow key={r.id} title={r.title} time={r.time} xp={r.xp} />
-                  ))
-                )}
-              </div>
-            </section>
+              <section className="rounded-lg border-2 border-[#e1dbd3] bg-white px-[21px] pb-[22px] pt-[21px] shadow-[0_2px_0_0_#e1dbd3]">
+                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Recent</p>
+                <div className="mt-4 flex flex-col gap-3">
+                  {planning.loading ? (
+                    <div className="text-sm text-nimbli-muted">Laden…</div>
+                  ) : (
+                    (planning.recent ?? []).map((r) => (
+                      <OuderRecentRow key={r.id} title={r.title} time={r.time} xp={r.xp} />
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </main>

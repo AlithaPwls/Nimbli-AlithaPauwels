@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Building2, Check, CreditCard, Sparkles } from 'lucide-react'
+import LoadingScreen from '@/components/LoadingScreen.jsx'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useKinePracticeRegistration } from '@/hooks/useKinePracticeRegistration.js'
@@ -78,9 +79,10 @@ export default function RegisterKinePractice() {
 
   const skipAccount = Boolean(user && role === 'kine')
   const steps = useMemo(() => buildSteps(form.plan, skipAccount), [form.plan, skipAccount])
-  const currentKey = steps[stepIndex] ?? 'plan'
   const totalSteps = steps.length
-  const isLastStep = stepIndex >= totalSteps - 1
+  const currentStepIndex = Math.min(stepIndex, Math.max(0, totalSteps - 1))
+  const currentKey = steps[currentStepIndex] ?? 'plan'
+  const isLastStep = currentStepIndex >= totalSteps - 1
 
   useEffect(() => {
     if (authLoading) return
@@ -94,12 +96,6 @@ export default function RegisterKinePractice() {
       }
     }
   }, [authLoading, user, role, profile, navigate])
-
-  useEffect(() => {
-    if (stepIndex >= steps.length) {
-      setStepIndex(Math.max(0, steps.length - 1))
-    }
-  }, [steps.length, stepIndex])
 
   const update = useCallback((key, value) => {
     setForm((f) => {
@@ -169,11 +165,7 @@ export default function RegisterKinePractice() {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-nimbli-canvas font-nimbli-body text-nimbli-muted">
-        Laden…
-      </div>
-    )
+    return <LoadingScreen title="Account laden" message="We controleren je registratie." />
   }
 
   return (
@@ -185,28 +177,28 @@ export default function RegisterKinePractice() {
           className="inline-flex cursor-pointer items-center gap-2 rounded-md font-nimbli-heading text-lg font-bold text-nimbli-ink transition-colors duration-200 hover:text-nimbli focus-visible:ring-[3px] focus-visible:ring-nimbli/40 focus-visible:outline-none motion-reduce:transition-none"
         >
           <ArrowLeft className="size-5 shrink-0" aria-hidden strokeWidth={2.25} />
-          {stepIndex === 0 ? 'Terug naar login' : 'Vorige stap'}
+          {currentStepIndex === 0 ? 'Terug naar login' : 'Vorige stap'}
         </button>
       </header>
 
       <main className="flex flex-1 flex-col items-center px-4 pb-12 pt-2 sm:px-6">
         <div className="w-full max-w-[520px]">
           <p className="text-center text-sm font-nimbli-heading font-semibold text-nimbli-muted">
-            Stap {stepIndex + 1} van {totalSteps}
+            Stap {currentStepIndex + 1} van {totalSteps}
           </p>
           <div
             className="mx-auto mt-4 flex justify-center gap-2"
             role="progressbar"
-            aria-valuenow={stepIndex + 1}
+            aria-valuenow={currentStepIndex + 1}
             aria-valuemin={1}
             aria-valuemax={totalSteps}
-            aria-label={`Stap ${stepIndex + 1} van ${totalSteps}`}
+            aria-label={`Stap ${currentStepIndex + 1} van ${totalSteps}`}
           >
             {steps.map((_, i) => (
               <span
                 key={i}
                 className={`size-2.5 shrink-0 rounded-full transition-colors duration-200 motion-reduce:transition-none ${
-                  i <= stepIndex ? 'bg-nimbli' : 'bg-nimbli-slot-border/60'
+                  i <= currentStepIndex ? 'bg-nimbli' : 'bg-nimbli-slot-border/60'
                 }`}
               />
             ))}

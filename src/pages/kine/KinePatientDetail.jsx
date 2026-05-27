@@ -18,6 +18,7 @@ import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useAssignPatientExercises } from '@/hooks/kine/useAssignPatientExercises.js'
 import { useDeleteKinePatient } from '@/hooks/kine/useDeleteKinePatient.js'
+import { useDeletePatientExerciseAssignment } from '@/hooks/kine/useDeletePatientExerciseAssignment.js'
 import { useKinePatientDetail } from '@/hooks/kine/useKinePatientDetail.js'
 import { usePatientNotes } from '@/hooks/kine/usePatientNotes.js'
 
@@ -29,6 +30,9 @@ function PatientDetailTabPanel({
   loading,
   patientName,
   onAddExercise,
+  onDeleteExercise,
+  deletingExerciseId,
+  deleteExerciseError,
   notes,
   notesLoading,
   onNewNote,
@@ -48,6 +52,9 @@ function PatientDetailTabPanel({
         loading={loading}
         patientName={patientName}
         onAddExercise={onAddExercise}
+        onDeleteExercise={onDeleteExercise}
+        deletingExerciseId={deletingExerciseId}
+        deleteExerciseError={deleteExerciseError}
       />
     )
   }
@@ -92,6 +99,13 @@ export default function KinePatientDetail() {
     clearError: clearDeleteError,
   } = useDeleteKinePatient()
 
+  const {
+    deleteAssignment,
+    deletingAssignmentId,
+    error: deleteAssignmentError,
+    clearError: clearDeleteAssignmentError,
+  } = useDeletePatientExerciseAssignment()
+
   const [activeTab, setActiveTab] = useState('overzicht')
   const [inviteOpen, setInviteOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -123,6 +137,7 @@ export default function KinePatientDetail() {
 
   function openAssignDialog() {
     clearAssignError()
+    clearDeleteAssignmentError()
     setAssignOpen(true)
   }
 
@@ -180,15 +195,26 @@ export default function KinePatientDetail() {
     }
   }
 
-  async function handleAssignExercises(exerciseIds) {
+  async function handleAssignExercises({ selections }) {
     const res = await assign({
       childId: patient.id,
-      exerciseIds,
+      assignments: selections,
       assignedBy: profile?.id ?? null,
       alreadyAssignedIds: assignedExerciseIds,
     })
     if (res.ok) {
       setAssignOpen(false)
+      refetch({ silent: true })
+    }
+  }
+
+  async function handleDeleteExercise(exercise) {
+    const res = await deleteAssignment({
+      assignmentId: exercise?.assignmentId,
+      childId: patient?.id,
+    })
+
+    if (res.ok) {
       refetch({ silent: true })
     }
   }
@@ -239,6 +265,9 @@ export default function KinePatientDetail() {
               loading={loading}
               patientName={patient.name}
               onAddExercise={openAssignDialog}
+              onDeleteExercise={handleDeleteExercise}
+              deletingExerciseId={deletingAssignmentId}
+              deleteExerciseError={deleteAssignmentError}
               notes={notes}
               notesLoading={notesLoading}
               onNewNote={openNewNoteDialog}

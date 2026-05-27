@@ -7,7 +7,10 @@ export default function KinePatientExercisesSection({
   loading = false,
   patientName = 'de patiënt',
   onAddExercise,
+  onDeleteExercise,
   addExerciseDisabled = false,
+  deletingExerciseId = null,
+  deleteExerciseError = null,
 }) {
   const list = Array.isArray(exercises) ? exercises : []
   const isEmpty = !loading && list.length === 0
@@ -43,13 +46,26 @@ export default function KinePatientExercisesSection({
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-4">
-            {list.map((exercise) => (
-              <li key={exercise.assignmentId ?? exercise.id}>
-                <KinePatientExerciseRow exercise={exercise} />
-              </li>
-            ))}
-          </ul>
+          <>
+            {deleteExerciseError ? (
+              <p className="mb-4 text-sm font-semibold text-red-600" role="alert">
+                {deleteExerciseError}
+              </p>
+            ) : null}
+
+            <ul className="flex flex-col gap-4">
+              {list.map((exercise) => (
+                <li key={exercise.assignmentId ?? exercise.id}>
+                  <KinePatientExerciseRow
+                    exercise={exercise}
+                    deleting={deletingExerciseId === exercise.assignmentId}
+                    deleteDisabled={!exercise.assignmentId}
+                    onDelete={onDeleteExercise}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </section>

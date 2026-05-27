@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router-dom'
+import LoadingScreen from '@/components/LoadingScreen.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 
 const ROLE_PATH = {
@@ -17,7 +18,7 @@ export default function ProtectedRoute({ children, allowedRole, allowedRoles }) 
   const { user, role, loading } = useAuth()
 
   if (loading) {
-    return <div>Laden…</div>
+    return <LoadingScreen title="Welkom terug" message="We zoeken jouw Nimbli-plek." />
   }
 
   if (!user) {
@@ -27,7 +28,7 @@ export default function ProtectedRoute({ children, allowedRole, allowedRoles }) 
   // If we have a session but role is not resolved yet (or profile lookup failed),
   // don't bounce the user back to /login — that feels like a random logout.
   if (!role) {
-    return <div>Laden…</div>
+    return <LoadingScreen title="Bijna klaar" message="We halen je profiel op." />
   }
   if (!ROLE_PATH[role]) {
     return <Navigate to="/login" replace />

@@ -10,7 +10,7 @@ export function useAssignPatientExercises() {
 
   const clearError = useCallback(() => setError(null), [])
 
-  const assign = useCallback(async ({ childId, exerciseIds, assignedBy, alreadyAssignedIds = [] }) => {
+  const assign = useCallback(async ({ childId, exerciseIds, assignments, assignedBy, reps, alreadyAssignedIds = [] }) => {
     if (!childId) {
       setError('Patiënt ontbreekt.')
       return { ok: false }
@@ -19,11 +19,23 @@ export function useAssignPatientExercises() {
     const assigned = new Set(
       Array.isArray(alreadyAssignedIds) ? alreadyAssignedIds.filter(Boolean) : []
     )
-    const unique = Array.from(
-      new Set((Array.isArray(exerciseIds) ? exerciseIds : []).filter((id) => id && !assigned.has(id)))
-    )
+    const normalizedAssignments = Array.isArray(assignments)
+      ? assignments
+          .map((a) => ({
+            exerciseId: a?.exerciseId ?? null,
+            reps: a?.reps ?? null,
+          }))
+          .filter((a) => a.exerciseId && !assigned.has(a.exerciseId))
+      : []
 
-    if (unique.length === 0) {
+    const uniqueIds =
+      normalizedAssignments.length > 0
+        ? normalizedAssignments.map((a) => a.exerciseId)
+        : Array.from(
+            new Set((Array.isArray(exerciseIds) ? exerciseIds : []).filter((id) => id && !assigned.has(id)))
+          )
+
+    if (uniqueIds.length === 0) {
       setError('Selecteer minstens één nieuwe oefening.')
       return { ok: false }
     }
@@ -31,10 +43,23 @@ export function useAssignPatientExercises() {
     setLoading(true)
     setError(null)
 
-    const rows = unique.map((exerciseId) => ({
+    const defaultRepsValue =
+      reps == null || !Number.isFinite(Number(reps))
+        ? null
+        : Math.min(99, Math.max(1, Math.round(Number(reps))))
+
+    const repsFor = (exerciseId) => {
+      const match = normalizedAssignments.find((a) => a.exerciseId === exerciseId)
+      if (!match) return defaultRepsValue
+      const n = Number(match.reps)
+      return Number.isFinite(n) ? Math.min(99, Math.max(1, Math.round(n))) : defaultRepsValue
+    }
+
+    const rows = uniqueIds.map((exerciseId) => ({
       child_id: childId,
       exercise_id: exerciseId,
       assigned_by: assignedBy ?? null,
+      reps: repsFor(exerciseId),
     }))
 
     const { error: insertErr } = await supabase.from('exercise_assignments').insert(rows)
@@ -46,7 +71,7 @@ export function useAssignPatientExercises() {
       return { ok: false }
     }
 
-    return { ok: true, count: unique.length }
+    return { ok: true, count: uniqueIds.length }
   }, [])
 
   return { assign, loading, error, clearError }

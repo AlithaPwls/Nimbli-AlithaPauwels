@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import supabase from '@/lib/supabaseClient.js'
 
 function calcAge(dateOfBirth) {
@@ -140,7 +141,7 @@ export function useParentDashboardData(childProfileId) {
       if (exerciseIds.length > 0) {
         const { data: exRows, error: exErr } = await supabase
           .from('exercises')
-          .select('id, title, description, media_url, is_archived')
+          .select('id, title, description, media_url, focus, duration_seconds, is_archived')
           .in('id', exerciseIds)
 
         if (cancelled) return
@@ -158,17 +159,21 @@ export function useParentDashboardData(childProfileId) {
       const upcomingList = assignmentRows
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
-          const title = ex?.title ?? ex?.name ?? 'Oefening'
-          const goal = ex?.focus?.trim() || prof?.treatment_goal?.trim() || 'Oefening'
+          const norm = ex ? normalizeExerciseRow(ex) : null
           const reps = typeof a?.reps === 'number' ? a.reps : null
-          const unit = a?.rep_unit ? String(a.rep_unit) : null
-          const meta = reps ? `• ${reps}${unit ? ` ${unit}` : ''}` : '• Start binnenkort'
+          const minutes =
+            ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
+              ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))
+              : null
           return {
             id: a.id,
             exerciseId: a.exercise_id,
-            title,
-            goal,
-            meta,
+            title: norm?.title ?? 'Oefening',
+            focus: norm?.category ?? 'Oefening',
+            categoryTone: norm?.categoryTone ?? 'default',
+            reps,
+            minutes,
+            imageUrl: norm?.imageUrl,
           }
         })
         .slice(0, 3)

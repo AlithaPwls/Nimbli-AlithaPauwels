@@ -10,7 +10,7 @@
  * 6. On unmount: stop camera, cancel rAF, close landmarker (frees GPU/WASM).
  */
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Volume2, VolumeX } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ import {
 } from '@/lib/kind/rulesEngineRoutine.js'
 import supabase from '@/lib/supabaseClient.js'
 import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
+import { useSpeechGuide } from '@/hooks/kind/useSpeechGuide.js'
 import { POSE_MODEL_LITE, VISION_WASM } from '@/lib/kind/poseConstants.js'
 
 async function createPoseLandmarker(delegate = 'GPU') {
@@ -35,6 +36,115 @@ async function createPoseLandmarker(delegate = 'GPU') {
   })
 }
 
+function pct(value) {
+  return Math.max(0, Math.min(100, Number(value) * 100 || 0))
+}
+
+function getDistanceOverlayCopy(poseUi) {
+  if (!poseUi) {
+    return {
+      title: 'Maak je klaar',
+      subtitle: 'Ga volledig in beeld staan.',
+      progressLabel: 'Voorbereiden',
+    }
+  }
+
+  switch (poseUi.phase) {
+    case 'between_reps':
+      return {
+        title: poseUi.secondsUntilNext > 0 ? `Pauze ${poseUi.secondsUntilNext}s` : 'Neem rustpositie',
+        subtitle: 'Wacht tot de teller klaar is. Daarna mag je terug naar rust.',
+        progressLabel: 'Wachten op volgende stap',
+      }
+    case 'wait_rest':
+      return {
+        title: 'Houd rustpositie',
+        subtitle: `Blijf ${poseUi.restRequiredSeconds} seconde stil. Als de balk vol is, mag je starten.`,
+        progressLabel: 'Rustpositie vasthouden',
+      }
+    case 'wait_arms_up':
+      return {
+        title: `Start herhaling ${poseUi.currentRep}`,
+        subtitle: 'Rustpositie is goed. Ga nu naar de oefenhouding.',
+        progressLabel: 'Klaar voor de volgende herhaling',
+      }
+    case 'holding':
+      return {
+        title: poseUi.secondsLeft > 0 ? `Nog ${poseUi.secondsLeft}s` : 'Bijna klaar',
+        subtitle: poseUi.line2 || 'Houd de pose vast tot de balk vol is.',
+        progressLabel: 'Pose vasthouden',
+      }
+    case 'wait_arms_down':
+      return {
+        title: 'Terug naar rust',
+        subtitle: 'Ga rustig terug naar de rustpositie en blijf even stil.',
+        progressLabel: 'Rust detecteren',
+      }
+    case 'complete':
+      return {
+        title: 'Klaar',
+        subtitle: poseUi.line2 || 'Super gedaan.',
+        progressLabel: 'Oefening voltooid',
+      }
+    default:
+      return {
+        title: poseUi.line1 || 'Volg de instructie',
+        subtitle: poseUi.line2 || 'Blijf goed in beeld.',
+        progressLabel: 'Voortgang',
+      }
+  }
+}
+
+function getPoseSpeechPrompt(poseUi, overlayCopy) {
+  if (!poseUi) return null
+
+  switch (poseUi.phase) {
+    case 'between_reps':
+      return {
+        key: `between_reps:${poseUi.repsCompleted}`,
+        text: 'Pauze. Wacht even.',
+      }
+    case 'wait_rest':
+      return {
+        key: `wait_rest:${poseUi.currentRep}`,
+        text: 'Houd rustpositie. Blijf even stil.',
+      }
+    case 'wait_arms_up':
+      return {
+        key: `wait_arms_up:${poseUi.currentRep}`,
+        text: `Start herhaling ${poseUi.currentRep}. Ga naar de oefenhouding.`,
+      }
+    case 'holding': {
+      const seconds = Number(poseUi.secondsLeft)
+      if (Number.isFinite(seconds) && seconds > 0) {
+        return {
+          key: `holding:${poseUi.currentRep}:${seconds}`,
+          text: `Nog ${seconds} seconden.`,
+        }
+      }
+      return {
+        key: `holding:${poseUi.currentRep}:done`,
+        text: 'Bijna klaar.',
+      }
+    }
+    case 'wait_arms_down':
+      return {
+        key: `wait_arms_down:${poseUi.currentRep}`,
+        text: 'Terug naar rust.',
+      }
+    case 'complete':
+      return {
+        key: 'complete',
+        text: 'Klaar. Super gedaan.',
+      }
+    default:
+      return {
+        key: `${poseUi.phase}:${overlayCopy.title}`,
+        text: [overlayCopy.title, overlayCopy.subtitle].filter(Boolean).join('. '),
+      }
+  }
+}
+
 export default function PoseDetection() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -44,11 +154,18 @@ export default function PoseDetection() {
   const repsParam = searchParams.get('reps')
   const xpParam = searchParams.get('xp')
   const { childId } = useActiveChildId()
+  const {
+    supported: speechSupported,
+    muted: speechMuted,
+    setMuted: setSpeechMuted,
+    speak,
+  } = useSpeechGuide({ rate: 1 })
 
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const landmarkerRef = useRef(null)
   const rafRef = useRef(0)
+  const lastSpokenKeyRef = useRef('')
 
   const [error, setError] = useState(null)
   const [hint, setHint] = useState('Camera starten…')
@@ -109,10 +226,6 @@ export default function PoseDetection() {
 
     let cancelled = false
     const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      setError('Canvas niet beschikbaar.')
-      return undefined
-    }
 
     const isStretchSterren = poseType === 'stretch_sterren' || routine === 'stretchSterren'
     const hasDbRulesEngine =
@@ -133,6 +246,11 @@ export default function PoseDetection() {
     const lastUiAtRef = { current: 0 }
 
     async function run() {
+      if (!ctx) {
+        setError('Canvas niet beschikbaar.')
+        return
+      }
+
       setError(null)
       setHint('Camera starten…')
 
@@ -313,82 +431,132 @@ export default function PoseDetection() {
       lastLoggedRepRef.current = 0
       sessionStartMsRef.current = null
     }
-  }, [routine, poseType, poseConfig, repsParam, exerciseId, assignmentId, childId, navigate])
+  }, [routine, poseType, poseConfig, repsParam, exerciseId, assignmentId, childId, xpParam, navigate])
 
   const showRoutineOverlay =
     (poseType === 'stretch_sterren' ||
       routine === 'stretchSterren' ||
       poseType === RULES_ENGINE_POSE_TYPE) &&
     poseUi
+  const overlayCopy = getDistanceOverlayCopy(poseUi)
+  const speechPrompt = showRoutineOverlay ? getPoseSpeechPrompt(poseUi, overlayCopy) : null
+  const speechPromptKey = speechPrompt?.key ?? ''
+  const speechPromptText = speechPrompt?.text ?? ''
+
+  useEffect(() => {
+    if (!speechSupported || speechMuted || !speechPromptKey || !speechPromptText) return
+    if (lastSpokenKeyRef.current === speechPromptKey) return
+
+    lastSpokenKeyRef.current = speechPromptKey
+    speak(speechPromptText)
+  }, [speechMuted, speechPromptKey, speechPromptText, speechSupported, speak])
 
   return (
-    <div className="flex min-h-svh flex-col bg-kind-canvas" data-page="kind-pose-detection">
-      <header className="flex shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-kind-white px-4 py-3">
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-black text-white" data-page="kind-pose-detection">
+      <header className="absolute left-0 right-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 via-black/30 to-transparent px-4 pb-8 pt-4 sm:px-5">
         <button
           type="button"
           onClick={backToExercise}
-          className="inline-flex items-center gap-2 rounded-sm font-nimbli-heading text-[18px] font-bold text-nimbli-ink transition-colors hover:text-kind-green-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white/90 px-3.5 py-2 font-nimbli-heading text-sm font-black text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary sm:text-base"
         >
           <ArrowLeft className="size-5 shrink-0" aria-hidden strokeWidth={2.25} />
           Terug
         </button>
-        {hint ? (
-          <p className="max-w-[60%] truncate font-nimbli-body text-xs text-kind-gray">{hint}</p>
-        ) : null}
+        <div className="flex items-start gap-2">
+          {hint ? (
+            <p className="rounded-full bg-black/55 px-3.5 py-2 text-right font-nimbli-heading text-sm font-bold text-white ring-1 ring-white/15 sm:text-lg">
+              {hint}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={!speechSupported}
+            onClick={() => setSpeechMuted((value) => !value)}
+            className="inline-flex size-10 items-center justify-center rounded-full bg-white/90 text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={speechMuted ? 'Zet voorlezen aan' : 'Zet voorlezen uit'}
+          >
+            {speechMuted ? (
+              <VolumeX className="size-5" aria-hidden />
+            ) : (
+              <Volume2 className="size-5" aria-hidden />
+            )}
+          </button>
+        </div>
       </header>
 
-      <main className="relative flex min-h-0 flex-1 flex-col items-center justify-center p-4">
+      <main className="relative min-h-svh flex-1 overflow-hidden bg-black">
         {error ? (
-          <p className="max-w-md rounded-lg border border-kind-border bg-kind-white px-4 py-3 text-center font-nimbli-body text-sm text-kind-red">
+          <p className="absolute left-1/2 top-1/2 z-40 w-[min(92vw,640px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border-2 border-kind-border bg-kind-white px-6 py-5 text-center font-nimbli-heading text-2xl font-bold text-kind-red shadow-2xl sm:text-3xl">
             {error}
           </p>
         ) : null}
 
-        <div className="relative flex max-h-[75vh] max-w-3xl justify-center overflow-hidden rounded-2xl bg-black shadow-lg ring-1 ring-black/10">
-          <div className="relative inline-block max-w-full scale-x-[-1]">
-            <video ref={videoRef} className="block max-h-[75vh] w-auto max-w-full" playsInline muted />
+        <div className="absolute inset-0 overflow-hidden bg-black">
+          <div className="relative size-full scale-x-[-1]">
+            <video ref={videoRef} className="block size-full object-cover" playsInline muted />
             <canvas
               ref={canvasRef}
-              className="pointer-events-none absolute left-0 top-0 size-full max-h-[75vh] max-w-full"
+              className="pointer-events-none absolute inset-0 size-full object-cover"
               aria-hidden
             />
           </div>
 
           {showRoutineOverlay ? (
-            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/55 via-transparent to-black/75 p-4 pt-3 text-center">
-              <div className="flex flex-col items-center gap-2">
-                <div className="rounded-full bg-black/45 px-3 py-1 font-nimbli-heading text-sm font-bold tabular-nums text-white ring-1 ring-white/20">
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/50 px-3 pb-3 pt-18 text-center sm:px-4 sm:pb-4 sm:pt-20">
+              <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-2">
+                <div className="rounded-full bg-kind-yellow px-3.5 py-1 font-nimbli-heading text-sm font-black tabular-nums text-nimbli-ink shadow-lg ring-1 ring-white/40 sm:text-base">
                   {poseUi.repsCompleted} / {poseUi.repsTarget} herhalingen
                 </div>
-                <svg viewBox="0 0 100 3" className="h-1.5 w-full max-w-xs text-kind-yellow" aria-hidden>
-                  <rect x="0" y="0" width="100" height="3" rx="1.5" className="fill-white/20" />
+                <svg viewBox="0 0 100 4" className="h-2 w-full max-w-md text-kind-yellow" aria-hidden>
+                  <rect x="0" y="0" width="100" height="3" rx="1.5" className="fill-white/25" />
                   <rect
                     x="0"
                     y="0"
-                    width={Math.max(0, Math.min(100, (poseUi.sessionProgress01 ?? 0) * 100))}
+                    width={pct(poseUi.sessionProgress01 ?? 0)}
                     height="3"
                     rx="1.5"
                     className="fill-current"
                   />
                 </svg>
               </div>
-              <div className="flex flex-col justify-end pt-16">
-                <p className="font-nimbli-heading text-lg font-bold text-white drop-shadow-sm">{poseUi.line1}</p>
-                <p className="mt-1 font-nimbli-body text-sm leading-snug text-white/95 drop-shadow-sm">{poseUi.line2}</p>
-                {poseUi.phase === 'holding' ? (
+              <div className="mx-auto flex w-full max-w-2xl flex-col justify-end rounded-2xl bg-kind-white/92 px-3.5 py-3 text-nimbli-ink shadow-xl ring-1 ring-white/40 backdrop-blur-sm sm:px-5 sm:py-4">
+                <p className="font-nimbli-heading text-[clamp(1.25rem,2.5vw,2.1rem)] font-black leading-none tracking-tight text-nimbli-ink">
+                  {overlayCopy.title}
+                </p>
+                <p className="mx-auto mt-1.5 max-w-xl font-nimbli-body text-[clamp(0.8rem,1.2vw,1rem)] font-bold leading-snug text-[#364153]">
+                  {overlayCopy.subtitle}
+                </p>
+                <div className="mt-2.5">
+                  <div className="mb-1 flex items-center justify-between gap-3 font-nimbli-heading text-[11px] font-black text-[#364153] sm:text-sm">
+                    <span>{overlayCopy.progressLabel}</span>
+                    <span className="tabular-nums">{Math.round(pct(poseUi.phaseProgress01 ?? poseUi.progress ?? 0))}%</span>
+                  </div>
                   <svg
-                    viewBox="0 0 100 4"
+                    viewBox="0 0 100 6"
                     className={cn(
-                      'mx-auto mt-3 h-2 w-full max-w-xs text-kind-green-primary',
-                      poseUi.progress >= 1 && 'text-kind-yellow'
+                      'h-3 w-full text-kind-green-primary',
+                      (poseUi.phase === 'between_reps' || poseUi.phase === 'complete') && 'text-kind-yellow'
                     )}
                     aria-hidden
                   >
-                    <rect x="0" y="0" width="100" height="4" rx="2" className="fill-white/25" />
-                    <rect x="0" y="0" width={Math.max(0, Math.min(100, poseUi.progress * 100))} height="4" rx="2" className="fill-current" />
+                    <rect x="0" y="0" width="100" height="6" rx="3" className="fill-[#e1dbd3]" />
+                    <rect
+                      x="0"
+                      y="0"
+                      width={pct(poseUi.phaseProgress01 ?? poseUi.progress ?? 0)}
+                      height="6"
+                      rx="3"
+                      className="fill-current"
+                    />
                   </svg>
-                ) : null}
+                </div>
               </div>
+            </div>
+          ) : hint && !error ? (
+            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/25 px-6 text-center">
+              <p className="rounded-[24px] bg-kind-white/95 px-5 py-4 font-nimbli-heading text-[clamp(1.25rem,3vw,2.4rem)] font-black text-nimbli-ink shadow-2xl ring-2 ring-white/30">
+                {hint}
+              </p>
             </div>
           ) : null}
         </div>

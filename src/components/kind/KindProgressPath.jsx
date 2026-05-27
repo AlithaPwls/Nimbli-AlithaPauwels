@@ -83,7 +83,7 @@ function PathSegment({ src, alt }) {
       alt={alt}
       width={439}
       height={797}
-      className="relative z-0 block w-full max-w-[412px] select-none"
+      className="relative z-0 block h-auto w-full select-none"
       draggable={false}
       decoding="async"
     />
@@ -117,8 +117,8 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
   )
 
   return (
-    <div className="flex flex-col items-center px-4 pb-16 pt-4 sm:px-6">
-      <section className="relative w-full max-w-[412px]" aria-label="Voortgang vandaag">
+    <div className="mx-auto flex w-3/4 min-w-0 flex-col items-center pb-16 pt-4">
+      <section className="relative w-full" aria-label="Voortgang vandaag">
         <PathSegment src={pathMainSvg} alt="" />
 
         <div className="pointer-events-none absolute inset-0">
@@ -175,7 +175,7 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
         onStartExercise={onStartExercise}
       />
 
-      <section className="relative -mt-1 w-full max-w-[412px]" aria-label="Eerdere dagen">
+      <section className="relative -mt-1 w-full" aria-label="Eerdere dagen">
         <PathSegment src={pathLowerSvg} alt="" />
 
         <div className="pointer-events-none absolute inset-0">

@@ -1,7 +1,8 @@
-import { ArrowLeft, Play } from 'lucide-react'
+import { ArrowLeft, Play, Square, Volume2 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useKindExerciseDetail } from '@/hooks/kind/useKindExerciseDetail.js'
+import { useSpeechGuide } from '@/hooks/kind/useSpeechGuide.js'
 import { routineFromExerciseTitle } from '@/lib/kind/routineFromExerciseTitle.js'
 
 function routineFromPoseConfig(poseEnabled, poseConfig) {
@@ -24,13 +25,21 @@ function youtubeEmbedUrl(url) {
   const m2 = t.match(/[?&]v=([^&]+)/)
   const id = (m1?.[1] || m2?.[1] || '').trim()
   if (!id) return null
-  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`
+  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&autoplay=1&mute=1`
 }
 
 function isDirectVideoUrl(url) {
   if (!url || typeof url !== 'string') return false
   const u = url.trim().toLowerCase()
-  return u.endsWith('.mp4') || u.endsWith('.webm') || u.endsWith('.mov') || u.includes('/storage/v1/object/')
+  const path = u.split(/[?#]/)[0]
+  return (
+    path.endsWith('.mp4') ||
+    path.endsWith('.webm') ||
+    path.endsWith('.mov') ||
+    path.endsWith('.m4v') ||
+    path.endsWith('.ogg') ||
+    u.includes('/exercise-videos/')
+  )
 }
 
 function formatDurationLabel(seconds) {
@@ -62,6 +71,7 @@ export default function Exercise() {
   const assignmentId = searchParams.get('assignmentId') || fromState?.assignmentId || null
 
   const { data, loading, error } = useKindExerciseDetail(exerciseId, assignmentId)
+  const { supported: speechSupported, speaking, speak, cancel } = useSpeechGuide()
 
   const title = data?.title ?? (loading ? 'Laden…' : 'Oefening')
   const repsDisplay = data?.repsLine ?? '—'
@@ -70,11 +80,20 @@ export default function Exercise() {
   const descriptionText = (data?.descriptionDisplay ?? '').trim()
   const durationLabel = formatDurationLabel(data?.durationSeconds)
 
-  const posterSrc = data?.thumbnailUrl || data?.mediaUrl || data?.imageUrl
-  const mediaUrl = data?.mediaUrl || null
+  const posterSrc = data?.thumbnailUrl || data?.imageUrl
+  const mediaUrl = data?.videoUrl || data?.mediaUrl || null
   const showYouTube = Boolean(mediaUrl && isYouTubeUrl(mediaUrl) && youtubeEmbedUrl(mediaUrl))
   const showDirectVideo = Boolean(mediaUrl && !showYouTube && isDirectVideoUrl(mediaUrl))
   const ytEmbed = showYouTube ? youtubeEmbedUrl(mediaUrl) : null
+  const speechText = [title, descriptionText].filter((text) => text && text !== '—').join('. ')
+
+  function handleListenClick() {
+    if (speaking) {
+      cancel()
+      return
+    }
+    speak(speechText)
+  }
 
   const goToPoseDetection = () => {
     const qs = new URLSearchParams()
@@ -146,11 +165,14 @@ export default function Exercise() {
                   />
                 ) : showDirectVideo ? (
                   <video
+                    key={mediaUrl}
                     className="absolute inset-0 size-full object-cover"
                     src={mediaUrl}
+                    autoPlay
                     controls
+                    muted
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     poster={posterSrc || undefined}
                   />
                 ) : posterSrc ? (
@@ -175,9 +197,25 @@ export default function Exercise() {
               </div>
 
               <div className="w-full rounded-2xl border-l-2 border-kind-border bg-kind-white py-[30px] pl-10 pr-8 shadow-[0px_2px_0px_#e1dbd3]">
-                <h2 className="font-nimbli-heading text-[18px] font-bold text-[#364153]">
-                  Hoe doe je deze oefening?
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-nimbli-heading text-[18px] font-bold text-[#364153]">
+                    Hoe doe je deze oefening?
+                  </h2>
+                  <button
+                    type="button"
+                    disabled={!speechSupported || loading || !descriptionText}
+                    onClick={handleListenClick}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-kind-yellow px-4 py-2 font-nimbli-heading text-sm font-black text-nimbli-ink shadow-[0_2px_0_0_#d08700] transition-colors hover:bg-kind-yellow/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-yellow focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55"
+                    aria-label={speaking ? 'Stop voorlezen' : 'Lees de uitleg voor'}
+                  >
+                    {speaking ? (
+                      <Square className="size-4" aria-hidden fill="currentColor" />
+                    ) : (
+                      <Volume2 className="size-4" aria-hidden />
+                    )}
+                    {speaking ? 'Stop' : 'Luister'}
+                  </button>
+                </div>
                 <p className="mt-2 whitespace-pre-line font-nimbli-body text-base font-normal leading-normal text-[#101828]">
                   {loading && !data ? 'Laden…' : descriptionText || '—'}
                 </p>

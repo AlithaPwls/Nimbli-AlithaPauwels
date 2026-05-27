@@ -196,7 +196,15 @@ export default function DashboardOuder() {
                   </div>
                 ) : (
                   (dashboard.upcoming ?? []).map((u) => (
-                    <OuderUpcomingExercise key={u.id} title={u.title} goal={u.goal} meta={u.meta} />
+                    <OuderUpcomingExercise
+                      key={u.id}
+                      title={u.title}
+                      focus={u.focus}
+                      categoryTone={u.categoryTone}
+                      reps={u.reps}
+                      minutes={u.minutes}
+                      imageUrl={u.imageUrl}
+                    />
                   ))
                 )}
               </div>
