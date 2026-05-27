@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { Calendar, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -31,6 +31,7 @@ export default function OuderSidebar({
   selectedChildId = null,
   onSelectChild = null,
 }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -68,9 +69,13 @@ export default function OuderSidebar({
         <button
           type="button"
           onClick={() => {
-            if (Array.isArray(children) && children.length > 1) {
-              setOpen((v) => !v)
+            // Clicking the active child name should switch to the kind dashboard.
+            if (selectedChild) {
+              setOpen(false)
+              navigate('/dashboard/kind')
+              return
             }
+            if (Array.isArray(children) && children.length > 1) setOpen((v) => !v)
           }}
           className={cn(
             'flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left',

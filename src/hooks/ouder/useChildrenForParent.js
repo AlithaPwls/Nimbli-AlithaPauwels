@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 
 function childSortKey(row) {
@@ -16,6 +16,18 @@ export function useChildrenForParent(parentProfile) {
   const [children, setChildren] = useState([])
   const [loading, setLoading] = useState(Boolean(inviteCode))
   const [error, setError] = useState(null)
+  const [tick, setTick] = useState(0)
+
+  const refetch = useCallback(() => {
+    setTick((t) => t + 1)
+  }, [])
+
+  const patchChild = useCallback((childId, patch) => {
+    if (!childId || !patch) return
+    setChildren((prev) =>
+      (prev ?? []).map((c) => (c?.id === childId ? { ...c, ...patch } : c))
+    )
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -64,7 +76,7 @@ export function useChildrenForParent(parentProfile) {
     return () => {
       cancelled = true
     }
-  }, [inviteCode, parentProfileId])
+  }, [inviteCode, parentProfileId, tick])
 
   const derived = useMemo(() => {
     return (children ?? []).map((c) => {
@@ -75,6 +87,6 @@ export function useChildrenForParent(parentProfile) {
     })
   }, [children])
 
-  return { children, derived, loading, error }
+  return { children, derived, loading, error, refetch, patchChild }
 }
 

@@ -1,0 +1,4 @@
+project_id = "bouzkvgtuxfdbmcgvyiu"
+
+[functions.register-kine-practice]
+verify_jwt = false

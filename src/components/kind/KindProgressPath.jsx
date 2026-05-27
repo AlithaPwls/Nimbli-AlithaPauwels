@@ -1,9 +1,20 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AlarmClock, Check, Lock, Moon, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import pathMainSvg from '@/assets/kind-path-figma.svg'
 import pathLowerSvg from '@/assets/kind-path-figma-lower.svg'
 import KindTodayExercisesPanel from '@/components/kind/KindTodayExercisesPanel.jsx'
+import { useKindOverviewWeekChart } from '@/hooks/kind/useKindOverviewWeekChart.js'
+import { buildPathMarkersFromWeekDays, kindPathMonthLabel } from '@/lib/kind/weekCalendar.js'
+
+const VARIANT_ICONS = {
+  warn: AlarmClock,
+  ok: Check,
+  completed: Check,
+  sleep: Moon,
+  locked: Lock,
+}
 
 function Marker({ className, Icon, label, variant = 'neutral', labelClassName, onClick }) {
   const IconComponent = Icon
@@ -82,16 +93,33 @@ function PathSegment({ src, alt }) {
       alt={alt}
       width={439}
       height={797}
-      className="relative z-0 block w-full max-w-[412px] select-none"
+      className="relative z-0 block h-auto w-full select-none"
       draggable={false}
       decoding="async"
     />
   )
 }
 
-export default function KindProgressPath({ monthLabel = 'Januari' }) {
+function PathDayMarker({ marker }) {
+  const Icon = VARIANT_ICONS[marker.variant] ?? Check
+  return (
+    <Marker
+      className={marker.className}
+      Icon={Icon}
+      label={marker.label}
+      variant={marker.variant}
+    />
+  )
+}
+
+export default function KindProgressPath() {
+  const navigate = useNavigate()
   const [todayPanelOpen, setTodayPanelOpen] = useState(false)
   const [todayAnchorRect, setTodayAnchorRect] = useState(null)
+  const { weekDays, loading } = useKindOverviewWeekChart()
+
+  const monthLabel = useMemo(() => kindPathMonthLabel(new Date()), [])
+  const pathMarkers = useMemo(() => buildPathMarkersFromWeekDays(weekDays), [weekDays])
 
   const openTodayPanel = useCallback((event) => {
     setTodayAnchorRect(event.currentTarget.getBoundingClientRect())
@@ -103,24 +131,28 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
     setTodayAnchorRect(null)
   }, [])
 
+  const onStartExercise = useCallback(
+    (exercise) => {
+      closeTodayPanel()
+      const qs = new URLSearchParams()
+      qs.set('exerciseId', exercise.id)
+      if (exercise.assignmentId) qs.set('assignmentId', exercise.assignmentId)
+      navigate({ pathname: '/dashboard/kind/oefening', search: `?${qs.toString()}` }, { state: { exercise } })
+    },
+    [closeTodayPanel, navigate]
+  )
+
   return (
-    <div className="flex flex-col items-center px-4 pb-16 pt-4 sm:px-6">
-      <section className="relative w-full max-w-[412px]" aria-label="Voortgang vandaag">
+    <div className="mx-auto flex w-3/4 min-w-0 flex-col items-center pb-16 pt-4">
+      <section className="relative w-full" aria-label="Voortgang vandaag">
         <PathSegment src={pathMainSvg} alt="" />
 
         <div className="pointer-events-none absolute inset-0">
-          <Marker
-            className="left-[24%] top-[4.5%] -translate-x-1/2"
-            Icon={AlarmClock}
-            label="ZA"
-            variant="warn"
-          />
-          <Marker
-            className="left-[57%] top-[19%] -translate-x-1/2"
-            Icon={Check}
-            label="DI"
-            variant="ok"
-          />
+          {!loading &&
+            pathMarkers.upperBeforeToday.map((marker) => (
+              <PathDayMarker key={marker.key} marker={marker} />
+            ))}
+
           <Marker
             className="left-[27%] top-[33%] -translate-x-1/2"
             Icon={Star}
@@ -129,29 +161,15 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
             labelClassName="text-xs font-normal"
             onClick={openTodayPanel}
           />
-          <Marker
-            className="left-[57%] top-[50%] -translate-x-1/2"
-            Icon={Moon}
-            label="VR"
-            variant="sleep"
-          />
-          <Marker
-            className="left-[24%] top-[66%] -translate-x-1/2"
-            Icon={Moon}
-            label="VR"
-            variant="sleep"
-          />
+
+          {!loading &&
+            pathMarkers.upperAfterToday.map((marker) => (
+              <PathDayMarker key={marker.key} marker={marker} />
+            ))}
 
           <p className="absolute left-[58%] top-[77%] -translate-x-1/2 font-nimbli-heading text-[26px] font-bold italic leading-tight tracking-tight text-[#6c6c6c]">
             {monthLabel}
           </p>
-
-          <Marker
-            className="left-[57%] top-[83%] -translate-x-1/2"
-            Icon={Lock}
-            label="DO"
-            variant="locked"
-          />
         </div>
       </section>
 
@@ -159,48 +177,17 @@ export default function KindProgressPath({ monthLabel = 'Januari' }) {
         open={todayPanelOpen}
         anchorRect={todayAnchorRect}
         onClose={closeTodayPanel}
+        onStartExercise={onStartExercise}
       />
 
-      <section className="relative -mt-1 w-full max-w-[412px]" aria-label="Eerdere dagen">
+      <section className="relative -mt-1 w-full" aria-label="Eerdere dagen">
         <PathSegment src={pathLowerSvg} alt="" />
 
         <div className="pointer-events-none absolute inset-0">
-          <Marker
-            className="left-[24%] top-[6%] -translate-x-1/2"
-            Icon={Check}
-            label="ZO"
-            variant="completed"
-          />
-          <Marker
-            className="left-[57%] top-[20%] -translate-x-1/2"
-            Icon={Check}
-            label="MA"
-            variant="completed"
-          />
-          <Marker
-            className="left-[24%] top-[34%] -translate-x-1/2"
-            Icon={Check}
-            label="DI"
-            variant="completed"
-          />
-          <Marker
-            className="left-[57%] top-[49%] -translate-x-1/2"
-            Icon={Check}
-            label="WO"
-            variant="completed"
-          />
-          <Marker
-            className="left-[24%] top-[67%] -translate-x-1/2"
-            Icon={Check}
-            label="DO"
-            variant="completed"
-          />
-          <Marker
-            className="left-[57%] top-[82%] -translate-x-1/2"
-            Icon={Check}
-            label="VR"
-            variant="completed"
-          />
+          {!loading &&
+            pathMarkers.lowerMarkers.map((marker) => (
+              <PathDayMarker key={marker.key} marker={marker} />
+            ))}
         </div>
       </section>
     </div>

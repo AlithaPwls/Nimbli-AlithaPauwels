@@ -11,13 +11,15 @@ function formatPct(progress) {
   return `${Math.round(clampProgress(progress) * 100)}%`
 }
 
-export default function KinePatientCard({ patient }) {
+export default function KinePatientCard({ patient, onSelect }) {
   const pct = formatPct(patient.progress)
   const barValue = progressValue(patient.progress)
 
   return (
     <button
       type="button"
+      onClick={() => onSelect?.(patient)}
+      aria-label={`Bekijk details van ${patient.name}`}
       className="group relative w-full cursor-pointer rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 hover:bg-nimbli-canvas/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
     >
       <div className="flex items-start gap-4">
@@ -49,7 +51,7 @@ export default function KinePatientCard({ patient }) {
               className="h-2 flex-1 overflow-hidden rounded-full bg-nimbli-canvas accent-[#82B3E1]"
               value={barValue}
               max={100}
-              aria-label={`Voortgang ${patient.name} ${barValue}%`}
+              aria-label={`Weekvoortgang ${patient.name}: ${barValue}% van toegewezen oefeningen`}
             />
             <p className="w-10 text-right text-[11px] font-semibold text-nimbli-muted">{pct}</p>
           </div>

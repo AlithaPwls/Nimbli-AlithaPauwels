@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Minus, Plus, Upload, X } from 'lucide-react'
+import { CheckCircle2, Loader2, Minus, Plus, Upload, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { createPracticeExercise } from '@/hooks/kine/createPracticeExercise.js'
+import { useGeneratePoseConfig } from '@/hooks/kine/useGeneratePoseConfig.js'
+import ExerciseFrameCapture from '@/components/kine/ExerciseFrameCapture.jsx'
 import {
   DIFFICULTY_OPTIONS,
   GOAL_OPTIONS,
-  difficultyLabelFromId,
 } from '@/lib/kineExerciseFormConstants.js'
+
+const EMPTY_LANDMARKS = Object.freeze({ rest: null, target: null })
+
+const XP_MIN = 10
+const XP_MAX = 150
+const XP_STEP = 10
+const XP_DEFAULT = 50
+
+function snapExerciseXp(n) {
+  if (!Number.isFinite(n)) return XP_DEFAULT
+  const stepped = Math.round(n / XP_STEP) * XP_STEP
+  return Math.min(XP_MAX, Math.max(XP_MIN, stepped))
+}
 
 function clampInt(n, min, max) {
   if (!Number.isFinite(n)) return min
@@ -31,6 +45,24 @@ function FieldBlock({ label, htmlFor, placeholder, value, onChange, inputProps =
         placeholder={placeholder}
         className="h-10 w-full rounded-md border border-[#e1dbd3] bg-white px-3 text-sm text-nimbli-ink placeholder:text-nimbli-muted transition-colors duration-200 motion-reduce:transition-none focus:border-nimbli focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
         {...inputProps}
+      />
+    </div>
+  )
+}
+
+function TextareaBlock({ label, htmlFor, placeholder, value, onChange, rows = 3 }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-nimbli-ink">
+        {label}
+      </label>
+      <textarea
+        id={htmlFor}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full resize-y rounded-md border border-[#e1dbd3] bg-white px-3 py-2 text-sm text-nimbli-ink placeholder:text-nimbli-muted transition-colors duration-200 motion-reduce:transition-none focus:border-nimbli focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
       />
     </div>
   )
@@ -131,6 +163,67 @@ function CounterField({ label, htmlFor, value, onChange, min, max }) {
   )
 }
 
+function XpField({ label, htmlFor, value, onChange }) {
+  function setSnapped(next) {
+    const n = typeof next === 'number' ? next : parseInt(String(next), 10)
+    onChange(snapExerciseXp(n))
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-nimbli-ink">
+        {label}
+      </label>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="XP verlagen"
+          disabled={value <= XP_MIN}
+          onClick={() => setSnapped(value - XP_STEP)}
+          className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-[#e1dbd3] bg-white text-nimbli-ink transition-colors duration-200 motion-reduce:transition-none hover:bg-nimbli-canvas/80 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
+        >
+          <Minus className="size-4" strokeWidth={2.25} aria-hidden />
+        </button>
+        <input
+          id={htmlFor}
+          inputMode="numeric"
+          autoComplete="off"
+          required
+          min={XP_MIN}
+          max={XP_MAX}
+          step={XP_STEP}
+          value={String(value)}
+          aria-valuenow={value}
+          aria-valuemin={XP_MIN}
+          aria-valuemax={XP_MAX}
+          onChange={(e) => {
+            const raw = e.target.value.replace(/\D/g, '')
+            if (raw === '') {
+              onChange(XP_MIN)
+              return
+            }
+            setSnapped(parseInt(raw, 10))
+          }}
+          onBlur={() => onChange(snapExerciseXp(value))}
+          className="h-9 w-14 rounded-md border border-[#e1dbd3] bg-white text-center font-nimbli-body text-sm font-semibold text-nimbli-ink tabular-nums transition-colors duration-200 motion-reduce:transition-none [appearance:textfield] focus:border-nimbli focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <button
+          type="button"
+          aria-label="XP verhogen"
+          disabled={value >= XP_MAX}
+          onClick={() => setSnapped(value + XP_STEP)}
+          className="flex size-9 cursor-pointer items-center justify-center rounded-md border border-[#e1dbd3] bg-white text-nimbli-ink transition-colors duration-200 motion-reduce:transition-none hover:bg-nimbli-canvas/80 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
+        >
+          <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+        </button>
+      </div>
+      <p className="text-[11px] leading-snug text-nimbli-muted">
+        Beloning voor het kind: {XP_MIN}–{XP_MAX} XP, per {XP_STEP}.
+      </p>
+    </div>
+  )
+}
+
 /**
  * Compact modal: nieuwe oefening (clean layout, Nimbli tokens, Lucide icons).
  */
@@ -140,16 +233,32 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
   const measureVideoRef = useRef(null)
 
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [goalId, setGoalId] = useState('mobiliteit')
   const [repsCount, setRepsCount] = useState(10)
   const [difficultyId, setDifficultyId] = useState('gemiddeld')
   const [durationMinutes, setDurationMinutes] = useState(5)
+  const [xpValue, setXpValue] = useState(XP_DEFAULT)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [videoError, setVideoError] = useState(null)
   const [saveError,   setSaveError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [capturedLandmarks, setCapturedLandmarks] = useState(EMPTY_LANDMARKS)
+  const [generatedPoseConfig, setGeneratedPoseConfig] = useState(null)
+
+  const {
+    generate: generatePoseConfig,
+    reset: resetPoseGeneration,
+    loading: poseGenerateLoading,
+    error: poseGenerateError,
+  } = useGeneratePoseConfig()
+
+  const invalidatePoseGeneration = useCallback(() => {
+    setGeneratedPoseConfig(null)
+    resetPoseGeneration()
+  }, [resetPoseGeneration])
 
   const revokePreview = useCallback(() => {
     setPreviewUrl((prev) => {
@@ -157,16 +266,20 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       return null
     })
     setFile(null)
-  }, [])
+    setCapturedLandmarks(EMPTY_LANDMARKS)
+    invalidatePoseGeneration()
+  }, [invalidatePoseGeneration])
 
   useEffect(() => {
     if (!open) return
     setSaveError(null)
     setName('')
+    setDescription('')
     setGoalId('mobiliteit')
     setRepsCount(10)
     setDifficultyId('gemiddeld')
     setDurationMinutes(5)
+    setXpValue(XP_DEFAULT)
     setVideoError(null)
     setDragActive(false)
     setPreviewUrl((prev) => {
@@ -174,7 +287,10 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       return null
     })
     setFile(null)
-  }, [open])
+    setCapturedLandmarks(EMPTY_LANDMARKS)
+    setGeneratedPoseConfig(null)
+    resetPoseGeneration()
+  }, [open, resetPoseGeneration])
 
   function handleOpenChange(next) {
     if (!next) {
@@ -182,10 +298,12 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       revokePreview()
       setSaveError(null)
       setName('')
+      setDescription('')
       setGoalId('mobiliteit')
       setRepsCount(10)
       setDifficultyId('gemiddeld')
       setDurationMinutes(5)
+      setXpValue(XP_DEFAULT)
       setVideoError(null)
       setDragActive(false)
     }
@@ -210,6 +328,22 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       return URL.createObjectURL(next)
     })
     setFile(next)
+    setCapturedLandmarks(EMPTY_LANDMARKS)
+    invalidatePoseGeneration()
+  }
+
+  async function handleGeneratePoseConfig() {
+    const title = name.trim()
+    const result = await generatePoseConfig({
+      exerciseTitle: title,
+      goalId,
+      repsCount,
+      rest: capturedLandmarks.rest,
+      target: capturedLandmarks.target,
+    })
+    if (result.ok) {
+      setGeneratedPoseConfig(result.poseConfig)
+    }
   }
 
   function handleDrop(e) {
@@ -230,7 +364,18 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
 
     const repsN = clampInt(repsCount, 1, 99)
     const durationN = clampInt(durationMinutes, 1, 240)
-    const diffLabel = difficultyLabelFromId(difficultyId)
+
+    if (
+      previewUrl &&
+      capturedLandmarks.rest &&
+      capturedLandmarks.target &&
+      !generatedPoseConfig
+    ) {
+      setSaveError(
+        'Je hebt rust- en doelpositie vastgelegd. Klik eerst op Genereer oefening-logica, of wis één van de twee poses om zonder pose-regels op te slaan.',
+      )
+      return
+    }
 
     if (previewUrl && measureVideoRef.current) {
       const el = measureVideoRef.current
@@ -264,11 +409,14 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
       const result = await createPracticeExercise({
         practiceId,
         title,
+        description,
         goalId,
         difficultyId,
         repsCount: repsN,
         durationMinutes: durationN,
         file: fileToUpload,
+        poseConfig: generatedPoseConfig,
+        xpValue,
       })
 
       if (!result.ok) {
@@ -289,9 +437,11 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
   }
 
   const idName = `${baseId}-name`
+  const idDescription = `${baseId}-description`
   const idGoalGroup = `${baseId}-goal`
   const idReps = `${baseId}-reps`
   const idDuration = `${baseId}-duration`
+  const idXp = `${baseId}-xp`
   const idDiffGroup = `${baseId}-difficulty`
   const idFile = `${baseId}-file`
 
@@ -299,10 +449,10 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[min(92vh,720px)] max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-xl border border-[#e1dbd3] bg-white p-0 shadow-sm ring-0 sm:max-w-2xl"
+        className="grid-rows-[auto_minmax(0,1fr)] max-h-[min(92vh,720px)] max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-xl border border-[#e1dbd3] bg-white p-0 shadow-sm ring-0 sm:max-w-2xl"
       >
         <DialogDescription className="sr-only">
-          Formulier: naam, doel (categorie), herhalingen, moeilijkheid, duur, optioneel video.
+          Formulier: naam, omschrijving, doel (categorie), herhalingen, moeilijkheid, duur, XP, optioneel video.
         </DialogDescription>
 
         <header className="flex items-start justify-between gap-3 border-b border-[#e1dbd3] px-5 py-4">
@@ -321,7 +471,8 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
         </header>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto px-5 py-4 lg:grid-cols-[1fr_min(220px,100%)] lg:gap-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_min(220px,100%)] lg:gap-5">
             <div className="flex min-w-0 flex-col gap-3.5">
               <FieldBlock
                 label="Naam *"
@@ -330,6 +481,13 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                 value={name}
                 onChange={setName}
                 inputProps={{ required: true, autoComplete: 'off' }}
+              />
+              <TextareaBlock
+                label="Omschrijving"
+                htmlFor={idDescription}
+                placeholder="Geef een korte omschrijving van hoe de patiënt de oefening moet uitvoeren."
+                value={description}
+                onChange={setDescription}
               />
               <ChoiceChipRow
                 label="Doel *"
@@ -360,6 +518,12 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                 onChange={setDurationMinutes}
                 min={1}
                 max={240}
+              />
+              <XpField
+                label="XP-beloning *"
+                htmlFor={idXp}
+                value={xpValue}
+                onChange={setXpValue}
               />
             </div>
 
@@ -410,6 +574,95 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                 </p>
               ) : null}
             </div>
+          </div>
+
+          {previewUrl ? (
+            <>
+              <ExerciseFrameCapture
+                slot="rest"
+                slotLabel="Rustpositie"
+                videoUrl={previewUrl}
+                videoFileName={file?.name || 'video.mp4'}
+                onLandmarksCaptured={(payload) => {
+                  invalidatePoseGeneration()
+                  setCapturedLandmarks((prev) => ({ ...prev, rest: payload }))
+                }}
+                onClear={() => {
+                  invalidatePoseGeneration()
+                  setCapturedLandmarks((prev) => ({ ...prev, rest: null }))
+                }}
+              />
+              <ExerciseFrameCapture
+                slot="target"
+                slotLabel="Doelpositie"
+                videoUrl={previewUrl}
+                videoFileName={file?.name || 'video.mp4'}
+                onLandmarksCaptured={(payload) => {
+                  invalidatePoseGeneration()
+                  setCapturedLandmarks((prev) => ({ ...prev, target: payload }))
+                }}
+                onClear={() => {
+                  invalidatePoseGeneration()
+                  setCapturedLandmarks((prev) => ({ ...prev, target: null }))
+                }}
+              />
+              <div className="flex flex-col gap-2 rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      poseGenerateLoading ||
+                      !name.trim() ||
+                      !capturedLandmarks.rest ||
+                      !capturedLandmarks.target
+                    }
+                    onClick={handleGeneratePoseConfig}
+                    className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-nimbli bg-nimbli px-3 text-sm font-bold text-nimbli-foreground shadow-[0_1px_0_0_var(--color-nimbli-shadow)] transition-colors duration-200 motion-reduce:transition-none hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {poseGenerateLoading ? (
+                      <>
+                        <Loader2 className="size-4 shrink-0 animate-spin" strokeWidth={2} aria-hidden />
+                        Bezig…
+                      </>
+                    ) : (
+                      'Genereer oefening-logica'
+                    )}
+                  </button>
+                  {generatedPoseConfig ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-nimbli">
+                      <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                      Pose-logica klaar
+                    </span>
+                  ) : null}
+                </div>
+                {poseGenerateLoading ? (
+                  <p className="text-[11px] leading-snug text-nimbli-muted">
+                    Dit kan tot 60 seconden duren — de AI bekijkt beide poses.
+                  </p>
+                ) : (
+                  <p className="text-[11px] leading-snug text-nimbli-muted">
+                    Vul eerst de naam in en leg rust- en doelpositie vast. Daarna maakt de AI een pose-regelset
+                    die past bij je video.
+                  </p>
+                )}
+                {poseGenerateError ? (
+                  <p className="text-xs font-medium text-red-600" role="alert">
+                    {poseGenerateError}
+                  </p>
+                ) : null}
+                {generatedPoseConfig ? (
+                  <details className="rounded-md border border-[#e1dbd3] bg-white text-xs">
+                    <summary className="cursor-pointer select-none px-3 py-2 font-medium text-nimbli-ink hover:bg-nimbli-canvas/50">
+                      Bekijk pose_config (JSON)
+                    </summary>
+                    <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-t border-[#e1dbd3] bg-nimbli-canvas/40 p-3 font-mono text-[11px] text-nimbli-ink">
+                      {JSON.stringify(generatedPoseConfig, null, 2)}
+                    </pre>
+                  </details>
+                ) : null}
+              </div>
+            </>
+          ) : null}
           </div>
 
           {saveError ? (

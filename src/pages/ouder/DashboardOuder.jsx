@@ -9,9 +9,9 @@ import OuderStatPill from '@/components/ouder/OuderStatPill.jsx'
 import OuderMiniLineChart from '@/components/ouder/OuderMiniLineChart.jsx'
 import OuderProgressRow from '@/components/ouder/OuderProgressRow.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
-import OuderRecentRow from '@/components/ouder/OuderRecentRow.jsx'
+import OuderRecentSection from '@/components/ouder/OuderRecentSection.jsx'
 
-// Avatar fallback is derived from Supabase rows (patients/profiles).
+// Avatar fallback is derived from Supabase `profiles` rows.
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -65,6 +65,13 @@ export default function DashboardOuder() {
 
   const dashboard = useParentDashboardData(selectedChildId)
 
+  const parentWelcomeTitle = useMemo(() => {
+    const first = profile?.firstname?.trim() ?? ''
+    const last = profile?.lastname?.trim() ?? ''
+    const full = `${first} ${last}`.trim()
+    return full ? `Welkom, ${full} !` : 'Welkom'
+  }, [profile])
+
   if (loading) {
     return <div className="text-center py-8">Laden...</div>
   }
@@ -114,7 +121,9 @@ export default function DashboardOuder() {
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
-          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">Dashboard</h1>
+          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
+            {parentWelcomeTitle}
+          </h1>
 
           {childrenError ? (
             <div
@@ -167,21 +176,31 @@ export default function DashboardOuder() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[640px_1fr]">
-            <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
-              <header className="flex items-center justify-between">
-                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Frequentie per Week</p>
-                <OuderStatPill value={`${dashboard.weekly?.deltaPercent ?? 0}%`} />
+          <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
+            <section className="flex min-h-0 w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
+              <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Frequentie per week</p>
+                {dashboard.weekly?.monthLabel ? (
+                  <span className="text-center text-sm font-medium text-[#6b7280]">
+                    {dashboard.weekly.monthLabel}
+                  </span>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <div className="flex justify-end">
+                  <OuderStatPill value={`${dashboard.weekly?.deltaPercent ?? 0}%`} />
+                </div>
               </header>
-              <div className="mt-6">
+              <div className="mt-4 flex min-h-0 flex-1 flex-col">
                 <OuderMiniLineChart
                   points={dashboard.weekly?.points}
                   days={dashboard.weekly?.days}
+                  dayDates={dashboard.weekly?.dayDates}
                 />
               </div>
             </section>
 
-            <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
+            <section className="flex w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
               <header className="flex items-center justify-between">
                 <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Aankomende oefeningen</p>
               </header>
@@ -196,15 +215,21 @@ export default function DashboardOuder() {
                   </div>
                 ) : (
                   (dashboard.upcoming ?? []).map((u) => (
-                    <OuderUpcomingExercise key={u.id} title={u.title} goal={u.goal} meta={u.meta} />
+                    <OuderUpcomingExercise
+                      key={u.id}
+                      title={u.title}
+                      focus={u.focus}
+                      categoryTone={u.categoryTone}
+                      reps={u.reps}
+                      minutes={u.minutes}
+                      imageUrl={u.imageUrl}
+                    />
                   ))
                 )}
               </div>
             </section>
-          </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[640px_1fr]">
-            <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
+            <section className="w-full min-w-0 rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
               <header className="flex items-center justify-between">
                 <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Voortgangsindicatoren</p>
               </header>
@@ -215,26 +240,11 @@ export default function DashboardOuder() {
               </div>
             </section>
 
-            <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
-              <header className="flex items-center justify-between">
-                <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Recent</p>
-              </header>
-              <div className="mt-4 flex flex-col gap-3">
-                {dashboard.loading ? (
-                  <div className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-3 text-sm text-[#6b7280]">
-                    Recent laden…
-                  </div>
-                ) : (dashboard.recent ?? []).length === 0 ? (
-                  <div className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-3 text-sm text-[#6b7280]">
-                    Nog geen recente sessies.
-                  </div>
-                ) : (
-                  (dashboard.recent ?? []).slice(0, 3).map((r) => (
-                    <OuderRecentRow key={r.id} title={r.title} time={r.time} xp={r.xp} />
-                  ))
-                )}
-              </div>
-            </section>
+            <OuderRecentSection
+              items={dashboard.recent ?? []}
+              loading={dashboard.loading}
+              className="rounded-[14px]"
+            />
           </div>
         </div>
       </main>

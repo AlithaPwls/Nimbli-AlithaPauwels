@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
+import LoadingScreen from '@/components/LoadingScreen.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 import KineSidebar from './KineSidebar.jsx'
 
@@ -17,11 +18,7 @@ export default function KineLayout() {
   }, [loading, profile, navigate])
 
   if (loading || !profile || profile.practice_id == null) {
-    return (
-      <div className="flex min-h-svh items-center justify-center bg-nimbli-canvas font-nimbli-body text-nimbli-muted">
-        Laden…
-      </div>
-    )
+    return <LoadingScreen title="Praktijk laden" message="We zetten je dashboard klaar." />
   }
 
   return (

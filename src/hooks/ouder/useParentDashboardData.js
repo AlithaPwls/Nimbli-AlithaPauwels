@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import supabase from '@/lib/supabaseClient.js'
 
 function calcAge(dateOfBirth) {
@@ -36,6 +37,14 @@ function startOfDayLocal(d) {
   return dt
 }
 
+/** Monday 00:00 local — matches oefenplanning week strip. */
+function startOfWeekMonday(d) {
+  const dt = startOfDayLocal(d)
+  const mondayOffset = (dt.getDay() + 6) % 7
+  dt.setDate(dt.getDate() - mondayOffset)
+  return dt
+}
+
 function addDaysLocal(d, days) {
   const dt = new Date(d)
   dt.setDate(dt.getDate() + days)
@@ -44,6 +53,39 @@ function addDaysLocal(d, days) {
 
 function dayLabelShort(d) {
   return new Date(d).toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '')
+}
+
+/** Calendar week columns: Monday → Sunday. */
+const WEEK_DAY_LABELS = ['MA', 'DI', 'WO', 'DO', 'VR', 'ZA', 'ZO']
+
+function formatWeekRangeLabel(weekStart) {
+  const start = new Date(weekStart)
+  const end = addDaysLocal(start, 6)
+  const month = end.toLocaleString('nl-BE', { month: 'long' })
+  const monthLabel = `${month.charAt(0).toUpperCase()}${month.slice(1)} ${end.getFullYear()}`
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return { rangeLabel: `${start.getDate()}–${end.getDate()} ${monthLabel}`, monthLabel }
+  }
+  const startMonth = start.toLocaleString('nl-BE', { month: 'short' })
+  const endMonth = end.toLocaleString('nl-BE', { month: 'long' })
+  const endMonthCap = `${endMonth.charAt(0).toUpperCase()}${endMonth.slice(1)}`
+  return {
+    rangeLabel: `${start.getDate()} ${startMonth} – ${end.getDate()} ${endMonthCap} ${end.getFullYear()}`,
+    monthLabel: `${endMonthCap} ${end.getFullYear()}`,
+  }
+}
+
+function emptyWeeklyState(weekStart = startOfWeekMonday(new Date())) {
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDaysLocal(weekStart, i))
+  const { rangeLabel, monthLabel } = formatWeekRangeLabel(weekStart)
+  return {
+    points: [0, 0, 0, 0, 0, 0, 0],
+    days: WEEK_DAY_LABELS,
+    dayDates: weekDays.map((d) => d.getDate()),
+    rangeLabel,
+    monthLabel,
+    deltaPercent: 0,
+  }
 }
 
 function xpFromEvent(ev) {
@@ -63,7 +105,7 @@ export function useParentDashboardData(childProfileId) {
   const [child, setChild] = useState(null)
   const [upcoming, setUpcoming] = useState([])
   const [recent, setRecent] = useState([])
-  const [weekly, setWeekly] = useState({ points: [0, 0, 0, 0, 0, 0, 0], days: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'], deltaPercent: 0 })
+  const [weekly, setWeekly] = useState(() => emptyWeeklyState())
   const [progress, setProgress] = useState({ balans: 0, mobiliteit: 0, kracht: 0 })
 
   useEffect(() => {
@@ -95,7 +137,7 @@ export function useParentDashboardData(childProfileId) {
         setChild(null)
         setUpcoming([])
         setRecent([])
-        setWeekly({ points: [0, 0, 0, 0, 0, 0, 0], days: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'], deltaPercent: 0 })
+        setWeekly(emptyWeeklyState())
         setProgress({ balans: 0, mobiliteit: 0, kracht: 0 })
         setError(profErr)
         setLoading(false)
@@ -107,7 +149,7 @@ export function useParentDashboardData(childProfileId) {
       if (!prof?.id) {
         setUpcoming([])
         setRecent([])
-        setWeekly({ points: [0, 0, 0, 0, 0, 0, 0], days: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'], deltaPercent: 0 })
+        setWeekly(emptyWeeklyState())
         setProgress({ balans: 0, mobiliteit: 0, kracht: 0 })
         setLoading(false)
         return
@@ -116,7 +158,7 @@ export function useParentDashboardData(childProfileId) {
       // 2) assignments
       const { data: assigns, error: asErr } = await supabase
         .from('exercise_assignments')
-        .select('id, child_id, exercise_id, reps, rep_unit, created_at')
+        .select('id, child_id, exercise_id, reps, rep_unit, created_at, schedule_days')
         .eq('child_id', prof.id)
         .order('created_at', { ascending: false })
 
@@ -140,7 +182,7 @@ export function useParentDashboardData(childProfileId) {
       if (exerciseIds.length > 0) {
         const { data: exRows, error: exErr } = await supabase
           .from('exercises')
-          .select('id, title, description, media_url, is_archived')
+          .select(`${EXERCISE_THUMBNAIL_SELECT}, is_archived`)
           .in('id', exerciseIds)
 
         if (cancelled) return
@@ -158,17 +200,21 @@ export function useParentDashboardData(childProfileId) {
       const upcomingList = assignmentRows
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
-          const title = ex?.title ?? ex?.name ?? 'Oefening'
-          const goal = ex?.focus?.trim() || prof?.treatment_goal?.trim() || 'Oefening'
+          const norm = ex ? normalizeExerciseRow(ex) : null
           const reps = typeof a?.reps === 'number' ? a.reps : null
-          const unit = a?.rep_unit ? String(a.rep_unit) : null
-          const meta = reps ? `• ${reps}${unit ? ` ${unit}` : ''}` : '• Start binnenkort'
+          const minutes =
+            ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
+              ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))
+              : null
           return {
             id: a.id,
             exerciseId: a.exercise_id,
-            title,
-            goal,
-            meta,
+            title: norm?.title ?? 'Oefening',
+            focus: norm?.category ?? 'Oefening',
+            categoryTone: norm?.categoryTone ?? 'default',
+            reps,
+            minutes,
+            imageUrl: norm?.imageUrl,
           }
         })
         .slice(0, 3)
@@ -181,7 +227,7 @@ export function useParentDashboardData(childProfileId) {
         .select('id, exercise_id, completed_at, score, success')
         .eq('child_id', prof.id)
         .order('completed_at', { ascending: false })
-        .limit(8)
+        .limit(5)
 
       if (cancelled) return
 
@@ -232,22 +278,22 @@ export function useParentDashboardData(childProfileId) {
 
       setRecent(recentList)
 
-      // Weekly frequency: last 7 days (including today) vs previous 7 days.
+      // Weekly frequency: current calendar week (Mon–Sun) vs previous week.
       const today0 = startOfDayLocal(new Date())
-      const windowStart = addDaysLocal(today0, -6)
-      const prevStart = addDaysLocal(today0, -13)
-      const prevEnd = addDaysLocal(today0, -7)
+      const weekStart = startOfWeekMonday(today0)
+      const weekEnd = addDaysLocal(weekStart, 7)
+      const prevWeekStart = addDaysLocal(weekStart, -7)
 
       const { data: weekRows, error: weekErr } = await supabase
         .from('exercise_sessions')
         .select('id, completed_at, exercise_id')
         .eq('child_id', prof.id)
-        .gte('completed_at', prevStart.toISOString())
-        .lt('completed_at', addDaysLocal(today0, 1).toISOString())
+        .gte('completed_at', prevWeekStart.toISOString())
+        .lt('completed_at', weekEnd.toISOString())
 
       if (cancelled) return
       if (weekErr) {
-        setWeekly({ points: [0, 0, 0, 0, 0, 0, 0], days: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'], deltaPercent: 0 })
+        setWeekly(emptyWeeklyState())
         setProgress({ balans: 0, mobiliteit: 0, kracht: 0 })
         setError(weekErr)
         setLoading(false)
@@ -255,35 +301,39 @@ export function useParentDashboardData(childProfileId) {
       }
 
       const weekEvents = toArray(weekRows)
+      const weekDays = Array.from({ length: 7 }, (_, i) => addDaysLocal(weekStart, i))
+      const currentWeekKeys = new Set(weekDays.map((d) => dateKeyLocal(d)))
+      const prevWeekDays = Array.from({ length: 7 }, (_, i) => addDaysLocal(prevWeekStart, i))
+      const prevWeekKeys = new Set(prevWeekDays.map((d) => dateKeyLocal(d)))
+
       const countsByDay = new Map()
       let currentTotal = 0
       let prevTotal = 0
       for (const ev of weekEvents) {
         const k = dateKeyLocal(ev.completed_at)
         if (!k) continue
-        const dt = new Date(ev.completed_at)
-        if (dt >= windowStart && dt < addDaysLocal(today0, 1)) {
+        if (currentWeekKeys.has(k)) {
           countsByDay.set(k, (countsByDay.get(k) ?? 0) + 1)
           currentTotal += 1
-        } else if (dt >= prevStart && dt < prevEnd) {
+        } else if (prevWeekKeys.has(k)) {
           prevTotal += 1
         }
       }
 
-      const days = Array.from({ length: 7 }, (_, i) => addDaysLocal(windowStart, i))
-      const points = days.map((d) => countsByDay.get(dateKeyLocal(d)) ?? 0)
-      const dayLabels = days.map(dayLabelShort).map((s) => s.slice(0, 2).toUpperCase())
+      const points = weekDays.map((d) => countsByDay.get(dateKeyLocal(d)) ?? 0)
+      const dayDates = weekDays.map((d) => d.getDate())
       const deltaPercent =
         prevTotal <= 0 ? (currentTotal > 0 ? 100 : 0) : Math.round(((currentTotal - prevTotal) / prevTotal) * 100)
 
-      setWeekly({ points, days: dayLabels, deltaPercent })
+      const { rangeLabel, monthLabel } = formatWeekRangeLabel(weekStart)
+      setWeekly({ points, days: WEEK_DAY_LABELS, dayDates, rangeLabel, monthLabel, deltaPercent })
 
       let b = 0
       let m = 0
       let k = 0
       for (const ev of weekEvents) {
-        const dt = new Date(ev.completed_at)
-        if (!(dt >= windowStart && dt < addDaysLocal(today0, 1))) continue
+        const dayKey = dateKeyLocal(ev.completed_at)
+        if (!dayKey || !currentWeekKeys.has(dayKey)) continue
         const focus = String(recentExercisesById.get(ev.exercise_id)?.focus ?? '').toLowerCase()
         if (focus.includes('balans') || focus.includes('evenwicht')) b += 1
         else if (focus.includes('mobil') || focus.includes('stretch') || focus.includes('rekken')) m += 1

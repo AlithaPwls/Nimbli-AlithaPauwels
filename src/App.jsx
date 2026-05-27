@@ -5,6 +5,10 @@ import LoginWithCode from './pages/loginflow/LoginWithCode.jsx'
 import RegisterOuder from './pages/loginflow/RegisterOuder.jsx'
 import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.jsx'
 import DashboardKind from './pages/kind/DashboardKind.jsx'
+import KindOverzicht from './pages/kind/KindOverzicht.jsx'
+import Exercise from './pages/kind/Exercise.jsx'
+import PoseDetection from './pages/kind/PoseDetection.jsx'
+import Reward from './pages/kind/Reward.jsx'
 import DashboardOuder from './pages/ouder/DashboardOuder.jsx'
 import OuderOefenplanning from './pages/ouder/OuderOefenplanning.jsx'
 import OuderInstellingen from './pages/ouder/OuderInstellingen.jsx'
@@ -14,10 +18,12 @@ import DashboardKine from './pages/kine/DashboardKine.jsx'
 import KineOefeningen from './pages/kine/KineOefeningen.jsx'
 import KineOefeningenEigenVideos from './pages/kine/KineOefeningenEigenVideos.jsx'
 import KineInstellingen from './pages/kine/KineInstellingen.jsx'
+import KineNieuweGebruiker from './pages/kine/KineNieuweGebruiker.jsx'
 import AddPatient1 from './pages/kine/AddPatient-1.jsx'
 import AddPatient2 from './pages/kine/AddPatient-2.jsx'
 import AddPatient3 from './pages/kine/AddPatient-3.jsx'
 import AddPatient4 from './pages/kine/AddPatient-4.jsx'
+import KinePatientDetail from './pages/kine/KinePatientDetail.jsx'
 import KineLayout from './components/kine/KineLayout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
@@ -34,6 +40,26 @@ export default function App() {
       <Route path="/dashboard/kind" element={
         <ProtectedRoute allowedRoles={['child', 'parent']}>
           <DashboardKind />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/overzicht" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <KindOverzicht />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/oefening" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <Exercise />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/oefening/pose" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <PoseDetection />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/kind/oefening/reward" element={
+        <ProtectedRoute allowedRoles={['child', 'parent']}>
+          <Reward />
         </ProtectedRoute>
       } />
       <Route path="/dashboard/ouder" element={
@@ -75,9 +101,11 @@ export default function App() {
         <Route path="patienten/nieuw/2" element={<AddPatient2 />} />
         <Route path="patienten/nieuw/3" element={<AddPatient3 />} />
         <Route path="patienten/nieuw/4" element={<AddPatient4 />} />
+        <Route path="patienten/:patientId" element={<KinePatientDetail />} />
         <Route path="oefeningen" element={<KineOefeningen />} />
         <Route path="oefeningen/eigen" element={<KineOefeningenEigenVideos />} />
         <Route path="instellingen" element={<KineInstellingen />} />
+        <Route path="instellingen/nieuwe-gebruiker" element={<KineNieuweGebruiker />} />
       </Route>
     </Routes>
   )

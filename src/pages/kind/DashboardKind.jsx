@@ -18,15 +18,17 @@ export default function DashboardKind() {
     <div className="flex h-svh overflow-hidden bg-kind-canvas" data-page="kind-dashboard">
       <KindSidebar displayName={displayName} active="oefeningen" />
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row lg:gap-[88px] lg:pl-0">
-        <main className="relative min-h-0 w-full shrink-0 overflow-y-auto overflow-x-hidden bg-kind-canvas lg:w-[464px] lg:max-w-[464px]">
-          <KindProgressPath monthLabel="Januari" />
+      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden lg:flex-row">
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-kind-canvas">
+          <div className="flex w-full min-w-0 flex-1 flex-col items-stretch px-4 lg:justify-center lg:px-8 xl:px-10">
+            <KindProgressPath />
+          </div>
           <div className="flex justify-end border-t border-[#e5e7eb] px-4 py-6 lg:hidden">
             <KindSummaryCard className="w-full max-w-[362px]" />
           </div>
         </main>
 
-        <aside className="relative hidden h-full min-h-0 w-[362px] shrink-0 flex-col items-end justify-start gap-10 self-stretch pt-6 pr-6 lg:flex lg:pt-10">
+        <aside className="relative hidden h-full min-h-0 w-[362px] shrink-0 flex-col justify-start gap-10 self-stretch pt-6 pr-8 lg:flex lg:pt-10 lg:pr-10 xl:pr-14">
           <KindSummaryCard className="shrink-0" />
         </aside>
       </div>

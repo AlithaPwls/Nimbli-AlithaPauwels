@@ -1,50 +1,11 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import caretSvg from '@/assets/kind-today-popover-caret.svg'
-import thumb1 from '@/assets/kind-exercise-thumb-1.png'
-import thumb2 from '@/assets/kind-exercise-thumb-2.png'
 import KindTodayExerciseRow from '@/components/kind/KindTodayExerciseRow.jsx'
-
-const TODAY_EXERCISES = [
-  {
-    id: '1',
-    title: 'Jumping jacks',
-    category: 'Kracht',
-    categoryClass: 'bg-[#ffc1f9]',
-    difficulty: 'Makkelijk',
-    reps: '10 herhalingen',
-    image: thumb1,
-  },
-  {
-    id: '2',
-    title: 'Superheld pose',
-    category: 'Balans',
-    categoryClass: 'bg-[#bde786]',
-    difficulty: 'Makkelijk',
-    reps: '10 herhalingen',
-    image: thumb1,
-  },
-  {
-    id: '3',
-    title: 'Balans brug',
-    category: 'Balans',
-    categoryClass: 'bg-[#bde786]',
-    difficulty: 'Makkelijk',
-    reps: '10 herhalingen',
-    image: thumb2,
-  },
-  {
-    id: '4',
-    title: 'Stretch naar de sterren',
-    category: 'Mobiliteit',
-    categoryClass: 'bg-kind-yellow',
-    difficulty: 'Makkelijk',
-    reps: '10 herhalingen',
-    image: thumb1,
-  },
-]
+import { useKindTodayExercises } from '@/hooks/kind/useKindTodayExercises.js'
 
 export default function KindTodayExercisesPanel({ open, anchorRect, onClose, onStartExercise }) {
+  const { exercises, loading, error, refetch, childResolved } = useKindTodayExercises()
   useEffect(() => {
     if (!open) return undefined
     const onKey = (e) => {
@@ -53,6 +14,10 @@ export default function KindTodayExercisesPanel({ open, anchorRect, onClose, onS
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
+
+  useEffect(() => {
+    if (open) void refetch({ soft: true })
+  }, [open, refetch])
 
   if (!open || !anchorRect) return null
 
@@ -86,9 +51,29 @@ export default function KindTodayExercisesPanel({ open, anchorRect, onClose, onS
         <div className="flex flex-col items-center">
           <img src={caretSvg} alt="" className="relative z-[1] h-6 w-11 shrink-0" width={45} height={24} />
           <div className="-mt-px w-full divide-y divide-kind-border overflow-hidden rounded-b-lg border border-kind-light-gray/90 bg-kind-white shadow-[0px_4px_4px_rgba(0,0,0,0.12)]">
-            {TODAY_EXERCISES.map((exercise) => (
-              <KindTodayExerciseRow key={exercise.id} exercise={exercise} onStart={onStartExercise} />
-            ))}
+            {loading ? (
+              <p className="px-2.5 py-4 text-center font-nimbli-body text-xs text-kind-gray">Laden…</p>
+            ) : error ? (
+              <p className="px-2.5 py-4 text-center font-nimbli-body text-xs text-kind-red">
+                Oefeningen laden lukt niet. Probeer later opnieuw.
+              </p>
+            ) : !childResolved ? (
+              <p className="px-2.5 py-4 text-center font-nimbli-body text-xs text-kind-gray">
+                Geen kindprofiel gevonden.
+              </p>
+            ) : exercises.length === 0 ? (
+              <p className="px-2.5 py-4 text-center font-nimbli-body text-xs text-kind-gray">
+                Nog geen oefeningen toegewezen.
+              </p>
+            ) : (
+              exercises.map((exercise) => (
+                <KindTodayExerciseRow
+                  key={exercise.assignmentId}
+                  exercise={exercise}
+                  onStart={onStartExercise}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
