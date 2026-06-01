@@ -66,6 +66,11 @@ export function kindWeekDayLabelShort(d) {
   return two.charAt(0).toUpperCase() + two.slice(1)
 }
 
+/** Full weekday label for path markers (ZONDAG, WOENSDAG, …). */
+export function kindWeekDayLabelFull(d) {
+  return new Date(d).toLocaleDateString('nl-BE', { weekday: 'long' }).toUpperCase()
+}
+
 /** e.g. "20–26 mei 2026" for the current calendar week. */
 export function formatKindWeekRange(weekStart) {
   const start = startOfDayLocal(weekStart)
@@ -185,36 +190,23 @@ export function buildWeekDayDotsFromBars(bars) {
   })
 }
 
-/** Fixed layout slots on the kind progress path SVG (Figma positions). */
-const PATH_LOWER_SLOTS = [
-  { className: 'left-[24%] top-[6%] -translate-x-1/2' },
-  { className: 'left-[57%] top-[20%] -translate-x-1/2' },
-  { className: 'left-[24%] top-[34%] -translate-x-1/2' },
-  { className: 'left-[57%] top-[49%] -translate-x-1/2' },
-  { className: 'left-[24%] top-[67%] -translate-x-1/2' },
-  { className: 'left-[57%] top-[82%] -translate-x-1/2' },
-]
-
-const PATH_UPPER_BEFORE_SLOTS = [
-  { className: 'left-[24%] top-[4.5%] -translate-x-1/2' },
-  { className: 'left-[57%] top-[19%] -translate-x-1/2' },
-]
-
-const PATH_UPPER_AFTER_SLOTS = [
-  { className: 'left-[57%] top-[50%] -translate-x-1/2' },
-  { className: 'left-[24%] top-[66%] -translate-x-1/2' },
-  { className: 'left-[57%] top-[83%] -translate-x-1/2' },
-]
-
 function pathLabelFromDot(dot) {
   const short = dot?.label ?? ''
   return short.length >= 2 ? short.slice(0, 2).toUpperCase() : short.toUpperCase()
 }
 
-function pathVariantForDot(dot, { onLowerPath, futureIndex }) {
-  if (dot.state === 'ok') return onLowerPath ? 'completed' : 'ok'
+function pathFullLabelFromDot(dot) {
+  const key = dot?.key
+  if (!key) return pathLabelFromDot(dot)
+  const parts = String(key).split('-').map(Number)
+  if (parts.length !== 3) return pathLabelFromDot(dot)
+  const [year, month, day] = parts
+  return kindWeekDayLabelFull(new Date(year, month - 1, day))
+}
+
+function pathVariantForDot(dot, { futureIndex }) {
+  if (dot.state === 'ok' || dot.state === 'gift') return 'ok'
   if (dot.state === 'fail') return 'warn'
-  if (dot.state === 'gift') return 'ok'
   if (dot.state === 'empty' || dot.state === 'today') {
     if (futureIndex === 0 || futureIndex === 1) return 'sleep'
     return 'locked'
@@ -222,42 +214,108 @@ function pathVariantForDot(dot, { onLowerPath, futureIndex }) {
   return 'locked'
 }
 
-function attachSlots(dots, slots, options) {
-  return dots.map((dot, i) => ({
+/**
+ * Zigzag day slots — identical on upper, main, and lower path segments (Figma 490:2699).
+ * Index 0–1: top curve · 2–5: rest of segment.
+ */
+const PATH_DAY_ZIGZAG_SLOTS = [
+  { className: 'left-[31%] top-[4%] -translate-x-1/2' },
+  { className: 'left-[74%] top-[18%] -translate-x-1/2' },
+  { className: 'left-[28%] top-[35%] -translate-x-1/2' },
+  { className: 'left-[73%] top-[51%] -translate-x-1/2' },
+  { className: 'left-[25%] top-[66%] -translate-x-1/2' },
+  { className: 'left-[74%] top-[84%] -translate-x-1/2' },
+]
+
+const PATH_SLOT_TOP_PCT = [4, 15, 33, 50, 66, 84]
+
+/** Onderste pad: zigzag links/rechts, hoogte tussen vroegere offset 0 en 1. */
+const PATH_LOWER_DAY_SLOTS = [
+  { className: 'left-[25%] top-[18%] -translate-x-1/2' },
+  { className: 'left-[74%] top-[50%] -translate-x-1/2' },
+  { className: 'left-[28%] top-[38%] -translate-x-1/2' },
+  { className: 'left-[73%] top-[52%] -translate-x-1/2' },
+  { className: 'left-[25%] top-[66%] -translate-x-1/2' },
+  { className: 'left-[64%] top-[80%] -translate-x-1/2' },
+]
+
+const PATH_LOWER_TOP_PCT = [12, 24, 38, 52, 66, 80]
+
+function lowerPathSlot(index) {
+  return PATH_LOWER_DAY_SLOTS[Math.min(index, PATH_LOWER_DAY_SLOTS.length - 1)]
+}
+
+const PATH_MAIN_BEFORE_SLOT = PATH_DAY_ZIGZAG_SLOTS[0]
+export const PATH_MAIN_TODAY_SLOT = PATH_DAY_ZIGZAG_SLOTS[1]
+/** Komende dagen op het middenpad t/m vrijdag (za/zo op onderste segment). */
+const PATH_MAIN_AFTER_MAX = 4
+const PATH_MAIN_AFTER_SLOTS = PATH_DAY_ZIGZAG_SLOTS.slice(2, 2 + PATH_MAIN_AFTER_MAX)
+export const PATH_MAIN_MONTH_SLOT = { className: 'left-[62%] top-[77%] -translate-x-1/2' }
+
+/** Clip height for stacked path segments (hide unused tail). */
+export function getPathSegmentClipPercent(markerCount, startSlotIndex = 0) {
+  if (markerCount <= 0) return 0
+  const endIdx = Math.min(startSlotIndex + markerCount - 1, PATH_SLOT_TOP_PCT.length - 1)
+  return Math.min(100, PATH_SLOT_TOP_PCT[endIdx] + 16)
+}
+
+export function getLowerPathClipPercent(markerCount) {
+  if (markerCount <= 0) return 0
+  return Math.min(100, PATH_LOWER_TOP_PCT[markerCount - 1] + 16)
+}
+
+function toPathMarker(dot, slot, { futureIndex, labelMode = 'short' }) {
+  return {
     ...dot,
-    label: pathLabelFromDot(dot),
-    variant: pathVariantForDot(dot, options),
-    className: slots[i]?.className ?? slots[slots.length - 1]?.className,
-  }))
+    label: labelMode === 'full' ? pathFullLabelFromDot(dot) : pathLabelFromDot(dot),
+    variant: pathVariantForDot(dot, { futureIndex }),
+    className: slot.className,
+    labelMode,
+  }
 }
 
 /**
- * Maps calendar-week dots onto the progress path (lower = earlier days, upper = around today).
+ * Maps the calendar week onto the three stacked path segments (Figma Oefeningen Dashboard).
  */
 export function buildPathMarkersFromWeekDays(weekDays) {
   const days = toArray(weekDays)
-  const todayIdx = days.findIndex((d) => d.isToday)
+  const todayKey = dateKeyLocal(new Date())
+  let todayIdx = days.findIndex((d) => d.isToday)
+  if (todayIdx < 0 && todayKey) {
+    todayIdx = days.findIndex((d) => d.key === todayKey)
+  }
   if (todayIdx < 0) {
-    return { lowerMarkers: [], upperBeforeToday: [], upperAfterToday: [] }
+    return { upperPath: [], mainBeforeToday: null, mainAfterToday: [], lowerPath: [] }
   }
 
   const beforeToday = days.slice(0, todayIdx)
   const afterToday = days.slice(todayIdx + 1)
 
-  const upperBeforeDots = beforeToday.slice(-PATH_UPPER_BEFORE_SLOTS.length)
-  const lowerDots = beforeToday.slice(0, Math.max(0, beforeToday.length - PATH_UPPER_BEFORE_SLOTS.length))
-  const upperAfterDots = afterToday.slice(0, PATH_UPPER_AFTER_SLOTS.length)
+  const upperDots =
+    beforeToday.length > 1
+      ? beforeToday.slice(0, -1).slice(-PATH_DAY_ZIGZAG_SLOTS.length)
+      : []
+  const mainBeforeDot = beforeToday.length > 0 ? beforeToday[beforeToday.length - 1] : null
+  const mainAfterDots = afterToday.slice(0, PATH_MAIN_AFTER_MAX)
+  const lowerDots = afterToday.slice(
+    PATH_MAIN_AFTER_MAX,
+    PATH_MAIN_AFTER_MAX + PATH_DAY_ZIGZAG_SLOTS.length
+  )
 
   return {
-    lowerMarkers: attachSlots(lowerDots, PATH_LOWER_SLOTS, { onLowerPath: true }),
-    upperBeforeToday: attachSlots(upperBeforeDots, PATH_UPPER_BEFORE_SLOTS, { onLowerPath: false }),
-    upperAfterToday: attachSlots(upperAfterDots, PATH_UPPER_AFTER_SLOTS, {
-      onLowerPath: false,
-      futureIndex: 0,
-    }).map((m, i) => ({
-      ...m,
-      variant: pathVariantForDot(m, { onLowerPath: false, futureIndex: i }),
-    })),
+    upperPath: upperDots.map((dot, i) => toPathMarker(dot, PATH_DAY_ZIGZAG_SLOTS[i], { futureIndex: i })),
+    mainBeforeToday: mainBeforeDot
+      ? toPathMarker(mainBeforeDot, PATH_MAIN_BEFORE_SLOT, { futureIndex: 0, labelMode: 'full' })
+      : null,
+    mainAfterToday: mainAfterDots.map((dot, i) =>
+      toPathMarker(dot, PATH_MAIN_AFTER_SLOTS[i], { futureIndex: i, labelMode: 'full' })
+    ),
+    lowerPath: lowerDots.map((dot, i) =>
+      toPathMarker(dot, lowerPathSlot(i), {
+        futureIndex: PATH_MAIN_AFTER_MAX + i,
+        labelMode: 'full',
+      })
+    ),
   }
 }
 

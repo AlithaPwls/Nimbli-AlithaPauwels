@@ -1,4 +1,5 @@
-import { Award, ChevronDown, LogOut, Star, Trophy } from 'lucide-react'
+import { ChevronDown, LogOut, Star, Trophy } from 'lucide-react'
+import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -106,7 +107,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           setPassword('')
           setSwitchOpen(true)
         }}
-        className="flex h-[30px] w-full max-w-[173px] items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40"
+        className="mx-auto flex h-[30px] w-full max-w-[173px] items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40"
         aria-label="Wissel naar ouderdashboard"
       >
         <p className="truncate font-nimbli-heading text-sm font-normal text-kind-black">{displayName}</p>
@@ -185,7 +186,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
         </DialogContent>
       </Dialog>
 
-      <p className="mt-10 font-nimbli-heading text-2xl font-black tracking-tight text-kind-green-primary">nimbli</p>
+      <NimbliSidebarLogo className="mt-10" />
 
       <nav className="mt-8 flex w-full max-w-[173px] flex-col gap-4" aria-label="Navigatie kind">
         <SidebarItem
@@ -203,14 +204,6 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           onClick={() => goTo('overzicht')}
         >
           Overzicht
-        </SidebarItem>
-        <SidebarItem
-          active={active === 'profiel'}
-          Icon={Award}
-          iconClassName="text-kind-blue"
-          onClick={() => goTo('profiel')}
-        >
-          Mijn profiel
         </SidebarItem>
       </nav>
 

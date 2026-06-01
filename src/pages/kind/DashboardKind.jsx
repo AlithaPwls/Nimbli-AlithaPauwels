@@ -20,7 +20,7 @@ export default function DashboardKind() {
 
       <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden lg:flex-row">
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-kind-canvas">
-          <div className="flex w-full min-w-0 flex-1 flex-col items-stretch px-4 lg:justify-center lg:px-8 xl:px-10">
+          <div className="flex w-full min-w-0 flex-1 flex-col items-stretch px-4 pt-4 lg:justify-start lg:px-8 lg:pt-8 xl:px-10">
             <KindProgressPath />
           </div>
           <div className="flex justify-end border-t border-[#e5e7eb] px-4 py-6 lg:hidden">

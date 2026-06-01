@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Calendar, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import { Calendar, ChevronDown, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { cn } from '@/lib/utils'
 
 const navItemClass = ({ isActive, disabled }) =>
@@ -65,7 +66,7 @@ export default function OuderSidebar({
 
   return (
     <aside className="flex h-svh w-[260px] shrink-0 flex-col border-r border-[#e5e7eb] bg-white px-6 pt-6 pb-6">
-      <div className="relative" ref={rootRef}>
+      <div className="relative mx-auto w-full max-w-[173px]" ref={rootRef}>
         <button
           type="button"
           onClick={() => {
@@ -78,19 +79,17 @@ export default function OuderSidebar({
             if (Array.isArray(children) && children.length > 1) setOpen((v) => !v)
           }}
           className={cn(
-            'flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left',
+            'flex h-[30px] w-full items-center justify-center gap-2 overflow-hidden rounded-md border border-[#f9fafb] bg-white px-2 text-left',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
             Array.isArray(children) && children.length > 1 ? 'cursor-pointer hover:bg-nimbli-canvas' : 'cursor-default'
           )}
           aria-haspopup={Array.isArray(children) && children.length > 1 ? 'menu' : undefined}
           aria-expanded={Array.isArray(children) && children.length > 1 ? open : undefined}
         >
-          <span className="font-nimbli-heading text-sm font-bold text-[#1a1a1a]">
+          <span className="truncate font-nimbli-heading text-sm font-bold text-[#1a1a1a]">
             {headerLabel}
           </span>
-          <span className="text-nimbli-muted" aria-hidden>
-            ▾
-          </span>
+          <ChevronDown className="size-3 shrink-0 text-[#1a1a1a]" aria-hidden />
         </button>
 
         {open && Array.isArray(children) && children.length > 1 ? (
@@ -126,9 +125,7 @@ export default function OuderSidebar({
         ) : null}
       </div>
 
-      <div className="mt-6 font-nimbli-heading text-3xl font-black tracking-tight text-nimbli">
-        nimbli
-      </div>
+      <NimbliSidebarLogo className="mt-6" />
 
       <nav className="mt-10 flex flex-col gap-3" aria-label="Navigatie ouder">
         <NavLink

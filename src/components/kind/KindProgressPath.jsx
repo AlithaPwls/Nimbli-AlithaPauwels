@@ -6,7 +6,14 @@ import pathMainSvg from '@/assets/kind-path-figma.svg'
 import pathLowerSvg from '@/assets/kind-path-figma-lower.svg'
 import KindTodayExercisesPanel from '@/components/kind/KindTodayExercisesPanel.jsx'
 import { useKindOverviewWeekChart } from '@/hooks/kind/useKindOverviewWeekChart.js'
-import { buildPathMarkersFromWeekDays, kindPathMonthLabel } from '@/lib/kind/weekCalendar.js'
+import {
+  PATH_MAIN_MONTH_SLOT,
+  PATH_MAIN_TODAY_SLOT,
+  buildPathMarkersFromWeekDays,
+  getLowerPathClipPercent,
+  getPathSegmentClipPercent,
+  kindPathMonthLabel,
+} from '@/lib/kind/weekCalendar.js'
 
 const VARIANT_ICONS = {
   warn: AlarmClock,
@@ -75,7 +82,7 @@ function Marker({ className, Icon, label, variant = 'neutral', labelClassName, o
       {label ? (
         <span
           className={cn(
-            'mt-2 max-w-[110px] text-center font-nimbli-body text-sm font-normal leading-tight text-kind-black',
+            'mt-2 max-w-[110px] text-center font-nimbli-body font-normal leading-tight text-kind-black',
             labelClassName
           )}
         >
@@ -86,40 +93,78 @@ function Marker({ className, Icon, label, variant = 'neutral', labelClassName, o
   )
 }
 
-function PathSegment({ src, alt }) {
+const PATH_VIEW_HEIGHT = 796.578
+
+function PathSegment({ src, alt, clipPercent = 100 }) {
+  const clipped = clipPercent < 100
+  const clipHeight = (PATH_VIEW_HEIGHT * clipPercent) / 100
+
+  if (!clipped) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        width={439}
+        height={797}
+        className="relative z-0 block h-auto w-full select-none"
+        draggable={false}
+        decoding="async"
+      />
+    )
+  }
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      width={439}
-      height={797}
-      className="relative z-0 block h-auto w-full select-none"
-      draggable={false}
-      decoding="async"
-    />
+    <div
+      className="relative z-0 w-full overflow-hidden"
+      style={{ aspectRatio: `438.967 / ${clipHeight}` }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        width={439}
+        height={797}
+        className="absolute left-0 top-0 block w-full max-w-none select-none"
+        draggable={false}
+        decoding="async"
+      />
+    </div>
   )
 }
 
 function PathDayMarker({ marker }) {
   const Icon = VARIANT_ICONS[marker.variant] ?? Check
+  const isFullLabel = marker.labelMode === 'full'
   return (
     <Marker
       className={marker.className}
       Icon={Icon}
       label={marker.label}
       variant={marker.variant}
+      labelClassName={isFullLabel ? 'text-[11px] sm:text-xs' : 'text-sm'}
     />
   )
+}
+
+function PathMarkersOverlay({ children }) {
+  return <div className="pointer-events-none absolute inset-0 z-10">{children}</div>
 }
 
 export default function KindProgressPath() {
   const navigate = useNavigate()
   const [todayPanelOpen, setTodayPanelOpen] = useState(false)
   const [todayAnchorRect, setTodayAnchorRect] = useState(null)
-  const { weekDays, loading } = useKindOverviewWeekChart()
+  const { weekDays } = useKindOverviewWeekChart()
 
   const monthLabel = useMemo(() => kindPathMonthLabel(new Date()), [])
   const pathMarkers = useMemo(() => buildPathMarkersFromWeekDays(weekDays), [weekDays])
+  const upperClipPercent = useMemo(
+    () => getPathSegmentClipPercent(pathMarkers.upperPath.length),
+    [pathMarkers.upperPath.length]
+  )
+  const lowerClipPercent = useMemo(
+    () => getLowerPathClipPercent(pathMarkers.lowerPath.length),
+    [pathMarkers.lowerPath.length]
+  )
 
   const openTodayPanel = useCallback((event) => {
     setTodayAnchorRect(event.currentTarget.getBoundingClientRect())
@@ -143,18 +188,27 @@ export default function KindProgressPath() {
   )
 
   return (
-    <div className="mx-auto flex w-3/4 min-w-0 flex-col items-center pb-16 pt-4">
-      <section className="relative w-full" aria-label="Voortgang vandaag">
-        <PathSegment src={pathMainSvg} alt="" />
-
-        <div className="pointer-events-none absolute inset-0">
-          {!loading &&
-            pathMarkers.upperBeforeToday.map((marker) => (
+    <div className="mx-auto flex w-full max-w-[440px] min-w-0 flex-col items-center pb-16 pt-2 sm:max-w-[480px]">
+      {pathMarkers.upperPath.length > 0 ? (
+        <section className="relative -mb-1 w-full" aria-label="Eerdere dagen op het pad">
+          <PathSegment src={pathMainSvg} alt="" clipPercent={upperClipPercent} />
+          <PathMarkersOverlay>
+            {pathMarkers.upperPath.map((marker) => (
               <PathDayMarker key={marker.key} marker={marker} />
             ))}
+          </PathMarkersOverlay>
+        </section>
+      ) : null}
+
+      <section className="relative w-full" aria-label="Voortgang deze week">
+        <PathSegment src={pathMainSvg} alt="" />
+        <PathMarkersOverlay>
+          {pathMarkers.mainBeforeToday ? (
+            <PathDayMarker key={pathMarkers.mainBeforeToday.key} marker={pathMarkers.mainBeforeToday} />
+          ) : null}
 
           <Marker
-            className="left-[27%] top-[33%] -translate-x-1/2"
+            className={cn(PATH_MAIN_TODAY_SLOT.className, 'z-20')}
             Icon={Star}
             label="VANDAAG"
             variant="today"
@@ -162,16 +216,31 @@ export default function KindProgressPath() {
             onClick={openTodayPanel}
           />
 
-          {!loading &&
-            pathMarkers.upperAfterToday.map((marker) => (
-              <PathDayMarker key={marker.key} marker={marker} />
-            ))}
+          {pathMarkers.mainAfterToday.map((marker) => (
+            <PathDayMarker key={marker.key} marker={marker} />
+          ))}
 
-          <p className="absolute left-[58%] top-[77%] -translate-x-1/2 font-nimbli-heading text-[26px] font-bold italic leading-tight tracking-tight text-[#6c6c6c]">
+          <p
+            className={cn(
+              'absolute font-nimbli-heading text-[26px] font-bold italic leading-tight tracking-tight text-[#6c6c6c]',
+              PATH_MAIN_MONTH_SLOT.className
+            )}
+          >
             {monthLabel}
           </p>
-        </div>
+        </PathMarkersOverlay>
       </section>
+
+      {pathMarkers.lowerPath.length > 0 ? (
+        <section className="relative -mt-[7%] w-full" aria-label="Komende dagen op het pad">
+          <PathSegment src={pathLowerSvg} alt="" clipPercent={lowerClipPercent} />
+          <PathMarkersOverlay>
+            {pathMarkers.lowerPath.map((marker) => (
+              <PathDayMarker key={marker.key} marker={marker} />
+            ))}
+          </PathMarkersOverlay>
+        </section>
+      ) : null}
 
       <KindTodayExercisesPanel
         open={todayPanelOpen}
@@ -179,17 +248,6 @@ export default function KindProgressPath() {
         onClose={closeTodayPanel}
         onStartExercise={onStartExercise}
       />
-
-      <section className="relative -mt-1 w-full" aria-label="Eerdere dagen">
-        <PathSegment src={pathLowerSvg} alt="" />
-
-        <div className="pointer-events-none absolute inset-0">
-          {!loading &&
-            pathMarkers.lowerMarkers.map((marker) => (
-              <PathDayMarker key={marker.key} marker={marker} />
-            ))}
-        </div>
-      </section>
     </div>
   )
 }

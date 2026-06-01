@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import KindSidebar from '@/components/kind/KindSidebar.jsx'
-import KindOverviewStats from '@/components/kind/KindOverviewStats.jsx'
+import KindOverviewProfileCard from '@/components/kind/KindOverviewProfileCard.jsx'
 import KindDailyMissionsCard from '@/components/kind/KindDailyMissionsCard.jsx'
 import KindBadgesCard from '@/components/kind/KindBadgesCard.jsx'
 import KindStreakCard from '@/components/kind/KindStreakCard.jsx'
@@ -23,21 +23,24 @@ export default function KindOverzicht() {
 
       <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto w-full max-w-[960px] px-6 py-8 sm:px-8 sm:py-10">
-          <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <header>
             <h1 className="font-nimbli-heading text-4xl font-extrabold leading-10 text-kind-black">
               Overzicht
             </h1>
-            <KindOverviewStats />
           </header>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            <div className="flex flex-col gap-6">
-              <KindDailyMissionsCard />
-              <KindStreakCard />
-            </div>
-            <div className="flex flex-col gap-6">
-              <KindBadgesCard />
-              <KindOverviewWeekChart />
+          <div className="mt-8 flex flex-col gap-6">
+            <KindOverviewProfileCard />
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+              <div className="flex flex-col gap-6">
+                <KindDailyMissionsCard />
+                <KindStreakCard />
+              </div>
+              <div className="flex flex-col gap-6">
+                <KindBadgesCard />
+                <KindOverviewWeekChart />
+              </div>
             </div>
           </div>
         </div>

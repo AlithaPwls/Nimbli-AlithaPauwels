@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { Calendar, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useLogout } from '@/hooks/useLogout.js'
@@ -33,9 +34,9 @@ export default function KineSidebar() {
     >
       <Link
         to="/dashboard/kine"
-        className="font-nimbli-heading text-2xl font-bold tracking-tight text-nimbli no-underline hover:opacity-90"
+        className="block rounded-md no-underline transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
       >
-        nimbli
+        <NimbliSidebarLogo />
       </Link>
 
       <nav className="mt-14 flex flex-col gap-3" aria-label="Secties">

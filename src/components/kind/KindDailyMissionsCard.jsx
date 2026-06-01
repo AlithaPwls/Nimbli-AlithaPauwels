@@ -32,9 +32,14 @@ function MissionProgress({ current, total, done, showReward }) {
   )
 }
 
-export default function KindDailyMissionsCard() {
+export default function KindDailyMissionsCard({ className }) {
   return (
-    <section className="rounded-lg border-2 border-kind-border bg-kind-white p-[17px] shadow-[0_2px_0_0_#e1dbd3]">
+    <section
+      className={cn(
+        'w-full rounded-lg border-2 border-kind-border bg-kind-white p-[17px] shadow-[0_2px_0_0_#e1dbd3]',
+        className
+      )}
+    >
       <h2 className="font-nimbli-heading text-[13px] font-bold text-kind-black">Dagmissies</h2>
       <div className="my-4 h-px bg-kind-border" />
 
