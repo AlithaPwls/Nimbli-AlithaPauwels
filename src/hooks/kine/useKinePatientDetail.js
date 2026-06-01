@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import { parseScheduleDays } from '@/lib/kind/weekCalendar.js'
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -72,7 +73,7 @@ function formatAssignmentReps(reps, repUnit) {
   if (reps == null || !Number.isFinite(Number(reps))) return null
   const n = Number(reps)
   const unit = repUnit?.trim()
-  return unit ? `${n} ${unit}` : `${n}×`
+  return unit ? `${n} ${unit}` : `${n}`
 }
 
 function normalizeWeeklyCounts(counts) {
@@ -373,6 +374,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
             assignmentId: a.id,
             ...base,
             reps: repsOverride ?? base.reps,
+            scheduleDays: parseScheduleDays(a),
           }
         })
         .filter(Boolean)

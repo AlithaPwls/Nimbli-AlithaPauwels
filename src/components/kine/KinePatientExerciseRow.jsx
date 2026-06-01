@@ -1,6 +1,12 @@
-import { Trash2 } from 'lucide-react'
+import { CalendarDays, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+import {
+  EXERCISE_SCHEDULE_DAYS,
+  normalizeScheduleDays,
+  scheduleDaysSummary,
+} from '@/lib/kine/exerciseScheduleDays.js'
+import { cn } from '@/lib/utils'
 
 export default function KinePatientExerciseRow({
   exercise,
@@ -9,6 +15,8 @@ export default function KinePatientExerciseRow({
   onDelete,
 }) {
   const canDelete = Boolean(onDelete) && !deleteDisabled
+  const scheduleDays = normalizeScheduleDays(exercise.scheduleDays ?? exercise.schedule_days)
+  const scheduleSummary = scheduleDaysSummary(scheduleDays)
 
   return (
     <article className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
@@ -52,6 +60,36 @@ export default function KinePatientExerciseRow({
                 <span aria-hidden>⏱</span>
                 {exercise.time}
               </span>
+            </div>
+
+            <div className="mt-3">
+              <div
+                className="mt-2 flex flex-wrap gap-1.5"
+                role="list"
+                aria-label={`Uitvoeren op: ${scheduleSummary}`}
+              >
+                {EXERCISE_SCHEDULE_DAYS.map((day) => {
+                  const active = scheduleDays.includes(day.index)
+                  return (
+                    <span
+                      key={day.index}
+                      role="listitem"
+                      title={day.label}
+                      aria-current={active ? 'true' : undefined}
+                      className={cn(
+                        'inline-flex min-w-9 items-center justify-center rounded-lg border-2 px-2 py-1',
+                        'font-nimbli-heading text-[11px] font-bold',
+                        active
+                          ? 'border-nimbli/25 bg-nimbli/10 text-nimbli'
+                          : 'border-[#e1dbd3] bg-[#f9fafb] text-[#9ca3af]'
+                      )}
+                    >
+                      {day.short}
+                    </span>
+                  )
+                })}
+              </div>
+           
             </div>
           </div>
 

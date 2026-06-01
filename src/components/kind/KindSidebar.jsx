@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, Star, Trophy } from 'lucide-react'
+import { LogOut, Star, Trophy } from 'lucide-react'
 import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -14,6 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  SIDEBAR_BTN_FOCUS,
+  SIDEBAR_BTN_HOVER,
+  SIDEBAR_BTN_INTERACTION,
+  SIDEBAR_BTN_PRESS,
+  SIDEBAR_ICON_BTN_PRESS,
+} from '@/lib/sidebarButtonInteraction.js'
 
 function SidebarItem({ active, Icon, iconClassName, children, onClick }) {
   const IconComponent = Icon
@@ -21,12 +28,15 @@ function SidebarItem({ active, Icon, iconClassName, children, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={cn(
         'flex h-[44px] w-full items-center gap-3 rounded-[6px] border px-3 py-2.5 text-left',
-        'transition-colors duration-200 motion-reduce:transition-none',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
+        SIDEBAR_BTN_INTERACTION,
+        SIDEBAR_BTN_HOVER,
+        SIDEBAR_BTN_PRESS,
+        SIDEBAR_BTN_FOCUS,
         active
-          ? 'border-[#2bb39b] border-[1.5px] bg-kind-white shadow-[0_1.5px_0_0_#1e7a6a]'
+          ? 'border-[#2bb39b] border-[1.5px] bg-kind-white shadow-[0_1.5px_0_0_#1e7a6a] active:shadow-[0_1px_0_0_#1e7a6a]'
           : 'border border-[#f9fafb] bg-kind-white shadow-[0_2px_0_0_#e1dbd3]'
       )}
     >
@@ -44,7 +54,7 @@ const KIND_ROUTES = {
 export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen', onNavigate }) {
   const { logout, loading: logoutLoading } = useLogout()
   const navigate = useNavigate()
-  const { role, profile } = useAuth()
+  const { profile } = useAuth()
 
   const [switchOpen, setSwitchOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -96,6 +106,12 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
     }
   }, [canSwitchToParent, navigate, password, profile?.invite_code])
 
+  function handleSwitchSubmit(e) {
+    e.preventDefault()
+    if (switchLoading || !canSwitchToParent) return
+    void doSwitchToParent()
+  }
+
   return (
     <aside className="flex h-svh w-[216px] shrink-0 flex-col border-r-2 border-[#e5e7eb] bg-kind-white px-6 py-3 font-nimbli-body text-nimbli-ink">
       <button
@@ -107,82 +123,93 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           setPassword('')
           setSwitchOpen(true)
         }}
-        className="mx-auto flex h-[30px] w-full max-w-[173px] items-center justify-center gap-2 overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40"
+        className={cn(
+          'mx-auto flex h-[30px] w-full max-w-[173px] items-center justify-center overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2',
+          SIDEBAR_BTN_INTERACTION,
+          SIDEBAR_BTN_HOVER,
+          SIDEBAR_BTN_PRESS,
+          SIDEBAR_BTN_FOCUS,
+          'shadow-[0_2px_0_0_#e1dbd3]'
+        )}
         aria-label="Wissel naar ouderdashboard"
       >
-        <p className="truncate font-nimbli-heading text-sm font-normal text-kind-black">{displayName}</p>
-        <ChevronDown className="size-3 shrink-0 text-kind-black" aria-hidden />
+        <span className="truncate font-nimbli-heading text-sm font-normal text-kind-black">{displayName}</span>
       </button>
 
       <Dialog open={switchOpen} onOpenChange={setSwitchOpen}>
         <DialogContent className="gap-5 bg-kind-white sm:max-w-sm">
-          <DialogHeader className="gap-2 text-left">
-            <DialogTitle className="font-nimbli-heading text-xl font-black tracking-tight text-kind-black">
-              Naar ouderdashboard
-            </DialogTitle>
-            <DialogDescription className="font-nimbli-body text-sm leading-relaxed text-kind-gray">
-              Voor je veiligheid vragen we je wachtwoord om terug te schakelen naar het ouderaccount.
-            </DialogDescription>
-          </DialogHeader>
+          <form onSubmit={handleSwitchSubmit} className="flex flex-col gap-5">
+            <DialogHeader className="gap-2 text-left">
+              <DialogTitle className="font-nimbli-heading text-xl font-black tracking-tight text-kind-black">
+                Naar ouderdashboard
+              </DialogTitle>
+              <DialogDescription className="font-nimbli-body text-sm leading-relaxed text-kind-gray">
+                Voor je veiligheid vragen we je wachtwoord om terug te schakelen naar het ouderaccount.
+              </DialogDescription>
+            </DialogHeader>
 
-          {!canSwitchToParent ? (
-            <p className="rounded-xl border border-kind-border bg-kind-white px-3 py-2 font-nimbli-body text-sm text-kind-red shadow-[0px_2px_0px_#e1dbd3]">
-              Geen gekoppeld ouderaccount gevonden.
-            </p>
-          ) : (
-            <div className="grid gap-2">
-              <label className="font-nimbli-body text-xs font-semibold tracking-wide text-kind-gray">
-                Wachtwoord
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+            {!canSwitchToParent ? (
+              <p className="rounded-xl border border-kind-border bg-kind-white px-3 py-2 font-nimbli-body text-sm text-kind-red shadow-[0px_2px_0px_#e1dbd3]">
+                Geen gekoppeld ouderaccount gevonden.
+              </p>
+            ) : (
+              <div className="grid gap-2">
+                <label
+                  htmlFor="kind-switch-parent-password"
+                  className="font-nimbli-body text-xs font-semibold tracking-wide text-kind-gray"
+                >
+                  Wachtwoord
+                </label>
+                <input
+                  id="kind-switch-parent-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={cn(
+                    'h-11 w-full rounded-xl border bg-kind-white px-3 font-nimbli-body text-sm text-kind-black outline-none',
+                    'shadow-[0px_2px_0px_#e1dbd3] transition-colors',
+                    'focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
+                    switchError ? 'border-kind-red' : 'border-kind-border'
+                  )}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                {switchError ? (
+                  <p className="rounded-lg bg-kind-red/10 px-2 py-1 font-nimbli-body text-xs text-kind-red">
+                    {switchError?.message ? String(switchError.message) : 'Wachtwoordcontrole mislukt.'}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            <DialogFooter className="mt-1 gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setSwitchOpen(false)}
+                disabled={switchLoading}
                 className={cn(
-                  'h-11 w-full rounded-xl border bg-kind-white px-3 font-nimbli-body text-sm text-kind-black outline-none',
+                  'h-11 rounded-xl border border-kind-border bg-kind-white px-4 font-nimbli-heading text-sm font-bold text-kind-black',
                   'shadow-[0px_2px_0px_#e1dbd3] transition-colors',
-                  'focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
-                  switchError ? 'border-kind-red' : 'border-kind-border'
+                  'hover:bg-kind-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
+                  'disabled:opacity-60'
                 )}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-              {switchError ? (
-                <p className="rounded-lg bg-kind-red/10 px-2 py-1 font-nimbli-body text-xs text-kind-red">
-                  {switchError?.message ? String(switchError.message) : 'Wachtwoordcontrole mislukt.'}
-                </p>
-              ) : null}
-            </div>
-          )}
-
-          <DialogFooter className="mt-1 gap-2 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setSwitchOpen(false)}
-              disabled={switchLoading}
-              className={cn(
-                'h-11 rounded-xl border border-kind-border bg-kind-white px-4 font-nimbli-heading text-sm font-bold text-kind-black',
-                'shadow-[0px_2px_0px_#e1dbd3] transition-colors',
-                'hover:bg-kind-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
-                'disabled:opacity-60'
-              )}
-            >
-              Annuleren
-            </button>
-            <button
-              type="button"
-              onClick={() => void doSwitchToParent()}
-              disabled={switchLoading || !canSwitchToParent}
-              className={cn(
-                'h-11 rounded-xl border-0 bg-kind-green-primary px-5 font-nimbli-heading text-sm font-black text-kind-canvas',
-                'shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-white',
-                'disabled:opacity-60 disabled:shadow-none'
-              )}
-            >
-              {switchLoading ? 'Bezig…' : 'Doorgaan'}
-            </button>
-          </DialogFooter>
+              >
+                Annuleren
+              </button>
+              <button
+                type="submit"
+                disabled={switchLoading || !canSwitchToParent}
+                className={cn(
+                  'h-11 rounded-xl border-0 bg-kind-green-primary px-5 font-nimbli-heading text-sm font-black text-kind-canvas',
+                  'shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-white',
+                  'disabled:opacity-60 disabled:shadow-none'
+                )}
+              >
+                {switchLoading ? 'Bezig…' : 'Doorgaan'}
+              </button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -210,7 +237,14 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
       <div className="mt-auto pt-8">
         <button
           type="button"
-          className="inline-flex size-[30px] items-center justify-center rounded-md text-kind-green-primary transition-colors hover:bg-kind-canvas disabled:opacity-60"
+          className={cn(
+            'inline-flex size-[30px] items-center justify-center rounded-md text-nimbli',
+            SIDEBAR_BTN_INTERACTION,
+            SIDEBAR_BTN_HOVER,
+            SIDEBAR_ICON_BTN_PRESS,
+            SIDEBAR_BTN_FOCUS,
+            'disabled:pointer-events-none disabled:opacity-60'
+          )}
           onClick={() => void logout()}
           disabled={logoutLoading}
           aria-label={logoutLoading ? 'Bezig met uitloggen' : 'Uitloggen'}

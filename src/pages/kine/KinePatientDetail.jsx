@@ -230,64 +230,73 @@ export default function KinePatientDetail() {
   return (
     <div className="min-h-svh bg-nimbli-foreground">
       <div className="mx-auto max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
-        <OuderBackLink to="/dashboard/kine" />
+        {loading || showContent ? (
+          <div className="flex items-start gap-6 sm:gap-10">
+            <OuderBackLink to="/dashboard/kine" className="shrink-0" />
+            <div className="flex min-w-0 flex-1 flex-col gap-6">
+              {loading ? (
+                <KinePatientDetailSkeleton />
+              ) : (
+                <>
+                  <KinePatientHeaderCard
+                    patient={patient}
+                    parent={parent}
+                    qrDisabled={!patient.inviteCode}
+                    onQrClick={() => setInviteOpen(true)}
+                  />
 
-        {loading ? (
-          <KinePatientDetailSkeleton />
-        ) : notFound ? (
-          <div className="mt-10 rounded-2xl border-2 border-[#e1dbd3] bg-white px-6 py-12 text-center shadow-[0_2px_0_0_#e1dbd3]">
-            <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">Patiënt niet gevonden</p>
-            <p className="mt-2 text-sm text-nimbli-muted">
-              Deze patiënt bestaat niet of hoort niet bij jouw praktijk.
-            </p>
-          </div>
-        ) : error ? (
-          <p className="mt-10 text-sm font-semibold text-red-600" role="alert">
-            Kon patiëntgegevens niet laden. Probeer later opnieuw.
-          </p>
-        ) : showContent ? (
-          <div className="mt-8 flex flex-col gap-6">
-            <KinePatientHeaderCard
-              patient={patient}
-              parent={parent}
-              qrDisabled={!patient.inviteCode}
-              onQrClick={() => setInviteOpen(true)}
-            />
+                  <KinePatientDetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
+                  <PatientDetailTabPanel
+                    activeTab={activeTab}
+                    weeklyChart={weeklyChart}
+                    sessions={sessions}
+                    assignments={assignments}
+                    loading={loading}
+                    patientName={patient.name}
+                    onAddExercise={openAssignDialog}
+                    onDeleteExercise={handleDeleteExercise}
+                    deletingExerciseId={deletingAssignmentId}
+                    deleteExerciseError={deleteAssignmentError}
+                    notes={notes}
+                    notesLoading={notesLoading}
+                    onNewNote={openNewNoteDialog}
+                    onEditNote={openEditNoteDialog}
+                    onDeleteNote={openDeleteNoteDialog}
+                  />
 
-            <KinePatientDetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-            <PatientDetailTabPanel
-              activeTab={activeTab}
-              weeklyChart={weeklyChart}
-              sessions={sessions}
-              assignments={assignments}
-              loading={loading}
-              patientName={patient.name}
-              onAddExercise={openAssignDialog}
-              onDeleteExercise={handleDeleteExercise}
-              deletingExerciseId={deletingAssignmentId}
-              deleteExerciseError={deleteAssignmentError}
-              notes={notes}
-              notesLoading={notesLoading}
-              onNewNote={openNewNoteDialog}
-              onEditNote={openEditNoteDialog}
-              onDeleteNote={openDeleteNoteDialog}
-            />
-
-            <div className="flex justify-center pt-2">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={openDeleteDialog}
-                className="h-11 w-fit font-nimbli-heading text-sm font-bold"
-              >
-                <Trash2 className="mr-2 size-[18px]" aria-hidden />
-                Patiënt verwijderen
-              </Button>
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={openDeleteDialog}
+                      className="h-11 w-fit font-nimbli-heading text-sm font-bold"
+                    >
+                      <Trash2 className="mr-2 size-[18px]" aria-hidden />
+                      Patiënt verwijderen
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <>
+            <OuderBackLink to="/dashboard/kine" />
+            {notFound ? (
+              <div className="mt-10 rounded-2xl border-2 border-[#e1dbd3] bg-white px-6 py-12 text-center shadow-[0_2px_0_0_#e1dbd3]">
+                <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">Patiënt niet gevonden</p>
+                <p className="mt-2 text-sm text-nimbli-muted">
+                  Deze patiënt bestaat niet of hoort niet bij jouw praktijk.
+                </p>
+              </div>
+            ) : error ? (
+              <p className="mt-10 text-sm font-semibold text-red-600" role="alert">
+                Kon patiëntgegevens niet laden. Probeer later opnieuw.
+              </p>
+            ) : null}
+          </>
+        )}
 
         <KinePatientDeleteNoteDialog
           open={deleteNoteOpen}

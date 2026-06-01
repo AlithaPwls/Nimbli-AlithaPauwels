@@ -31,13 +31,13 @@ export default function DashboardKine() {
   const totalPatients = kpis.totalPatients
   const adherenceDisplay =
     kpisLoading ? '…' : kpis.adherencePct == null ? '--' : `${kpis.adherencePct}%`
-  const complianceDisplay =
-    kpisLoading ? '…' : kpis.compliancePct == null ? '--' : `${kpis.compliancePct}%`
+  const successRateDisplay =
+    kpisLoading ? '…' : kpis.successRatePct == null ? '--' : `${kpis.successRatePct}%`
 
   const adherenceProgress =
     kpis.adherencePct == null ? null : Math.min(1, Math.max(0, kpis.adherencePct / 100))
-  const complianceProgress =
-    kpis.compliancePct == null ? null : Math.min(1, Math.max(0, kpis.compliancePct / 100))
+  const successRateProgress =
+    kpis.successRatePct == null ? null : Math.min(1, Math.max(0, kpis.successRatePct / 100))
 
   const showFigmaEmpty = !patientsLoading && patients.length === 0 && !query.trim()
   const showNoSearchResults = !patientsLoading && patients.length === 0 && query.trim()
@@ -66,11 +66,11 @@ export default function DashboardKine() {
             Icon={Activity}
           />
           <KineStatCard
-            title="Compliance"
-            value={complianceDisplay}
-            subtitle="Gemiddelde rate"
+            title="Succesrate"
+            value={successRateDisplay}
+            subtitle="Gemiddeld deze week"
             accent="blue"
-            progress={complianceProgress}
+            progress={successRateProgress}
             Icon={Target}
           />
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
-import { addDaysLocal, startOfWeekMonday } from '@/lib/kind/weekCalendar.js'
+import { currentWeekRange, computeWeekProgress } from '@/lib/kine/practiceKpis.js'
 
 function calcAge(dob) {
   if (!dob) return null
@@ -29,33 +29,8 @@ function formatLastSession(completedAt) {
   })
 }
 
-function computeWeekProgress(childId, assignments, sessions, weekStart, weekEnd) {
-  const childAssignments = assignments.filter((a) => a.child_id === childId)
-  const total = childAssignments.length
-  if (total === 0) return 0
-
-  const assignmentIds = new Set(childAssignments.map((a) => a.id))
-  const exerciseToAssignment = new Map(childAssignments.map((a) => [a.exercise_id, a.id]))
-  const completed = new Set()
-
-  for (const s of sessions) {
-    if (s.child_id !== childId || s.success !== true) continue
-    const dt = new Date(s.completed_at)
-    if (Number.isNaN(dt.getTime()) || dt < weekStart || dt >= weekEnd) continue
-
-    if (s.assignment_id && assignmentIds.has(s.assignment_id)) {
-      completed.add(s.assignment_id)
-    } else if (s.exercise_id && exerciseToAssignment.has(s.exercise_id)) {
-      completed.add(exerciseToAssignment.get(s.exercise_id))
-    }
-  }
-
-  return completed.size / total
-}
-
 function buildPatientExtras(childIds, assignments, sessions) {
-  const weekStart = startOfWeekMonday(new Date())
-  const weekEnd = addDaysLocal(weekStart, 7)
+  const { weekStart, weekEnd } = currentWeekRange()
   const extras = {}
 
   for (const childId of childIds) {
@@ -63,7 +38,7 @@ function buildPatientExtras(childIds, assignments, sessions) {
     const last = childSessions[0]
     extras[childId] = {
       lastSession: formatLastSession(last?.completed_at),
-      progress: computeWeekProgress(childId, assignments, sessions, weekStart, weekEnd),
+      progress: computeWeekProgress(childId, assignments, sessions, weekStart, weekEnd) ?? 0,
     }
   }
 

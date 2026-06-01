@@ -23,6 +23,15 @@ const VARIANT_ICONS = {
   locked: Lock,
 }
 
+const MARKER_ICON_MOTION =
+  'transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none motion-reduce:shadow-none'
+
+const MARKER_ICON_HOVER =
+  'group-hover/marker:-translate-y-1 group-hover/marker:shadow-[0_14px_28px_rgba(0,0,0,0.14)] group-focus-visible/marker:-translate-y-1 group-focus-visible/marker:shadow-[0_14px_28px_rgba(0,0,0,0.14)]'
+
+const MARKER_LABEL_MOTION =
+  'transition-[color,font-weight] duration-200 ease-out motion-reduce:transition-none group-hover/marker:font-semibold group-hover/marker:text-kind-black'
+
 function Marker({ className, Icon, label, variant = 'neutral', labelClassName, onClick }) {
   const IconComponent = Icon
   const interactive = typeof onClick === 'function'
@@ -53,36 +62,53 @@ function Marker({ className, Icon, label, variant = 'neutral', labelClassName, o
           }
         : {})}
       className={cn(
-        'absolute flex flex-col items-center',
-        interactive &&
-          'pointer-events-auto cursor-pointer border-0 bg-transparent p-0 text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas',
+        'group/marker absolute flex flex-col items-center',
+        interactive
+          ? 'pointer-events-auto cursor-pointer border-0 bg-transparent p-0 text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas'
+          : 'pointer-events-auto cursor-default',
         className
       )}
     >
       {variant === 'today' ? (
-        <div className="relative grid size-[96px] place-items-center rounded-full">
+        <div
+          className={cn(
+            'relative grid size-[96px] place-items-center rounded-full',
+            MARKER_ICON_MOTION,
+            MARKER_ICON_HOVER
+          )}
+        >
           <div
-            className="absolute -inset-1 rounded-full border-2 border-dashed border-kind-yellow"
+            className="absolute -inset-1 rounded-full border-2 border-dashed border-kind-yellow transition-[border-color,transform] duration-200 ease-out group-hover/marker:scale-105 group-hover/marker:border-[#d4a017] motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none"
             aria-hidden
           />
           <div className="absolute inset-[8px] rounded-full bg-kind-yellow shadow-[0_10px_22px_rgba(0,0,0,0.12)]" />
-          <div className="absolute inset-[14px] grid place-items-center rounded-full bg-kind-yellow ring-4 ring-kind-white" />
-          <Star className="relative z-10 size-9 text-kind-white" fill="currentColor" aria-hidden />
+          <div className="absolute inset-[14px] grid place-items-center rounded-full bg-kind-yellow ring-4 ring-kind-white transition-transform duration-200 ease-out group-hover/marker:scale-105 motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none" />
+          <Star
+            className="relative z-10 size-9 text-kind-white transition-transform duration-200 ease-out group-hover/marker:scale-110 motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none"
+            fill="currentColor"
+            aria-hidden
+          />
         </div>
       ) : (
         <div
           className={cn(
             'grid size-[68px] place-items-center rounded-full shadow-[0_10px_22px_rgba(0,0,0,0.08)] ring-1 ring-black/5',
+            MARKER_ICON_MOTION,
+            MARKER_ICON_HOVER,
             iconWrapClass
           )}
         >
-          <IconComponent className="size-8" aria-hidden />
+          <IconComponent
+            className="size-8 transition-transform duration-200 ease-out group-hover/marker:scale-110 motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none"
+            aria-hidden
+          />
         </div>
       )}
       {label ? (
         <span
           className={cn(
             'mt-2 max-w-[110px] text-center font-nimbli-body font-normal leading-tight text-kind-black',
+            MARKER_LABEL_MOTION,
             labelClassName
           )}
         >

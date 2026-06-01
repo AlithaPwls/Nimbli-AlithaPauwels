@@ -3,16 +3,28 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { Calendar, ChevronDown, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { cn } from '@/lib/utils'
+import {
+  SIDEBAR_BTN_FOCUS,
+  SIDEBAR_BTN_HOVER,
+  SIDEBAR_BTN_INTERACTION,
+  SIDEBAR_BTN_PRESS,
+  SIDEBAR_ICON_BTN_PRESS,
+} from '@/lib/sidebarButtonInteraction.js'
 
 const navItemClass = ({ isActive, disabled }) =>
   cn(
-    'flex w-full items-center gap-3.5 rounded-md border bg-white px-3.5 py-3 font-nimbli-heading text-sm font-bold text-nimbli-ink transition-colors outline-none',
-    'shadow-[0_2px_0_0_#e1dbd3] focus-visible:ring-2 focus-visible:ring-nimbli/40',
+    'flex w-full items-center gap-3.5 rounded-md border bg-white px-3.5 py-3 font-nimbli-heading text-sm font-bold text-nimbli-ink outline-none',
     disabled
-      ? 'cursor-not-allowed border-nimbli-canvas opacity-60'
-      : isActive
-        ? 'border-nimbli shadow-[0_1px_0_0_#1e7a6a]'
-        : 'border-nimbli-canvas hover:border-nimbli-canvas/80'
+      ? 'cursor-not-allowed border-nimbli-canvas opacity-60 shadow-[0_2px_0_0_#e1dbd3]'
+      : cn(
+          SIDEBAR_BTN_INTERACTION,
+          SIDEBAR_BTN_HOVER,
+          SIDEBAR_BTN_PRESS,
+          SIDEBAR_BTN_FOCUS,
+          isActive
+            ? 'border-nimbli shadow-[0_1.5px_0_0_#1e7a6a] active:shadow-[0_1px_0_0_#1e7a6a]'
+            : 'border-nimbli-canvas shadow-[0_2px_0_0_#e1dbd3]'
+        )
   )
 
 function NavIcon({ Icon, isActive }) {
@@ -52,6 +64,10 @@ export default function OuderSidebar({
     return 'Ouder'
   }, [selectedChild])
 
+  const headerInteractive = Boolean(
+    selectedChild || (Array.isArray(children) && children.length > 1)
+  )
+
   useEffect(() => {
     function onDocPointerDown(e) {
       if (!open) return
@@ -79,9 +95,10 @@ export default function OuderSidebar({
             if (Array.isArray(children) && children.length > 1) setOpen((v) => !v)
           }}
           className={cn(
-            'flex h-[30px] w-full items-center justify-center gap-2 overflow-hidden rounded-md border border-[#f9fafb] bg-white px-2 text-left',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
-            Array.isArray(children) && children.length > 1 ? 'cursor-pointer hover:bg-nimbli-canvas' : 'cursor-default'
+            'flex h-[30px] w-full items-center justify-center gap-2 overflow-hidden rounded-md border border-[#f9fafb] bg-white px-2 text-left shadow-[0_2px_0_0_#e1dbd3]',
+            headerInteractive
+              ? cn(SIDEBAR_BTN_INTERACTION, SIDEBAR_BTN_HOVER, SIDEBAR_BTN_PRESS, SIDEBAR_BTN_FOCUS)
+              : cn('cursor-default', SIDEBAR_BTN_FOCUS)
           )}
           aria-haspopup={Array.isArray(children) && children.length > 1 ? 'menu' : undefined}
           aria-expanded={Array.isArray(children) && children.length > 1 ? open : undefined}
@@ -111,9 +128,12 @@ export default function OuderSidebar({
                     onSelectChild?.(c?.id ?? null)
                   }}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm',
-                    'transition-colors duration-150 motion-reduce:transition-none',
-                    active ? 'bg-nimbli/10 text-nimbli' : 'hover:bg-nimbli-canvas text-[#1a1a1a]'
+                    'flex w-full items-center justify-between rounded-lg border border-transparent px-3 py-2 text-left text-sm',
+                    SIDEBAR_BTN_INTERACTION,
+                    SIDEBAR_BTN_HOVER,
+                    SIDEBAR_BTN_PRESS,
+                    SIDEBAR_BTN_FOCUS,
+                    active ? 'border-kind-blue/25 bg-[#ebf4fb] text-nimbli' : 'text-[#1a1a1a]'
                   )}
                 >
                   <span className="truncate font-nimbli-heading font-bold">{name}</span>
@@ -167,7 +187,14 @@ export default function OuderSidebar({
       <div className="mt-auto flex items-center justify-between pt-8">
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md p-2 text-nimbli transition-colors hover:bg-nimbli-canvas disabled:opacity-60"
+          className={cn(
+            'inline-flex size-[30px] items-center justify-center rounded-md text-nimbli',
+            SIDEBAR_BTN_INTERACTION,
+            SIDEBAR_BTN_HOVER,
+            SIDEBAR_ICON_BTN_PRESS,
+            SIDEBAR_BTN_FOCUS,
+            'disabled:pointer-events-none disabled:opacity-60'
+          )}
           onClick={() => void logout()}
           disabled={logoutLoading}
           aria-label={logoutLoading ? 'Bezig met uitloggen' : 'Uitloggen'}
