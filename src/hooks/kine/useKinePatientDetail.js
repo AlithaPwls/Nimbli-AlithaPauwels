@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
-import { parseScheduleDays } from '@/lib/kind/weekCalendar.js'
+import { buildWeekBarsFromData, parseScheduleDays, startOfWeekMonday } from '@/lib/kind/weekCalendar.js'
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -43,19 +43,6 @@ function addDaysLocal(d, days) {
   return dt
 }
 
-function startOfWeekMonday(d) {
-  const dt = startOfDayLocal(d)
-  const mondayOffset = (dt.getDay() + 6) % 7
-  dt.setDate(dt.getDate() - mondayOffset)
-  return dt
-}
-
-function dayLabelShort(d) {
-  const raw = new Date(d).toLocaleDateString('nl-BE', { weekday: 'short' }).replace('.', '')
-  const two = raw.slice(0, 2)
-  return two.charAt(0).toUpperCase() + two.slice(1)
-}
-
 function formatSessionTime(completedAt) {
   if (!completedAt) return '—'
   const d = new Date(completedAt)
@@ -82,9 +69,60 @@ function normalizeWeeklyCounts(counts) {
   return counts.map((c) => Math.round((c / max) * 100))
 }
 
+function formatChartDayDateLabel(bar) {
+  if (bar.key && /^\d{4}-\d{2}-\d{2}$/.test(bar.key)) {
+    const [, month, day] = bar.key.split('-')
+    return `${Number(day)}/${month}`
+  }
+  return String(bar.date ?? '—')
+}
+
+function formatChartDayTooltip(bar, isToday, status) {
+  const suffix = isToday ? ' (vandaag)' : ''
+  const weekday = (bar.labelShort ?? '—').toUpperCase()
+  const head = `${weekday} ${formatChartDayDateLabel(bar)}${suffix}`
+  if (status === 'future') {
+    return `${head}: ${bar.total} oefeningen gepland`
+  }
+  return `${head}: ${bar.done}/${bar.total} oefeningen`
+}
+
+function buildKineWeeklyChart(weekStart, assignmentRows, weekSessionRows) {
+  const bars = buildWeekBarsFromData(weekStart, assignmentRows, weekSessionRows)
+  const todayKey = dateKeyLocal(new Date())
+  const rawCounts = bars.map((b) => b.done)
+  const dayStatuses = bars.map((b) => {
+    if (!b.key || !todayKey) return 'past'
+    if (b.key > todayKey) return 'future'
+    return 'past'
+  })
+  const dayDetails = bars.map((bar, i) => {
+    const status = dayStatuses[i]
+    const isToday = bar.key === todayKey
+    return {
+      title: formatChartDayTooltip(bar, isToday, status),
+      done: bar.done,
+      total: bar.total,
+    }
+  })
+
+  return {
+    points: normalizeWeeklyCounts(rawCounts),
+    days: bars.map((b) => b.labelShort),
+    dayStatuses,
+    dayDetails,
+  }
+}
+
 const EMPTY_WEEKLY = {
   points: [0, 0, 0, 0, 0, 0, 0],
   days: ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'],
+  dayStatuses: ['past', 'past', 'past', 'past', 'past', 'past', 'past'],
+  dayDetails: Array.from({ length: 7 }, () => ({
+    title: '—',
+    done: 0,
+    total: 0,
+  })),
 }
 
 function mapChildProfile(row) {
@@ -240,12 +278,22 @@ export function useKinePatientDetail({ patientId, practiceId }) {
       const weekStart = startOfWeekMonday(new Date())
       const weekEnd = addDaysLocal(weekStart, 7)
 
-      const { data: weekRows, error: weekErr } = await supabase
-        .from('exercise_sessions')
-        .select('id, completed_at')
-        .eq('child_id', child.id)
-        .gte('completed_at', weekStart.toISOString())
-        .lt('completed_at', weekEnd.toISOString())
+      const [
+        { data: weekRows, error: weekErr },
+        { data: assignRows, error: assignErr },
+      ] = await Promise.all([
+        supabase
+          .from('exercise_sessions')
+          .select('id, completed_at, success')
+          .eq('child_id', child.id)
+          .gte('completed_at', weekStart.toISOString())
+          .lt('completed_at', weekEnd.toISOString()),
+        supabase
+          .from('exercise_assignments')
+          .select('id, exercise_id, reps, rep_unit, created_at, schedule_days')
+          .eq('child_id', child.id)
+          .order('created_at', { ascending: false }),
+      ])
 
       if (cancelled) return
 
@@ -256,21 +304,11 @@ export function useKinePatientDetail({ patientId, practiceId }) {
         return
       }
 
-      const countsByDay = new Map()
-      for (const ev of toArray(weekRows)) {
-        const k = dateKeyLocal(ev.completed_at)
-        if (!k) continue
-        countsByDay.set(k, (countsByDay.get(k) ?? 0) + 1)
+      if (!assignErr) {
+        setWeeklyChart(buildKineWeeklyChart(weekStart, toArray(assignRows), toArray(weekRows)))
+      } else {
+        setWeeklyChart(buildKineWeeklyChart(weekStart, [], toArray(weekRows)))
       }
-
-      const days = Array.from({ length: 7 }, (_, i) => addDaysLocal(weekStart, i))
-      const rawCounts = days.map((d) => countsByDay.get(dateKeyLocal(d)) ?? 0)
-      const dayLabels = days.map((d) => dayLabelShort(d))
-
-      setWeeklyChart({
-        points: normalizeWeeklyCounts(rawCounts),
-        days: dayLabels,
-      })
 
       const { data: sessionRows, error: sessionsErr } = await supabase
         .from('exercise_sessions')
@@ -323,12 +361,6 @@ export function useKinePatientDetail({ patientId, practiceId }) {
       })
 
       setSessions(sessionList)
-
-      const { data: assignRows, error: assignErr } = await supabase
-        .from('exercise_assignments')
-        .select('id, exercise_id, reps, rep_unit, created_at, schedule_days')
-        .eq('child_id', child.id)
-        .order('created_at', { ascending: false })
 
       if (cancelled) return
 

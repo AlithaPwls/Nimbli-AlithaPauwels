@@ -1,9 +1,17 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import KinePracticeTeamList from '@/components/kine/KinePracticeTeamList.jsx'
+import KineTeamMemberDeleteDialog from '@/components/kine/KineTeamMemberDeleteDialog.jsx'
+import KineTeamMemberDetailDialog from '@/components/kine/KineTeamMemberDetailDialog.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderTextField from '@/components/ouder/OuderTextField.jsx'
+import { useAuth } from '@/hooks/useAuth.js'
 import { useLogout } from '@/hooks/useLogout.js'
+import { useDeleteKineTeamMember } from '@/hooks/kine/useDeleteKineTeamMember.js'
 import { useKineProfileForm } from '@/hooks/kine/useKineProfileForm.js'
+import { usePracticeKines } from '@/hooks/kine/usePracticeKines.js'
+import { useUpdateKineTeamMember } from '@/hooks/kine/useUpdateKineTeamMember.js'
 
 const primaryButtonClass =
   'h-10 rounded bg-nimbli px-6 font-nimbli-heading text-base font-black text-white shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90 disabled:opacity-60'
@@ -16,6 +24,8 @@ const asideOutlineButtonClass = `${outlineButtonClass} w-full`
 
 export default function KineInstellingen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { refreshProfile } = useAuth()
   const { logout, loading: logoutLoading } = useLogout()
   const {
     profile,
@@ -31,10 +41,101 @@ export default function KineInstellingen() {
     isDirty,
   } = useKineProfileForm()
 
+  const practiceId = profile?.practice_id ?? null
+  const {
+    members: practiceKines,
+    loading: teamLoading,
+    error: teamError,
+    refetch: refetchTeam,
+  } = usePracticeKines({
+    practiceId,
+    currentProfileId: profile?.id ?? null,
+  })
+
+  const {
+    updateMember,
+    loading: updateMemberLoading,
+    error: updateMemberError,
+    clearError: clearUpdateMemberError,
+  } = useUpdateKineTeamMember()
+
+  const {
+    deleteMember,
+    loading: deleteMemberLoading,
+    error: deleteMemberError,
+    clearError: clearDeleteMemberError,
+  } = useDeleteKineTeamMember()
+
+  const [selectedMember, setSelectedMember] = useState(null)
+  const [memberToDelete, setMemberToDelete] = useState(null)
+  const [memberSavedMessage, setMemberSavedMessage] = useState(null)
+
+  useEffect(() => {
+    if (location.state?.teamRefresh) {
+      refetchTeam()
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.pathname, location.state?.teamRefresh, navigate, refetchTeam])
+
   async function handleSave() {
     const result = await save()
     if (!result.ok && result.message) {
       setError(result.message)
+    }
+  }
+
+  function handleOpenMember(member) {
+    clearUpdateMemberError()
+    setMemberSavedMessage(null)
+    setSelectedMember(member)
+  }
+
+  function handleCloseMemberDetail(open) {
+    if (!open) {
+      setSelectedMember(null)
+      clearUpdateMemberError()
+      setMemberSavedMessage(null)
+    }
+  }
+
+  async function handleSaveMember(payload) {
+    setMemberSavedMessage(null)
+    const result = await updateMember(payload)
+    if (result.ok) {
+      setMemberSavedMessage('Wijzigingen opgeslagen.')
+      refetchTeam()
+      setSelectedMember((prev) => {
+        if (!prev || prev.id !== payload.kineId) return prev
+        const firstname = String(payload.firstname ?? '').trim()
+        const lastname = String(payload.lastname ?? '').trim()
+        return {
+          ...prev,
+          firstname,
+          lastname,
+          name: [firstname, lastname].filter(Boolean).join(' ') || prev.name,
+          email: String(payload.email ?? '').trim(),
+          dateOfBirth: payload.dateOfBirth || null,
+        }
+      })
+      if (payload.kineId === profile?.id) {
+        await refreshProfile()
+      }
+    }
+    return result
+  }
+
+  function handleRequestDelete(member) {
+    clearDeleteMemberError()
+    setMemberToDelete(member)
+  }
+
+  async function handleConfirmDeleteMember() {
+    if (!memberToDelete?.id) return
+    const result = await deleteMember({ kineId: memberToDelete.id })
+    if (result.ok) {
+      setMemberToDelete(null)
+      setSelectedMember(null)
+      refetchTeam()
     }
   }
 
@@ -64,6 +165,30 @@ export default function KineInstellingen() {
         <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-black">
           Instellingen
         </h1>
+
+        <KineTeamMemberDetailDialog
+          member={selectedMember}
+          onOpenChange={handleCloseMemberDetail}
+          onSave={handleSaveMember}
+          onRequestDelete={handleRequestDelete}
+          saving={updateMemberLoading}
+          saveError={updateMemberError}
+          savedMessage={memberSavedMessage}
+        />
+
+        <KineTeamMemberDeleteDialog
+          open={Boolean(memberToDelete)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setMemberToDelete(null)
+              clearDeleteMemberError()
+            }
+          }}
+          memberName={memberToDelete?.name}
+          loading={deleteMemberLoading}
+          error={deleteMemberError}
+          onConfirm={handleConfirmDeleteMember}
+        />
 
         <section className="mt-10 w-full">
           <h2 className="text-xl font-normal text-black">Mijn profiel</h2>
@@ -151,13 +276,15 @@ export default function KineInstellingen() {
             </div>
 
             <aside className="flex w-full flex-col gap-4 lg:w-[min(100%,320px)] lg:shrink-0">
-              <Button
-                type="button"
-                className={asidePrimaryButtonClass}
-                onClick={() => navigate('/dashboard/kine/instellingen/nieuwe-gebruiker')}
-              >
-                Nieuwe gebruiker toevoegen
-              </Button>
+              <KinePracticeTeamList
+                members={practiceKines}
+                loading={teamLoading}
+                error={teamError}
+                addButtonClassName={`${asidePrimaryButtonClass} mt-4`}
+                onAddMember={() => navigate('/dashboard/kine/instellingen/nieuwe-gebruiker')}
+                onSelectMember={handleOpenMember}
+              />
+
               <Button
                 type="button"
                 variant="outline"

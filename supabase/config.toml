@@ -2,3 +2,9 @@ project_id = "bouzkvgtuxfdbmcgvyiu"
 
 [functions.register-kine-practice]
 verify_jwt = false
+
+[functions.update-kine-team-member]
+verify_jwt = true
+
+[functions.delete-kine-team-member]
+verify_jwt = true
