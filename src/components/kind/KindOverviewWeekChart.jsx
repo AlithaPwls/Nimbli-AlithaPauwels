@@ -14,21 +14,28 @@ function barFillClass(done, total) {
 
 function WeekBar({ label, date, done, total }) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
-      <span className="font-nimbli-body text-[10px] font-semibold text-[#9ca3af]">
+    <div
+      className="group/weekday flex min-w-0 flex-1 cursor-default flex-col items-center gap-2 rounded-lg p-1 transition-[transform,filter] duration-200 ease-out motion-reduce:transition-none hover:-translate-y-1 motion-reduce:hover:translate-y-0"
+      title={`${label} ${date}: ${done}/${total} oefeningen`}
+    >
+      <span className="font-nimbli-body text-[10px] font-semibold text-[#9ca3af] transition-colors duration-200 ease-out group-hover/weekday:text-kind-black motion-reduce:transition-none">
         {done}/{total}
       </span>
-      <div className="relative flex h-32 w-full max-w-14 items-end overflow-hidden rounded-[10px] bg-kind-light-gray">
+      <div className="relative flex h-32 w-full max-w-14 items-end overflow-hidden rounded-[10px] bg-kind-light-gray shadow-sm transition-shadow duration-200 ease-out group-hover/weekday:shadow-[0_8px_20px_rgba(99,146,191,0.28)] motion-reduce:group-hover/weekday:shadow-sm motion-reduce:transition-none">
         <div
           className={cn(
-            'w-full rounded-t-[10px] bg-gradient-to-b from-kind-blue to-[#6392bf]',
+            'w-full rounded-t-[10px] bg-gradient-to-b from-kind-blue to-[#6392bf] transition-[height,filter] duration-200 ease-out group-hover/weekday:brightness-110 motion-reduce:transition-none motion-reduce:group-hover/weekday:brightness-100',
             barFillClass(done, total)
           )}
         />
       </div>
       <div className="flex flex-col items-center">
-        <span className="font-nimbli-heading text-xs font-bold text-[#6b7280]">{label}</span>
-        <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af]">{date}</span>
+        <span className="font-nimbli-heading text-xs font-bold text-[#6b7280] transition-colors duration-200 ease-out group-hover/weekday:text-kind-black motion-reduce:transition-none">
+          {label}
+        </span>
+        <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af] transition-colors duration-200 ease-out group-hover/weekday:text-[#6b7280] motion-reduce:transition-none">
+          {date}
+        </span>
       </div>
     </div>
   )

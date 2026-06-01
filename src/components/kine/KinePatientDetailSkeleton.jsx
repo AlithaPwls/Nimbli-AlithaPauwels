@@ -4,7 +4,7 @@ function Bone({ className = '' }) {
 
 export default function KinePatientDetailSkeleton() {
   return (
-    <div className="mt-8 flex flex-col gap-6" aria-busy="true" aria-label="Patiënt laden">
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Patiënt laden">
       <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3]">
         <div className="flex items-start justify-between gap-6">
           <div className="flex min-w-0 flex-1 gap-5">

@@ -2,76 +2,107 @@ import { Check, Gift, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useKindOverviewWeekChart } from '@/hooks/kind/useKindOverviewWeekChart.js'
 
+const DAY_DOT_CIRCLE =
+  'kind-week-day-dot grid size-7 place-items-center rounded-full transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none motion-reduce:shadow-none'
+
+const DAY_DOT_WRAP =
+  'group/day flex cursor-default flex-col items-center gap-1 rounded-md p-0.5 transition-colors duration-200 ease-out motion-reduce:transition-none hover:[&_.kind-week-day-dot]:-translate-y-0.5 hover:[&_.kind-week-day-dot]:shadow-[0_6px_14px_rgba(0,0,0,0.12)] motion-reduce:hover:[&_.kind-week-day-dot]:translate-y-0 motion-reduce:hover:[&_.kind-week-day-dot]:shadow-none'
+
+const DAY_DOT_LABEL =
+  'transition-[color,font-weight] duration-200 ease-out motion-reduce:transition-none group-hover/day:font-semibold group-hover/day:text-kind-black'
+
+function DayDotShell({ title, isToday, children }) {
+  return (
+    <div
+      className={cn(DAY_DOT_WRAP, isToday && 'cursor-pointer')}
+      title={title}
+      {...(isToday ? { 'aria-current': 'date' } : {})}
+    >
+      {children}
+    </div>
+  )
+}
+
+function DayDotLabels({ label, date, labelClassName, dateClassName }) {
+  return (
+    <>
+      <span className={cn('font-nimbli-body text-[10px] leading-none text-kind-black', DAY_DOT_LABEL, labelClassName)}>
+        {label}
+      </span>
+      <span
+        className={cn(
+          'font-nimbli-body text-[9px] leading-none text-[#9ca3af] transition-colors duration-200 ease-out group-hover/day:text-[#6b7280] motion-reduce:transition-none',
+          dateClassName
+        )}
+      >
+        {date}
+      </span>
+    </>
+  )
+}
+
 function DayDot({ state, label, date, done, total, isToday }) {
-  const base = 'grid size-7 place-items-center rounded-full'
   const title = `${label} ${date}: ${done}/${total} oefeningen${isToday ? ' (vandaag)' : ''}`
 
   if (state === 'fail') {
     return (
-      <div className="flex flex-col items-center gap-1" title={title}>
-        <div className={cn(base, 'bg-kind-red text-kind-white ring-1 ring-black/5')}>
-          <X className="size-3.5" aria-hidden />
+      <DayDotShell title={title} isToday={isToday}>
+        <div className={cn(DAY_DOT_CIRCLE, 'bg-kind-red text-kind-white ring-1 ring-black/5')}>
+          <X className="size-3.5 transition-transform duration-200 ease-out group-hover/day:scale-110 motion-reduce:group-hover/day:scale-100 motion-reduce:transition-none" aria-hidden />
         </div>
-        <span className="font-nimbli-body text-[10px] leading-none text-kind-black">{label}</span>
-        <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af]">{date}</span>
-      </div>
+        <DayDotLabels label={label} date={date} />
+      </DayDotShell>
     )
   }
   if (state === 'ok') {
     return (
-      <div className="flex flex-col items-center gap-1" title={title}>
-        <div className={cn(base, 'bg-[#81c784] text-kind-white ring-1 ring-black/5')}>
-          <Check className="size-3.5" aria-hidden />
+      <DayDotShell title={title} isToday={isToday}>
+        <div className={cn(DAY_DOT_CIRCLE, 'bg-[#81c784] text-kind-white ring-1 ring-black/5')}>
+          <Check className="size-3.5 transition-transform duration-200 ease-out group-hover/day:scale-110 motion-reduce:group-hover/day:scale-100 motion-reduce:transition-none" aria-hidden />
         </div>
-        <span className="font-nimbli-body text-[10px] leading-none text-kind-black">{label}</span>
-        <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af]">{date}</span>
-      </div>
+        <DayDotLabels label={label} date={date} />
+      </DayDotShell>
     )
   }
   if (state === 'today') {
     return (
-      <div className="flex flex-col items-center gap-1" title={title}>
+      <DayDotShell title={title} isToday>
         <div
           className={cn(
-            base,
-            'border-[3px] border-solid border-kind-yellow bg-transparent ring-1 ring-black/5'
+            DAY_DOT_CIRCLE,
+            'border-[3px] border-solid border-kind-yellow bg-transparent ring-1 ring-black/5 group-hover/day:border-[#d4a017]'
           )}
-          aria-current="date"
         />
-        <span className="font-nimbli-heading text-[10px] font-black leading-none text-kind-yellow">
-          {label}
-        </span>
-        <span className="font-nimbli-body text-[9px] font-semibold leading-none text-kind-yellow">
-          {date}
-        </span>
-      </div>
+        <DayDotLabels
+          label={label}
+          date={date}
+          labelClassName="font-nimbli-heading font-black text-kind-yellow group-hover/day:text-[#d4a017]"
+          dateClassName="font-semibold text-kind-yellow group-hover/day:text-[#d4a017]"
+        />
+      </DayDotShell>
     )
   }
   if (state === 'gift') {
     return (
-      <div className="flex flex-col items-center gap-1" title={title}>
+      <DayDotShell title={title} isToday={isToday}>
         <div
           className={cn(
-            base,
+            DAY_DOT_CIRCLE,
             'border border-[#bdbdbd] bg-[rgba(229,231,235,0.87)] text-kind-gray ring-1 ring-black/5'
           )}
         >
-          <Gift className="size-3.5" aria-hidden />
+          <Gift className="size-3.5 transition-transform duration-200 ease-out group-hover/day:scale-110 motion-reduce:group-hover/day:scale-100 motion-reduce:transition-none" aria-hidden />
         </div>
-        <span className="font-nimbli-body text-[10px] leading-none text-kind-black">{label}</span>
-        <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af]">{date}</span>
-      </div>
+        <DayDotLabels label={label} date={date} />
+      </DayDotShell>
     )
   }
 
   return (
-    <div className="flex flex-col items-center gap-1" title={title}>
-      <div
-        className={cn(base, 'border border-[#bdbdbd] bg-[rgba(229,231,235,0.87)] ring-1 ring-black/5')}
-      />
-      <span className="font-nimbli-body text-[10px] leading-none text-kind-black">{label}</span>
-      <span className="font-nimbli-body text-[9px] leading-none text-[#9ca3af]">{date}</span>
-    </div>
+    <DayDotShell title={title} isToday={isToday}>
+      <div className={cn(DAY_DOT_CIRCLE, 'border border-[#bdbdbd] bg-[rgba(229,231,235,0.87)] ring-1 ring-black/5')} />
+      <DayDotLabels label={label} date={date} />
+    </DayDotShell>
   )
 }
 

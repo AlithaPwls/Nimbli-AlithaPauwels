@@ -15,9 +15,35 @@ export function defaultExerciseScheduleDays() {
   return [0, 1, 2, 3, 4, 5]
 }
 
+function coerceScheduleDaysInput(raw) {
+  if (raw == null) return null
+  if (Array.isArray(raw)) return raw
+
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (!t) return null
+    if (t.startsWith('{') && t.endsWith('}')) {
+      const inner = t.slice(1, -1).trim()
+      if (!inner) return []
+      return inner.split(',').map((part) => part.trim())
+    }
+    if (t.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(t)
+        return Array.isArray(parsed) ? parsed : null
+      } catch {
+        return null
+      }
+    }
+  }
+
+  return null
+}
+
 export function normalizeScheduleDays(raw) {
-  if (!Array.isArray(raw)) return defaultExerciseScheduleDays()
-  const valid = raw
+  const coerced = coerceScheduleDaysInput(raw)
+  if (!Array.isArray(coerced)) return defaultExerciseScheduleDays()
+  const valid = coerced
     .map((d) => Number(d))
     .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
   const unique = [...new Set(valid)].sort((a, b) => a - b)

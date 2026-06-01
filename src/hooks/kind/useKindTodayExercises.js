@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
 import { categoryToneClasses, EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
-import { isAssignmentScheduledOnDate } from '@/lib/kind/weekCalendar.js'
+import { addDaysLocal, isAssignmentScheduledOnDate, startOfDayLocal } from '@/lib/kind/weekCalendar.js'
 
 function toArray(v) {
   if (v == null) return []
@@ -104,6 +104,8 @@ export function useKindTodayExercises() {
     }
 
     const today = new Date()
+    const dayStart = startOfDayLocal(today)
+    const dayEnd = addDaysLocal(dayStart, 1)
     const assignmentRows = toArray(assigns).filter((a) => isAssignmentScheduledOnDate(a, today))
     const exerciseIds = Array.from(new Set(assignmentRows.map((r) => r?.exercise_id).filter(Boolean)))
 
@@ -115,6 +117,8 @@ export function useKindTodayExercises() {
         .eq('child_id', childId)
         .in('exercise_id', exerciseIds)
         .eq('success', true)
+        .gte('completed_at', dayStart.toISOString())
+        .lt('completed_at', dayEnd.toISOString())
 
       if (sessErr) {
         setRows([])

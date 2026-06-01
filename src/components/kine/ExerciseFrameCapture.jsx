@@ -14,11 +14,14 @@ import {
   seekToTime,
   summarizeVisibility,
 } from '@/lib/kind/poseImageDetection.js'
+import {
+  formatCaptureSuccessMessage,
+  formatLowVisibilityWarning,
+} from '@/lib/kine/poseCaptureVisibilityCopy.js'
 import { usePoseImageLandmarker } from '@/hooks/kine/usePoseImageLandmarker.js'
 
 const FRAME_STEP_SEC = 1 / 30
 const VISIBILITY_WARN_THRESHOLD = 28
-const VISIBILITY_NAMES_PREVIEW = 6
 
 function formatSeconds(value) {
   if (!Number.isFinite(value) || value < 0) return '0:00'
@@ -91,7 +94,6 @@ export default function ExerciseFrameCapture({
   const [capturing, setCapturing] = useState(false)
   const [status, setStatus] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
-  const [pointCount, setPointCount] = useState(0)
   const [lastPayload, setLastPayload] = useState(null)
   const [visibilitySummary, setVisibilitySummary] = useState(null)
 
@@ -105,7 +107,6 @@ export default function ExerciseFrameCapture({
     setCurrentTime(0)
     setStatus(null)
     setErrorMessage(null)
-    setPointCount(0)
     setVisibilitySummary(null)
     clearOverlay()
 
@@ -177,7 +178,6 @@ export default function ExerciseFrameCapture({
     setCapturing(true)
     setStatus(null)
     setErrorMessage(null)
-    setPointCount(0)
     setLastPayload(null)
     setVisibilitySummary(null)
     clearOverlay()
@@ -200,7 +200,6 @@ export default function ExerciseFrameCapture({
       }
 
       drawOverlay(result)
-      setPointCount(payload.pose.landmarks.length)
       setLastPayload(payload)
       setVisibilitySummary(summarizeVisibility(payload))
       setStatus('ok')
@@ -218,7 +217,6 @@ export default function ExerciseFrameCapture({
   const handleClear = useCallback(() => {
     setStatus(null)
     setErrorMessage(null)
-    setPointCount(0)
     setLastPayload(null)
     setVisibilitySummary(null)
     clearOverlay()
@@ -322,37 +320,23 @@ export default function ExerciseFrameCapture({
             className="inline-flex items-center gap-1.5 rounded-md bg-nimbli/10 px-3 py-2 text-xs font-medium text-nimbli-ink"
             role="status"
           >
-            <CheckCircle2 className="size-4 text-nimbli" strokeWidth={2} aria-hidden />
-            {slotLabel} herkend op {formatSeconds(currentTime)}
-            {visibilitySummary
-              ? ` (${visibilitySummary.visibleCount}/${visibilitySummary.totalPoints} punten zichtbaar).`
-              : ` (${pointCount} punten).`}
+            <CheckCircle2 className="size-4 shrink-0 text-nimbli" strokeWidth={2} aria-hidden />
+            {formatCaptureSuccessMessage(
+              slotLabel,
+              formatSeconds(currentTime),
+              visibilitySummary
+            )}
           </p>
           {visibilitySummary && visibilitySummary.visibleCount < VISIBILITY_WARN_THRESHOLD ? (
-            <div
-              className="rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800"
+            <p
+              className="rounded-md bg-amber-50 px-3 py-2 text-xs leading-relaxed font-medium text-amber-800"
               role="status"
             >
-              <p className="inline-flex items-center gap-1.5">
-                <TriangleAlert className="size-4" strokeWidth={2} aria-hidden />
-                Lage zichtbaarheid: slechts {visibilitySummary.visibleCount} van{' '}
-                {visibilitySummary.totalPoints} punten goed zichtbaar.
-              </p>
-              {visibilitySummary.lowVisibilityNames.length > 0 ? (
-                <p className="mt-1 text-amber-700">
-                  Slecht zichtbaar:{' '}
-                  {visibilitySummary.lowVisibilityNames
-                    .slice(0, VISIBILITY_NAMES_PREVIEW)
-                    .join(', ')}
-                  {visibilitySummary.lowVisibilityNames.length > VISIBILITY_NAMES_PREVIEW
-                    ? ` +${
-                        visibilitySummary.lowVisibilityNames.length - VISIBILITY_NAMES_PREVIEW
-                      } meer`
-                    : ''}
-                  .
-                </p>
-              ) : null}
-            </div>
+              <span className="inline-flex items-start gap-1.5">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={2} aria-hidden />
+                <span>{formatLowVisibilityWarning(visibilitySummary)}</span>
+              </span>
+            </p>
           ) : null}
           {lastPayload ? (
             <details className="rounded-md border border-[#e1dbd3] bg-nimbli-canvas/40 text-xs">

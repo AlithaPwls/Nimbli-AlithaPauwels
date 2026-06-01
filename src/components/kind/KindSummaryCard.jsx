@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import KindDailyMissionsCard from '@/components/kind/KindDailyMissionsCard.jsx'
 import KindOverviewStats from '@/components/kind/KindOverviewStats.jsx'
 import KindWeekOverview from '@/components/kind/KindWeekOverview.jsx'
 
@@ -15,6 +16,8 @@ export default function KindSummaryCard({ className }) {
       >
         <KindWeekOverview noCard />
       </div>
+
+      <KindDailyMissionsCard />
     </section>
   )
 }

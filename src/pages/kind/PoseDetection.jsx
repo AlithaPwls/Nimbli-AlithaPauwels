@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
+import PoseHoldRing from '@/components/kind/PoseHoldRing.jsx'
 import { cn } from '@/lib/utils'
 import {
   RULES_ENGINE_POSE_TYPE,
@@ -45,103 +46,86 @@ function getDistanceOverlayCopy(poseUi) {
     return {
       title: 'Maak je klaar',
       subtitle: 'Ga volledig in beeld staan.',
-      progressLabel: 'Voorbereiden',
+      progressLabel: '',
+      showHoldRing: false,
     }
   }
 
   switch (poseUi.phase) {
     case 'between_reps':
       return {
-        title: poseUi.secondsUntilNext > 0 ? `Pauze ${poseUi.secondsUntilNext}s` : 'Neem rustpositie',
-        subtitle: 'Wacht tot de teller klaar is. Daarna mag je terug naar rust.',
-        progressLabel: 'Wachten op volgende stap',
+        title: 'Even pauze',
+        subtitle: '',
+        progressLabel: '',
+        showHoldRing: false,
       }
     case 'wait_rest':
       return {
-        title: 'Houd rustpositie',
-        subtitle: `Blijf ${poseUi.restRequiredSeconds} seconde stil. Als de balk vol is, mag je starten.`,
-        progressLabel: 'Rustpositie vasthouden',
+        title: 'Rust',
+        subtitle: '',
+        progressLabel: '',
+        showHoldRing: true,
       }
     case 'wait_arms_up':
       return {
-        title: `Start herhaling ${poseUi.currentRep}`,
-        subtitle: 'Rustpositie is goed. Ga nu naar de oefenhouding.',
-        progressLabel: 'Klaar voor de volgende herhaling',
+        title: 'Klaar?',
+        subtitle: '',
+        progressLabel: '',
+        showHoldRing: false,
       }
     case 'holding':
       return {
-        title: poseUi.secondsLeft > 0 ? `Nog ${poseUi.secondsLeft}s` : 'Bijna klaar',
-        subtitle: poseUi.line2 || 'Houd de pose vast tot de balk vol is.',
-        progressLabel: 'Pose vasthouden',
+        title: 'Houd vast',
+        subtitle: '',
+        progressLabel: '',
+        showHoldRing: false,
       }
     case 'wait_arms_down':
       return {
-        title: 'Terug naar rust',
-        subtitle: 'Ga rustig terug naar de rustpositie en blijf even stil.',
-        progressLabel: 'Rust detecteren',
+        title: 'Rust',
+        subtitle: '',
+        progressLabel: '',
+        showHoldRing: true,
       }
     case 'complete':
       return {
         title: 'Klaar',
         subtitle: poseUi.line2 || 'Super gedaan.',
-        progressLabel: 'Oefening voltooid',
+        progressLabel: '',
+        showHoldRing: false,
       }
     default:
       return {
         title: poseUi.line1 || 'Volg de instructie',
         subtitle: poseUi.line2 || 'Blijf goed in beeld.',
-        progressLabel: 'Voortgang',
+        progressLabel: '',
+        showHoldRing: false,
       }
   }
 }
 
-function getPoseSpeechPrompt(poseUi, overlayCopy) {
+function getPoseSpeechPrompt(poseUi) {
   if (!poseUi) return null
 
   switch (poseUi.phase) {
-    case 'between_reps':
-      return {
-        key: `between_reps:${poseUi.repsCompleted}`,
-        text: 'Pauze. Wacht even.',
-      }
-    case 'wait_rest':
-      return {
-        key: `wait_rest:${poseUi.currentRep}`,
-        text: 'Houd rustpositie. Blijf even stil.',
-      }
     case 'wait_arms_up':
       return {
         key: `wait_arms_up:${poseUi.currentRep}`,
-        text: `Start herhaling ${poseUi.currentRep}. Ga naar de oefenhouding.`,
+        text: `Start herhaling ${poseUi.currentRep}.`,
       }
-    case 'holding': {
-      const seconds = Number(poseUi.secondsLeft)
-      if (Number.isFinite(seconds) && seconds > 0) {
-        return {
-          key: `holding:${poseUi.currentRep}:${seconds}`,
-          text: `Nog ${seconds} seconden.`,
-        }
-      }
-      return {
-        key: `holding:${poseUi.currentRep}:done`,
-        text: 'Bijna klaar.',
-      }
-    }
     case 'wait_arms_down':
       return {
         key: `wait_arms_down:${poseUi.currentRep}`,
-        text: 'Terug naar rust.',
+        text: 'Ga naar rustpositie.',
       }
-    case 'complete':
+    case 'wait_rest':
+      if ((poseUi.restProgress01 ?? 0) > 0) return null
       return {
-        key: 'complete',
-        text: 'Klaar. Super gedaan.',
+        key: `wait_rest:prompt:${poseUi.currentRep}`,
+        text: 'Ga naar rustpositie.',
       }
     default:
-      return {
-        key: `${poseUi.phase}:${overlayCopy.title}`,
-        text: [overlayCopy.title, overlayCopy.subtitle].filter(Boolean).join('. '),
-      }
+      return null
   }
 }
 
@@ -439,7 +423,13 @@ export default function PoseDetection() {
       poseType === RULES_ENGINE_POSE_TYPE) &&
     poseUi
   const overlayCopy = getDistanceOverlayCopy(poseUi)
-  const speechPrompt = showRoutineOverlay ? getPoseSpeechPrompt(poseUi, overlayCopy) : null
+  const speechPrompt = showRoutineOverlay ? getPoseSpeechPrompt(poseUi) : null
+  const holdRingProgress =
+    poseUi?.phase === 'wait_rest'
+      ? (poseUi.restProgress01 ?? poseUi.phaseProgress01 ?? 0)
+      : poseUi?.phase === 'wait_arms_down'
+        ? (poseUi.downProgress01 ?? poseUi.phaseProgress01 ?? 0)
+        : 0
   const speechPromptKey = speechPrompt?.key ?? ''
   const speechPromptText = speechPrompt?.text ?? ''
 
@@ -520,36 +510,40 @@ export default function PoseDetection() {
                 </svg>
               </div>
               <div className="mx-auto flex w-full max-w-2xl flex-col justify-end rounded-2xl bg-kind-white/92 px-3.5 py-3 text-nimbli-ink shadow-xl ring-1 ring-white/40 backdrop-blur-sm sm:px-5 sm:py-4">
-                <p className="font-nimbli-heading text-[clamp(1.25rem,2.5vw,2.1rem)] font-black leading-none tracking-tight text-nimbli-ink">
-                  {overlayCopy.title}
-                </p>
-                <p className="mx-auto mt-1.5 max-w-xl font-nimbli-body text-[clamp(0.8rem,1.2vw,1rem)] font-bold leading-snug text-[#364153]">
-                  {overlayCopy.subtitle}
-                </p>
-                <div className="mt-2.5">
-                  <div className="mb-1 flex items-center justify-between gap-3 font-nimbli-heading text-[11px] font-black text-[#364153] sm:text-sm">
-                    <span>{overlayCopy.progressLabel}</span>
-                    <span className="tabular-nums">{Math.round(pct(poseUi.phaseProgress01 ?? poseUi.progress ?? 0))}%</span>
+                {overlayCopy.showHoldRing ? (
+                  <PoseHoldRing progress01={holdRingProgress} className="mb-1" />
+                ) : (
+                  <p className="font-nimbli-heading text-[clamp(1.25rem,2.5vw,2.1rem)] font-black leading-none tracking-tight text-nimbli-ink">
+                    {overlayCopy.title}
+                  </p>
+                )}
+                {overlayCopy.subtitle ? (
+                  <p className="mx-auto mt-1.5 max-w-xl font-nimbli-body text-[clamp(0.8rem,1.2vw,1rem)] font-bold leading-snug text-[#364153]">
+                    {overlayCopy.subtitle}
+                  </p>
+                ) : null}
+                {!overlayCopy.showHoldRing ? (
+                  <div className="mt-2.5">
+                    <svg
+                      viewBox="0 0 100 6"
+                      className={cn(
+                        'h-3 w-full text-kind-green-primary',
+                        (poseUi.phase === 'between_reps' || poseUi.phase === 'complete') && 'text-kind-yellow'
+                      )}
+                      aria-hidden
+                    >
+                      <rect x="0" y="0" width="100" height="6" rx="3" className="fill-[#e1dbd3]" />
+                      <rect
+                        x="0"
+                        y="0"
+                        width={pct(poseUi.phaseProgress01 ?? poseUi.progress ?? 0)}
+                        height="6"
+                        rx="3"
+                        className="fill-current"
+                      />
+                    </svg>
                   </div>
-                  <svg
-                    viewBox="0 0 100 6"
-                    className={cn(
-                      'h-3 w-full text-kind-green-primary',
-                      (poseUi.phase === 'between_reps' || poseUi.phase === 'complete') && 'text-kind-yellow'
-                    )}
-                    aria-hidden
-                  >
-                    <rect x="0" y="0" width="100" height="6" rx="3" className="fill-[#e1dbd3]" />
-                    <rect
-                      x="0"
-                      y="0"
-                      width={pct(poseUi.phaseProgress01 ?? poseUi.progress ?? 0)}
-                      height="6"
-                      rx="3"
-                      className="fill-current"
-                    />
-                  </svg>
-                </div>
+                ) : null}
               </div>
             </div>
           ) : hint && !error ? (

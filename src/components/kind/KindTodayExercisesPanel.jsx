@@ -38,7 +38,7 @@ export default function KindTodayExercisesPanel({ open, anchorRect, onClose, onS
         role="dialog"
         aria-modal="true"
         aria-labelledby="kind-today-exercises-title"
-        className="pointer-events-auto fixed z-50 w-[min(290px,calc(100vw-1.5rem))] max-h-[min(70vh,420px)] overflow-y-auto rounded-b-lg"
+        className="pointer-events-auto fixed z-50 w-[min(290px,calc(100vw-1.5rem))] max-h-[min(70vh,420px)] overflow-y-auto rounded-lg"
         style={{
           top: `${clampedTop}px`,
           left: `${left}px`,
@@ -50,7 +50,7 @@ export default function KindTodayExercisesPanel({ open, anchorRect, onClose, onS
         </h2>
         <div className="flex flex-col items-center">
           <img src={caretSvg} alt="" className="relative z-[1] h-6 w-11 shrink-0" width={45} height={24} />
-          <div className="-mt-px w-full divide-y divide-kind-border overflow-hidden rounded-b-lg border border-kind-light-gray/90 bg-kind-white shadow-[0px_4px_4px_rgba(0,0,0,0.12)]">
+          <div className="-mt-px w-full divide-y divide-kind-border overflow-hidden rounded-lg border border-kind-light-gray/90 bg-kind-white shadow-[0px_4px_4px_rgba(0,0,0,0.12)]">
             {loading ? (
               <p className="px-2.5 py-4 text-center font-nimbli-body text-xs text-kind-gray">Laden…</p>
             ) : error ? (

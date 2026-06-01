@@ -43,7 +43,7 @@ export default function KineNieuweGebruiker() {
       setSuccessMessage('De nieuwe gebruiker is toegevoegd.')
       setForm(emptyForm)
       setTimeout(() => {
-        navigate('/dashboard/kine/instellingen')
+        navigate('/dashboard/kine/instellingen', { state: { teamRefresh: true } })
       }, 1200)
     }
   }

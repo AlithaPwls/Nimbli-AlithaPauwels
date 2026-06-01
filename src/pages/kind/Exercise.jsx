@@ -129,31 +129,30 @@ export default function Exercise() {
   return (
     <div className="flex min-h-svh flex-col bg-kind-canvas" data-page="kind-exercise">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-8 px-4 py-6 sm:px-6 lg:flex-row lg:gap-12 lg:px-7 lg:pb-12 lg:pt-10">
-          <div className="flex min-w-0 flex-1 flex-col lg:max-w-[780px]">
-            <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:gap-10 lg:mb-10">
+        <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-8 px-4 py-6 sm:px-6 lg:gap-12 lg:px-7 lg:pb-12 lg:pt-10">
+          {error ? (
+            <p className="rounded-lg border border-kind-border bg-kind-white px-4 py-3 font-nimbli-body text-sm text-kind-red">
+              {typeof error?.message === 'string' && error.message
+                ? error.message
+                : 'Deze oefening kon niet worden geladen.'}
+            </p>
+          ) : null}
+
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
+            <div className="flex min-w-0 flex-1 gap-6 sm:gap-10">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
-                className="inline-flex w-fit shrink-0 items-center gap-2 rounded-sm text-nimbli-ink transition-colors hover:text-kind-green-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
+                onClick={() => navigate('/dashboard/kind')}
+                className="inline-flex h-fit w-fit shrink-0 items-center gap-2 self-start rounded-sm pt-1.5 text-nimbli-ink transition-colors hover:text-kind-green-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
               >
                 <ArrowLeft className="size-5 shrink-0" aria-hidden strokeWidth={2.25} />
                 <span className="font-nimbli-heading text-[18px] font-bold leading-[25.2px]">Terug</span>
               </button>
-              <h1 className="min-w-0 font-nimbli-heading text-[36px] font-extrabold leading-10 text-nimbli-ink sm:flex-1 sm:pt-0.5">
-                {title}
-              </h1>
-            </div>
-
-            {error ? (
-              <p className="rounded-lg border border-kind-border bg-kind-white px-4 py-3 font-nimbli-body text-sm text-kind-red">
-                {typeof error?.message === 'string' && error.message
-                  ? error.message
-                  : 'Deze oefening kon niet worden geladen.'}
-              </p>
-            ) : null}
-
-            <div className="flex w-full flex-col items-center gap-[30px]">
+              <div className="flex min-w-0 flex-1 flex-col gap-8 lg:max-w-[780px]">
+                <h1 className="min-w-0 font-nimbli-heading text-[36px] font-extrabold leading-10 text-nimbli-ink">
+                  {title}
+                </h1>
+                <div className="flex w-full flex-col gap-[30px]">
               <div className="relative flex aspect-[780/404] w-full max-h-[min(50vh,404px)] min-h-[200px] items-center justify-center overflow-hidden rounded-[24px] bg-[#6c6c6c] sm:max-h-[404px] sm:min-h-[280px]">
                 {showYouTube && ytEmbed ? (
                   <iframe
@@ -224,19 +223,21 @@ export default function Exercise() {
               <button
                 type="button"
                 onClick={goToPoseDetection}
-                className="h-16 w-full max-w-[774px] rounded-xl border-0 bg-kind-green-primary font-nimbli-heading text-[17.75px] font-black leading-none text-kind-canvas shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
+                className="h-16 w-full rounded-xl border-0 bg-kind-green-primary font-nimbli-heading text-[17.75px] font-black leading-none text-kind-canvas shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
               >
                 Start oefening
               </button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-[250px] lg:gap-6">
-            <StatCard label="Herhalingen" value={loading && !data ? '…' : repsDisplay} valueClassName="text-[#101828]" />
-            <StatCard label="Beloning" value={loading && !data ? '…' : beloning} valueClassName="text-[#d08700]" />
-            <StatCard label="Niveau" value={loading && !data ? '…' : niveau} valueClassName="text-[#00a63e]" />
-            <StatCard label="Duur" value={loading && !data ? '…' : durationLabel} valueClassName="text-[#ca0000]" />
-          </aside>
+            <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-[250px] lg:gap-6">
+              <StatCard label="Herhalingen" value={loading && !data ? '…' : repsDisplay} valueClassName="text-[#101828]" />
+              <StatCard label="Beloning" value={loading && !data ? '…' : beloning} valueClassName="text-[#d08700]" />
+              <StatCard label="Niveau" value={loading && !data ? '…' : niveau} valueClassName="text-[#00a63e]" />
+              <StatCard label="Duur" value={loading && !data ? '…' : durationLabel} valueClassName="text-[#ca0000]" />
+            </aside>
+          </div>
         </div>
       </div>
     </div>

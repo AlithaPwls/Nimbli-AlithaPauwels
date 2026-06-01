@@ -19,13 +19,37 @@ function isProbablyImageUrl(url) {
 }
 
 function youtubeThumb(url) {
-  if (!url || typeof url !== 'string') return null
-  const t = url.trim()
-  const m1 = t.match(/youtu\.be\/([^?]+)/)
-  const m2 = t.match(/[?&]v=([^&]+)/)
-  const id = (m1?.[1] || m2?.[1] || '').trim()
+  const id = youtubeVideoId(url)
   if (!id) return null
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+}
+
+/** YouTube watch/share URL → video id, or null. */
+export function youtubeVideoId(url) {
+  if (!url || typeof url !== 'string') return null
+  const t = url.trim()
+  const m1 = t.match(/youtu\.be\/([^?&/]+)/)
+  const m2 = t.match(/[?&]v=([^&]+)/)
+  const id = (m1?.[1] || m2?.[1] || '').trim()
+  return id || null
+}
+
+export function youtubeEmbedUrl(url) {
+  const id = youtubeVideoId(url)
+  return id ? `https://www.youtube-nocookie.com/embed/${id}` : null
+}
+
+/** Direct file / storage / provider URL usable in `<video src>`. */
+export function isExerciseVideoFileUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  if (youtubeVideoId(url)) return false
+  const path = (url.split('?')[0] || url).toLowerCase()
+  if (path.includes('/exercise-videos/')) return true
+  return /\.(mp4|mov|avi|webm|m4v)$/i.test(path)
+}
+
+export function isExerciseVideoUrl(url) {
+  return Boolean(youtubeVideoId(url) || isExerciseVideoFileUrl(url))
 }
 
 function tryParseDescriptionMeta(description) {
@@ -161,11 +185,16 @@ export function normalizeExerciseRow(row) {
 
   const imageFromMedia = mediaCandidates.find((url) => isProbablyImageUrl(url)) || null
 
-  const imageUrl =
-    (thumb && isProbablyImageUrl(thumb) ? thumb : null) ||
-    yt ||
-    imageFromMedia ||
-    PLACEHOLDER_IMG
+  const thumbnailUrl =
+    (thumb && isProbablyImageUrl(thumb) ? thumb : null) || yt || imageFromMedia || null
+
+  const imageUrl = thumbnailUrl || PLACEHOLDER_IMG
+
+  const youtubeUrl = mediaCandidates.find((url) => youtubeVideoId(url)) || null
+  const videoUrl =
+    mediaCandidates.find((url) => isExerciseVideoFileUrl(url)) ||
+    (isExerciseVideoFileUrl(thumb) ? thumb : null) ||
+    null
 
   const tone = inferCategoryTone(category)
 
@@ -181,7 +210,10 @@ export function normalizeExerciseRow(row) {
     reps,
     time,
     imageUrl,
+    thumbnailUrl,
+    videoUrl,
+    youtubeUrl,
     description: row.description,
-    mediaUrl: mediaCandidates[0] ?? null,
+    mediaUrl: videoUrl ?? youtubeUrl ?? mediaCandidates[0] ?? null,
   }
 }

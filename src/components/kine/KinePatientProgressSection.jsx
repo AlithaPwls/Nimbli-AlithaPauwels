@@ -11,7 +11,12 @@ export default function KinePatientProgressSection({ weeklyChart }) {
         <p className="mt-1 text-[15px] text-[#6b7280]">Laatste 7 dagen</p>
       </header>
       <div className="mt-8">
-        <KinePatientProgressChart points={points} days={days} />
+        <KinePatientProgressChart
+          points={points}
+          days={days}
+          dayStatuses={weeklyChart?.dayStatuses}
+          dayDetails={weeklyChart?.dayDetails}
+        />
       </div>
     </section>
   )

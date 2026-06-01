@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
-import { CirclePlay, Clock, Plus, Repeat2 } from 'lucide-react'
+import { CirclePlay, Clock, Plus, Repeat2, Trash2 } from 'lucide-react'
 import AddExerciseDialog from '@/components/kine/AddExerciseDialog.jsx'
 import ExerciseDetailDialog from '@/components/kine/ExerciseDetailDialog.jsx'
+import KineExerciseDeleteDialog from '@/components/kine/KineExerciseDeleteDialog.jsx'
 import KineOefeningenModeSwitch from '@/components/kine/KineOefeningenModeSwitch.jsx'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
+import { useDeletePracticeExercise } from '@/hooks/kine/useDeletePracticeExercise.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import { dbExerciseRowToEigenVideoCard, rowHasUploadedVideoFile } from '@/lib/eigenExerciseCard.js'
@@ -25,6 +28,14 @@ export default function KineOefeningenEigenVideos() {
   const [category, setCategory] = useState('all')
   const [addExerciseOpen, setAddExerciseOpen] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  const {
+    deleteExercise,
+    deletingExerciseId,
+    error: deleteError,
+    clearError: clearDeleteError,
+  } = useDeletePracticeExercise()
 
   const rawById = useMemo(() => {
     const m = new Map()
@@ -48,6 +59,21 @@ export default function KineOefeningenEigenVideos() {
     })
   }, [query, category, videos])
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget?.id || !practiceId) return
+    const raw = rawById.get(deleteTarget.id)
+    const res = await deleteExercise({
+      exerciseId: deleteTarget.id,
+      practiceId,
+      rawRow: raw,
+    })
+    if (res.ok) {
+      if (selectedExercise?.id === deleteTarget.id) setSelectedExercise(null)
+      setDeleteTarget(null)
+      refetch()
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
       <ExerciseDetailDialog
@@ -55,6 +81,28 @@ export default function KineOefeningenEigenVideos() {
         onOpenChange={(open) => {
           if (!open) setSelectedExercise(null)
         }}
+        onDelete={
+          selectedExercise
+            ? () => {
+                setDeleteTarget({ id: selectedExercise.id, title: selectedExercise.title })
+                clearDeleteError()
+              }
+            : undefined
+        }
+        deleteDisabled={Boolean(deletingExerciseId)}
+      />
+      <KineExerciseDeleteDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+            clearDeleteError()
+          }
+        }}
+        exerciseTitle={deleteTarget?.title}
+        loading={Boolean(deletingExerciseId)}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
       />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -125,16 +173,36 @@ export default function KineOefeningenEigenVideos() {
           <p className="mt-8 text-center text-sm text-nimbli-muted">Oefeningen laden…</p>
         ) : (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
-            {filtered.map((video) => (
-              <button
+            {filtered.map((video) => {
+              const isDeleting = deletingExerciseId === video.id
+              return (
+              <article
                 key={video.id}
-                type="button"
-                onClick={() => {
-                  const raw = rawById.get(video.id)
-                  if (raw) setSelectedExercise(normalizeExerciseRow(raw))
-                }}
-                className="w-full rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 pt-[25px] text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+                className="relative rounded-[14px] border-2 border-[#e1dbd3] bg-white shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50"
               >
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon-sm"
+                  disabled={isDeleting}
+                  aria-label={`Verwijder ${video.title}`}
+                  className="absolute right-4 top-4 z-10"
+                  onClick={() => {
+                    clearDeleteError()
+                    setDeleteTarget({ id: video.id, title: video.title })
+                  }}
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    const raw = rawById.get(video.id)
+                    if (raw) setSelectedExercise(normalizeExerciseRow(raw))
+                  }}
+                  className="w-full cursor-pointer rounded-[14px] p-6 pt-[25px] pr-14 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40 disabled:opacity-60"
+                >
                 <div className="flex items-start gap-4">
                   <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
                     {video.videoUrl ? (
@@ -191,8 +259,9 @@ export default function KineOefeningenEigenVideos() {
                     </div>
                   </div>
                 </div>
-              </button>
-            ))}
+                </button>
+              </article>
+            )})}
           </div>
         )}
 
