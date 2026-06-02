@@ -1,3 +1,5 @@
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
+
 function clampProgress(progress) {
   const safe = Number.isFinite(progress) ? progress : 0
   return Math.min(1, Math.max(0, safe))
@@ -24,11 +26,14 @@ export default function KinePatientCard({ patient, onSelect }) {
     >
       <div className="flex items-start gap-4">
         <img
-          className="mt-0.5 size-12 shrink-0 rounded-xl object-cover ring-1 ring-nimbli-slot-border/20"
-          src={patient.avatarUrl}
+          className="mt-0.5 size-12 shrink-0 rounded-2xl object-cover ring-1 ring-nimbli-slot-border/20"
+          src={resolveProfileAvatarUrl(patient.avatarUrl)}
           alt={`${patient.name} profielfoto`}
           loading="lazy"
           decoding="async"
+          onError={(e) => {
+            e.currentTarget.src = FALLBACK_PROFILE_PIC
+          }}
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">

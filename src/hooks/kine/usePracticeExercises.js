@@ -2,6 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 
+function shouldRefetchFromPayload(payload, practiceId) {
+  const row = payload?.new ?? payload?.old
+  if (!row || typeof row !== 'object') return true
+  if (!practiceId) return true
+  // If practice_id exists, we can skip unrelated changes.
+  if (Object.prototype.hasOwnProperty.call(row, 'practice_id')) {
+    return row.practice_id == null || row.practice_id === practiceId
+  }
+  return true
+}
+
 function rowHasColumn(rows, key) {
   const sample = rows.find((r) => r && typeof r === 'object')
   return sample != null && Object.prototype.hasOwnProperty.call(sample, key)
@@ -26,6 +37,27 @@ export function usePracticeExercises(practiceId) {
   const refetch = useCallback(() => {
     setTick((t) => t + 1)
   }, [])
+
+  useEffect(() => {
+    if (!practiceId) return
+
+    const channel = supabase
+      .channel(`practice-exercises:${practiceId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'exercises' },
+        (payload) => {
+          if (shouldRefetchFromPayload(payload, practiceId)) {
+            refetch()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [practiceId, refetch])
 
   useEffect(() => {
     let cancelled = false

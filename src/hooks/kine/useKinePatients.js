@@ -156,7 +156,7 @@ export function useKinePatients({ practiceId, query = '' }) {
         id: r.id,
         name,
         age: age ?? '—',
-        avatarUrl: r.avatar_url || 'https://placehold.co/96x96?text=%20',
+        avatarUrl: r.avatar_url,
         focus: r.treatment_goal?.trim() || '—',
         lastSession: meta.lastSession,
         progress: meta.progress,

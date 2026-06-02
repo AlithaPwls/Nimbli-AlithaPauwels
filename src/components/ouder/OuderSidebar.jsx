@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Calendar, ChevronDown, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import { withChildSearch } from '@/lib/activeChild.js'
+import { Calendar, ChevronDown, LayoutDashboard, LogOut, Settings, Sparkles } from 'lucide-react'
 import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { cn } from '@/lib/utils'
 import {
@@ -64,9 +65,8 @@ export default function OuderSidebar({
     return 'Ouder'
   }, [selectedChild])
 
-  const headerInteractive = Boolean(
-    selectedChild || (Array.isArray(children) && children.length > 1)
-  )
+  const hasMultipleChildren = Array.isArray(children) && children.length > 1
+  const headerOpensPicker = hasMultipleChildren
 
   useEffect(() => {
     function onDocPointerDown(e) {
@@ -86,30 +86,27 @@ export default function OuderSidebar({
         <button
           type="button"
           onClick={() => {
-            // Clicking the active child name should switch to the kind dashboard.
-            if (selectedChild) {
-              setOpen(false)
-              navigate('/dashboard/kind')
-              return
-            }
-            if (Array.isArray(children) && children.length > 1) setOpen((v) => !v)
+            if (headerOpensPicker) setOpen((v) => !v)
           }}
+          disabled={!headerOpensPicker}
           className={cn(
             'flex h-[30px] w-full items-center justify-center gap-2 overflow-hidden rounded-md border border-[#f9fafb] bg-white px-2 text-left shadow-[0_2px_0_0_#e1dbd3]',
-            headerInteractive
+            headerOpensPicker
               ? cn(SIDEBAR_BTN_INTERACTION, SIDEBAR_BTN_HOVER, SIDEBAR_BTN_PRESS, SIDEBAR_BTN_FOCUS)
               : cn('cursor-default', SIDEBAR_BTN_FOCUS)
           )}
-          aria-haspopup={Array.isArray(children) && children.length > 1 ? 'menu' : undefined}
-          aria-expanded={Array.isArray(children) && children.length > 1 ? open : undefined}
+          aria-haspopup={headerOpensPicker ? 'menu' : undefined}
+          aria-expanded={headerOpensPicker ? open : undefined}
         >
           <span className="truncate font-nimbli-heading text-sm font-bold text-[#1a1a1a]">
             {headerLabel}
           </span>
-          <ChevronDown className="size-3 shrink-0 text-[#1a1a1a]" aria-hidden />
+          {headerOpensPicker ? (
+            <ChevronDown className="size-3 shrink-0 text-[#1a1a1a]" aria-hidden />
+          ) : null}
         </button>
 
-        {open && Array.isArray(children) && children.length > 1 ? (
+        {open && hasMultipleChildren ? (
           <div
             role="menu"
             aria-label="Kies kind"
@@ -125,7 +122,9 @@ export default function OuderSidebar({
                   role="menuitem"
                   onClick={() => {
                     setOpen(false)
-                    onSelectChild?.(c?.id ?? null)
+                    const nextId = c?.id ?? null
+                    if (!nextId || nextId === selectedChildId) return
+                    onSelectChild?.(nextId)
                   }}
                   className={cn(
                     'flex w-full items-center justify-between rounded-lg border border-transparent px-3 py-2 text-left text-sm',
@@ -143,13 +142,33 @@ export default function OuderSidebar({
             })}
           </div>
         ) : null}
+
+        {selectedChild ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              navigate(withChildSearch('/dashboard/kind', selectedChildId))
+            }}
+            className={cn(
+              'mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-nimbli-canvas bg-[#f0faf7] px-2 py-1.5 font-nimbli-heading text-xs font-bold text-nimbli',
+              SIDEBAR_BTN_INTERACTION,
+              SIDEBAR_BTN_HOVER,
+              SIDEBAR_BTN_PRESS,
+              SIDEBAR_BTN_FOCUS
+            )}
+          >
+            <Sparkles className="size-3.5 shrink-0" aria-hidden />
+            Kindweergave
+          </button>
+        ) : null}
       </div>
 
       <NimbliSidebarLogo className="mt-6" />
 
       <nav className="mt-10 flex flex-col gap-3" aria-label="Navigatie ouder">
         <NavLink
-          to="/dashboard/ouder"
+          to={withChildSearch('/dashboard/ouder', selectedChildId)}
           end
           className={({ isActive }) => navItemClass({ isActive })}
         >
@@ -161,7 +180,7 @@ export default function OuderSidebar({
           )}
         </NavLink>
         <NavLink
-          to="/dashboard/ouder/oefenplanning"
+          to={withChildSearch('/dashboard/ouder/oefenplanning', selectedChildId)}
           className={({ isActive }) => navItemClass({ isActive })}
         >
           {({ isActive }) => (
@@ -172,7 +191,7 @@ export default function OuderSidebar({
           )}
         </NavLink>
         <NavLink
-          to="/dashboard/ouder/instellingen"
+          to={withChildSearch('/dashboard/ouder/instellingen', selectedChildId)}
           className={({ isActive }) => navItemClass({ isActive })}
         >
           {({ isActive }) => (
@@ -188,7 +207,7 @@ export default function OuderSidebar({
         <button
           type="button"
           className={cn(
-            'inline-flex size-[30px] items-center justify-center rounded-md text-nimbli',
+            'inline-flex size-9 items-center justify-center rounded-md text-nimbli',
             SIDEBAR_BTN_INTERACTION,
             SIDEBAR_BTN_HOVER,
             SIDEBAR_ICON_BTN_PRESS,
@@ -199,9 +218,10 @@ export default function OuderSidebar({
           disabled={logoutLoading}
           aria-label={logoutLoading ? 'Bezig met uitloggen' : 'Uitloggen'}
         >
-          <LogOut className="size-[28px] rotate-180" strokeWidth={2} />
+          <LogOut className="size-5 rotate-180" strokeWidth={2} />
         </button>
       </div>
+
     </aside>
   )
 }

@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { applyActiveChildToParams, resolveKindRouteChildId } from '@/lib/activeChild.js'
+import { useAuth } from '@/hooks/useAuth.js'
 import { AlarmClock, Check, Lock, Moon, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import pathMainSvg from '@/assets/kind-path-figma.svg'
@@ -177,6 +179,8 @@ function PathMarkersOverlay({ children }) {
 
 export default function KindProgressPath() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { role, profile } = useAuth()
   const [todayPanelOpen, setTodayPanelOpen] = useState(false)
   const [todayAnchorRect, setTodayAnchorRect] = useState(null)
   const { weekDays } = useKindOverviewWeekChart()
@@ -208,9 +212,13 @@ export default function KindProgressPath() {
       const qs = new URLSearchParams()
       qs.set('exerciseId', exercise.id)
       if (exercise.assignmentId) qs.set('assignmentId', exercise.assignmentId)
+      applyActiveChildToParams(
+        qs,
+        resolveKindRouteChildId({ role, profile, searchParams })
+      )
       navigate({ pathname: '/dashboard/kind/oefening', search: `?${qs.toString()}` }, { state: { exercise } })
     },
-    [closeTodayPanel, navigate]
+    [closeTodayPanel, navigate, profile, role, searchParams]
   )
 
   return (

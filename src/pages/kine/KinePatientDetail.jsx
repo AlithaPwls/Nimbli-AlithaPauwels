@@ -79,11 +79,22 @@ export default function KinePatientDetail() {
   const { profile } = useAuth()
   const practiceId = profile?.practice_id ?? null
 
-  const { patient, parent, weeklyChart, sessions, assignments, loading, error, notFound, refetch } =
-    useKinePatientDetail({
-      patientId,
-      practiceId,
-    })
+  const {
+    patient,
+    parent,
+    siblings,
+    linkedParentId,
+    weeklyChart,
+    sessions,
+    assignments,
+    loading,
+    error,
+    notFound,
+    refetch,
+  } = useKinePatientDetail({
+    patientId,
+    practiceId,
+  })
 
   const {
     assign,
@@ -245,6 +256,55 @@ export default function KinePatientDetail() {
                     onQrClick={() => setInviteOpen(true)}
                   />
 
+                  {linkedParentId ? (
+                    <section className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-5 shadow-[0_2px_0_0_#e1dbd3]">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h2 className="font-nimbli-heading text-base font-bold text-nimbli-ink">
+                          Gezin
+                        </h2>
+                        <Button
+                          type="button"
+                          className="h-9 bg-nimbli font-nimbli-heading text-xs font-bold"
+                          onClick={() => {
+                            const params = new URLSearchParams({
+                              existingParentId: linkedParentId,
+                            })
+                            const relation = parent?.role_parent?.trim()
+                            if (relation) {
+                              params.set('parentRelation', relation)
+                            }
+                            navigate(`/dashboard/kine/patienten/nieuw?${params.toString()}`)
+                          }}
+                        >
+                          Kind toevoegen
+                        </Button>
+                      </div>
+                      {Array.isArray(siblings) && siblings.length > 0 ? (
+                        <ul className="mt-3 flex flex-col gap-2">
+                          {siblings.map((s) => {
+                            const name = `${s?.firstname ?? ''} ${s?.lastname ?? ''}`.trim() || 'Kind'
+                            return (
+                              <li key={s.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/dashboard/kine/patienten/${s.id}`)}
+                                  className="w-full rounded-lg border border-[#e1dbd3] px-3 py-2 text-left text-sm hover:border-nimbli/40"
+                                >
+                                  <span className="font-nimbli-heading font-bold">{name}</span>
+                                  {!s.user_id ? (
+                                    <span className="ml-2 text-xs text-amber-700">Nog niet geactiveerd</span>
+                                  ) : null}
+                                </button>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-nimbli-muted">Geen andere kinderen gekoppeld.</p>
+                      )}
+                    </section>
+                  ) : null}
+
                   <KinePatientDetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
                   <PatientDetailTabPanel
@@ -357,6 +417,7 @@ export default function KinePatientDetail() {
           }}
           patientName={patient?.name ?? 'deze patiënt'}
           isRegistered={isRegistered}
+          hasOtherChildren={Array.isArray(siblings) && siblings.length > 0}
           loading={deleting}
           error={deleteError}
           onConfirm={handleConfirmDelete}

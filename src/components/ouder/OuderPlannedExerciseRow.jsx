@@ -37,7 +37,7 @@ export default function OuderPlannedExerciseRow({
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-nimbli-muted">
             <span
               className={cn(
-                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold',
+                'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black',
                 categoryToneClasses(categoryTone)
               )}
             >
@@ -46,7 +46,7 @@ export default function OuderPlannedExerciseRow({
             <MetaDot />
             <span className="inline-flex items-center gap-1">
               <Repeat2 className="size-3.5" aria-hidden />
-              {reps}x herhalingen
+              {reps}
             </span>
             <MetaDot />
             <span className="inline-flex items-center gap-1">

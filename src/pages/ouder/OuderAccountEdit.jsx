@@ -1,5 +1,6 @@
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
@@ -8,6 +9,7 @@ import OuderTextField from '@/components/ouder/OuderTextField.jsx'
 export default function OuderAccountEdit() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
+  const { activatedChildren, activeChildId, setSelectedChildId } = useActiveChildSelection(profile)
 
   if (loading) {
     return <div className="text-center py-8">Laden...</div>
@@ -19,7 +21,13 @@ export default function OuderAccountEdit() {
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
-      <OuderSidebar logout={logout} logoutLoading={logoutLoading} />
+      <OuderSidebar
+        logout={logout}
+        logoutLoading={logoutLoading}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
+      />
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">

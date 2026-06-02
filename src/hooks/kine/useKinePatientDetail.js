@@ -139,7 +139,7 @@ function mapChildProfile(row) {
     name,
     age: age ?? null,
     ageLabel: age != null ? `${age} jaar` : '—',
-    avatarUrl: row.avatar_url || 'https://placehold.co/96x96?text=%20',
+    avatarUrl: row.avatar_url ?? null,
     birthdate: row.date_of_birth ?? null,
     birthdateLabel: formatBirthdate(row.date_of_birth),
     treatmentGoal: row.treatment_goal?.trim() || null,
@@ -159,8 +159,8 @@ function mapParentProfile(row) {
     id: row.id,
     name,
     email: row.email?.trim() || null,
-    phone: null,
-    relation: null,
+    phone: row.phone_number?.trim() || null,
+    relation: row.role_parent?.trim() || null,
     isRegistered: Boolean(row.user_id),
   }
 }
@@ -171,6 +171,8 @@ function mapParentProfile(row) {
 export function useKinePatientDetail({ patientId, practiceId }) {
   const [childRow, setChildRow] = useState(null)
   const [parentRow, setParentRow] = useState(null)
+  const [siblings, setSiblings] = useState([])
+  const [linkedParentId, setLinkedParentId] = useState(null)
   const [weeklyChart, setWeeklyChart] = useState(EMPTY_WEEKLY)
   const [sessions, setSessions] = useState([])
   const [assignments, setAssignments] = useState([])
@@ -245,7 +247,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
 
       const { data: rel, error: relErr } = await supabase
         .from('child_parent_relations')
-        .select('parent_id')
+        .select('parent_id, role_parent')
         .eq('child_id', child.id)
         .limit(1)
         .maybeSingle()
@@ -258,7 +260,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
       } else if (rel?.parent_id) {
         const { data: parent, error: parentErr } = await supabase
           .from('profiles')
-          .select('id, firstname, lastname, email, user_id')
+          .select('id, firstname, lastname, email, user_id, phone_number')
           .eq('id', rel.parent_id)
           .eq('role', 'parent')
           .maybeSingle()
@@ -269,10 +271,28 @@ export function useKinePatientDetail({ patientId, practiceId }) {
           setParentRow(null)
           setError(parentErr)
         } else {
-          setParentRow(parent ?? null)
+          setParentRow(parent ? { ...parent, role_parent: rel?.role_parent ?? null } : null)
+        }
+        setLinkedParentId(rel.parent_id)
+
+        const { data: sibRows, error: sibErr } = await supabase
+          .from('child_parent_relations')
+          .select(
+            'child:profiles!child_id ( id, firstname, lastname, invite_code, user_id )'
+          )
+          .eq('parent_id', rel.parent_id)
+          .neq('child_id', child.id)
+
+        if (!cancelled && !sibErr) {
+          const list = (Array.isArray(sibRows) ? sibRows : [])
+            .map((r) => r?.child)
+            .filter((c) => c?.id)
+          setSiblings(list)
         }
       } else {
         setParentRow(null)
+        setLinkedParentId(null)
+        setSiblings([])
       }
 
       const weekStart = startOfWeekMonday(new Date())
@@ -425,5 +445,17 @@ export function useKinePatientDetail({ patientId, practiceId }) {
   const patient = useMemo(() => mapChildProfile(childRow), [childRow])
   const parent = useMemo(() => mapParentProfile(parentRow), [parentRow])
 
-  return { patient, parent, weeklyChart, sessions, assignments, loading, error, notFound, refetch }
+  return {
+    patient,
+    parent,
+    siblings,
+    linkedParentId,
+    weeklyChart,
+    sessions,
+    assignments,
+    loading,
+    error,
+    notFound,
+    refetch,
+  }
 }

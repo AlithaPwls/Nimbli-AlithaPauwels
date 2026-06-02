@@ -3,16 +3,23 @@ import KindSidebar from '@/components/kind/KindSidebar.jsx'
 import KindProgressPath from '@/components/kind/KindProgressPath.jsx'
 import KindSummaryCard from '@/components/kind/KindSummaryCard.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
+import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 
 export default function DashboardKind() {
-  const { profile } = useAuth()
+  const { role, profile } = useAuth()
+  const { childId, children } = useActiveChildId()
 
   const displayName = useMemo(() => {
+    if (role === 'parent' && childId) {
+      const active = (children ?? []).find((c) => c?.id === childId)
+      const first = active?.firstname?.trim()
+      if (first) return first
+    }
     const first = profile?.firstname?.trim()
     const last = profile?.lastname?.trim()
     const combined = [first, last].filter(Boolean).join(' ')
     return combined || 'Kind'
-  }, [profile?.firstname, profile?.lastname])
+  }, [role, childId, children, profile?.firstname, profile?.lastname])
 
   return (
     <div className="flex h-svh overflow-hidden bg-kind-canvas" data-page="kind-dashboard">

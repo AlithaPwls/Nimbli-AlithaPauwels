@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { removeChildAvatar, uploadChildAvatar } from '@/lib/ouder/childAvatarStorage.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
@@ -24,18 +24,18 @@ function getChildAvatarUrl(child, previewById) {
 export default function OuderKindProfielenBeheren() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children, loading: childrenLoading, error, patchChild } = useChildrenForParent(profile)
-
-  const [selectedChildId, setSelectedChildId] = useState(null)
+  const {
+    children,
+    loading: childrenLoading,
+    error,
+    patchChild,
+    activatedChildren,
+    selectedChildId,
+    setSelectedChildId,
+  } = useActiveChildSelection(profile)
   const [previewById, setPreviewById] = useState(() => new Map())
   const [avatarSaving, setAvatarSaving] = useState(false)
   const [avatarError, setAvatarError] = useState(null)
-
-  useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      setSelectedChildId(children[0].id)
-    }
-  }, [children, selectedChildId])
 
   useEffect(() => {
     return () => {
@@ -137,7 +137,16 @@ export default function OuderKindProfielenBeheren() {
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
-      <OuderSidebar logout={logout} logoutLoading={logoutLoading} />
+      <OuderSidebar
+        logout={logout}
+        logoutLoading={logoutLoading}
+        childrenList={activatedChildren}
+        selectedChildId={selectedChildId}
+        onSelectChild={(id) => {
+          setSelectedChildId(id)
+          setAvatarError(null)
+        }}
+      />
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-5 py-8 font-nimbli-body text-nimbli-ink sm:px-8 sm:py-10">

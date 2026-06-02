@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
 import { useNavigate } from 'react-router-dom'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
+import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderSettingsToggleRow from '@/components/ouder/OuderSettingsToggleRow.jsx'
@@ -11,6 +13,7 @@ export default function OuderInstellingen() {
   const navigate = useNavigate()
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
+  const { activatedChildren, activeChildId, setSelectedChildId } = useActiveChildSelection(profile)
 
   const [cameraAccess, setCameraAccess] = useState(true)
   const [shareData, setShareData] = useState(false)
@@ -28,7 +31,13 @@ export default function OuderInstellingen() {
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
-      <OuderSidebar logout={logout} logoutLoading={logoutLoading} />
+      <OuderSidebar
+        logout={logout}
+        logoutLoading={logoutLoading}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
+      />
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
@@ -105,7 +114,9 @@ export default function OuderInstellingen() {
                     <OuderSettingsActionRow
                       label="Kindprofiel(en) beheren"
                       icon="edit"
-                      onClick={() => navigate('/dashboard/ouder/kindprofielen')}
+                      onClick={() =>
+                        navigate(`/dashboard/ouder/kindprofielen${buildChildSearch(activeChildId)}`)
+                      }
                     />
                     <OuderSettingsActionRow
                       label="Ouderprofiel bewerken"

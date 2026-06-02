@@ -67,48 +67,81 @@ export default function LoginWithCode() {
         return
       }
 
-      const grouped = new Map()
-      for (const r of rows ?? []) {
-        const key = r.invite_code ?? ''
-        const list = grouped.get(key)
-        if (list) list.push(r)
-        else grouped.set(key, [r])
-      }
-
-      let child
-      let parent
-      for (const list of grouped.values()) {
-        const c = list.find((r) => r.role === 'child' && r.user_id == null)
-        const p = list.find((r) => r.role === 'parent' && r.user_id == null)
-        if (c && p) {
-          child = c
-          parent = p
-          break
-        }
-      }
-
-      if (!child || !parent) {
+      const pendingChildren = (rows ?? []).filter((r) => r.role === 'child' && r.user_id == null)
+      if (pendingChildren.length !== 1) {
         setInviteError(
           'Deze code is ongeldig of al gebruikt. Vraag een nieuwe code aan je kinesist.'
         )
         return
       }
 
-      const next = {
-        inviteCode: code,
-        childProfile: {
-          id: child.id,
-          firstname: child.firstname,
-          lastname: child.lastname,
-        },
-        parentProfile: {
-          id: parent.id,
-          firstname: parent.firstname,
-          lastname: parent.lastname,
-          email: parent.email,
-        },
+      const child = pendingChildren[0]
+      const pendingParent = (rows ?? []).find((r) => r.role === 'parent' && r.user_id == null)
+
+      if (pendingParent) {
+        navigate('/register/ouder', {
+          state: {
+            inviteCode: code,
+            childProfile: {
+              id: child.id,
+              firstname: child.firstname,
+              lastname: child.lastname,
+            },
+            parentProfile: {
+              id: pendingParent.id,
+              firstname: pendingParent.firstname,
+              lastname: pendingParent.lastname,
+              email: pendingParent.email,
+            },
+          },
+        })
+        return
       }
-      navigate('/register/ouder', { state: next })
+
+      const { data: relRow, error: relErr } = await supabase
+        .from('child_parent_relations')
+        .select(
+          'parent:profiles!parent_id ( id, firstname, lastname, email, user_id )'
+        )
+        .eq('child_id', child.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (relErr) {
+        setInviteError('Kon de code niet controleren. Probeer later opnieuw.')
+        return
+      }
+
+      const linkedParent = relRow?.parent
+      if (!linkedParent?.id) {
+        setInviteError(
+          'Deze code is ongeldig of niet gekoppeld aan een ouder. Vraag je kinesist om hulp.'
+        )
+        return
+      }
+
+      if (!linkedParent.user_id) {
+        setInviteError(
+          'De ouder van dit kind is nog niet geregistreerd. Gebruik eerst de code van het eerste kind.'
+        )
+        return
+      }
+
+      navigate('/register/kind', {
+        state: {
+          inviteCode: code,
+          childProfile: {
+            id: child.id,
+            firstname: child.firstname,
+            lastname: child.lastname,
+          },
+          parentProfile: {
+            id: linkedParent.id,
+            firstname: linkedParent.firstname,
+            lastname: linkedParent.lastname,
+          },
+        },
+      })
     } finally {
       setChecking(false)
     }
@@ -194,4 +227,3 @@ export default function LoginWithCode() {
     </div>
   )
 }
-

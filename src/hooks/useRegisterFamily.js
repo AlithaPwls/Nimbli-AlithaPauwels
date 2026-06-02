@@ -1,9 +1,5 @@
 import supabase from '@/lib/supabaseClient.js'
-
-function childAuthEmail(inviteCode) {
-  const digits = String(inviteCode ?? '').replace(/\D/g, '')
-  return `kind.${digits || inviteCode}@nimbli.be`
-}
+import { childAuthEmailFromInviteCode } from '@/lib/childAuthEmail.js'
 
 /**
  * After failed signUp (duplicate / 422 / validation), try signIn once with the same password.
@@ -68,6 +64,14 @@ function isRpcMissing(err) {
  * Still requires FK ON UPDATE CASCADE on exercise_* tables if the kind has assignments.
  */
 async function linkPendingProfilesDirect(input, parentUserId, childUserId, email, childEmail) {
+  const { data: existingRelation } = await supabase
+    .from('child_parent_relations')
+    .select('role_parent')
+    .eq('parent_id', input.parentProfile.id)
+    .eq('child_id', input.childProfile.id)
+    .limit(1)
+    .maybeSingle()
+
   await supabase
     .from('child_parent_relations')
     .delete()
@@ -105,6 +109,7 @@ async function linkPendingProfilesDirect(input, parentUserId, childUserId, email
   await supabase.from('child_parent_relations').insert({
     parent_id: parentUserId,
     child_id: childUserId,
+    role_parent: existingRelation?.role_parent ?? null,
   })
 
   return { error: null }
@@ -129,7 +134,7 @@ async function linkPendingProfilesRpc(input, inviteDigits, parentUserId, childUs
  */
 export async function registerFamily(input) {
   const email = String(input.parentEmail ?? '').trim()
-  const childEmail = childAuthEmail(input.inviteCode)
+  const childEmail = childAuthEmailFromInviteCode(input.inviteCode)
 
   const parent = await ensureAuthUser({ email, password: input.password })
   if (!parent.userId) {

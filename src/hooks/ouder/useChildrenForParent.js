@@ -6,15 +6,24 @@ function childSortKey(row) {
   return name.toLowerCase()
 }
 
+function mapRelationRow(row) {
+  const child = row?.child
+  if (!child?.id) return null
+  return {
+    ...child,
+    role_parent: row?.role_parent ?? null,
+    isPending: child.user_id == null,
+  }
+}
+
 /**
- * Parent helper: loads all linked child profile rows (same invite_code).
+ * Parent helper: loads all linked child profiles via child_parent_relations.
  */
 export function useChildrenForParent(parentProfile) {
-  const inviteCode = parentProfile?.invite_code ?? null
   const parentProfileId = parentProfile?.id ?? null
 
   const [children, setChildren] = useState([])
-  const [loading, setLoading] = useState(Boolean(inviteCode))
+  const [loading, setLoading] = useState(Boolean(parentProfileId))
   const [error, setError] = useState(null)
   const [tick, setTick] = useState(0)
 
@@ -33,7 +42,7 @@ export function useChildrenForParent(parentProfile) {
     let cancelled = false
 
     async function run() {
-      if (!inviteCode) {
+      if (!parentProfileId) {
         setChildren([])
         setLoading(false)
         setError(null)
@@ -44,9 +53,17 @@ export function useChildrenForParent(parentProfile) {
       setError(null)
 
       const { data, error: qErr } = await supabase
-        .from('profiles')
-        .select('id, firstname, lastname, date_of_birth, created_at, avatar_url, role, invite_code')
-        .eq('invite_code', inviteCode)
+        .from('child_parent_relations')
+        .select(
+          `
+          role_parent,
+          child:profiles!child_id (
+            id, firstname, lastname, date_of_birth, created_at,
+            avatar_url, role, invite_code, user_id, treatment_goal
+          )
+        `
+        )
+        .eq('parent_id', parentProfileId)
 
       if (cancelled) return
 
@@ -57,16 +74,12 @@ export function useChildrenForParent(parentProfile) {
         return
       }
 
-      const list = Array.isArray(data) ? [...data] : []
-      const filtered = list.filter((r) => {
-        if (parentProfileId && r?.id === parentProfileId) return false
-        if (typeof r?.role === 'string') return r.role === 'child'
-        // If role is missing/unexpected, best-effort: treat "not the parent row" as child.
-        return true
-      })
-      filtered.sort((a, b) => childSortKey(a).localeCompare(childSortKey(b), 'nl'))
+      const list = (Array.isArray(data) ? data : [])
+        .map(mapRelationRow)
+        .filter((c) => c && c.role === 'child')
+      list.sort((a, b) => childSortKey(a).localeCompare(childSortKey(b), 'nl'))
 
-      setChildren(filtered)
+      setChildren(list)
       setError(null)
       setLoading(false)
     }
@@ -76,7 +89,17 @@ export function useChildrenForParent(parentProfile) {
     return () => {
       cancelled = true
     }
-  }, [inviteCode, parentProfileId, tick])
+  }, [parentProfileId, tick])
+
+  const activatedChildren = useMemo(
+    () => (children ?? []).filter((c) => !c.isPending),
+    [children]
+  )
+
+  const pendingChildren = useMemo(
+    () => (children ?? []).filter((c) => c.isPending),
+    [children]
+  )
 
   const derived = useMemo(() => {
     return (children ?? []).map((c) => {
@@ -87,6 +110,14 @@ export function useChildrenForParent(parentProfile) {
     })
   }, [children])
 
-  return { children, derived, loading, error, refetch, patchChild }
+  return {
+    children,
+    activatedChildren,
+    pendingChildren,
+    derived,
+    loading,
+    error,
+    refetch,
+    patchChild,
+  }
 }
-

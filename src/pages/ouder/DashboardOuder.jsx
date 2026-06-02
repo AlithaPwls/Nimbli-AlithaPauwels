@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { useParentDashboardData } from '@/hooks/ouder/useParentDashboardData.js'
+import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderChildSwitcher from '@/components/ouder/OuderChildSwitcher.jsx'
 import OuderStatPill from '@/components/ouder/OuderStatPill.jsx'
 import OuderMiniLineChart from '@/components/ouder/OuderMiniLineChart.jsx'
 import OuderProgressRow from '@/components/ouder/OuderProgressRow.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
 import OuderRecentSection from '@/components/ouder/OuderRecentSection.jsx'
-
-// Avatar fallback is derived from Supabase `profiles` rows.
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -35,35 +36,17 @@ function formatMemberSince(dateValue) {
 export default function DashboardOuder() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children, loading: childrenLoading, error: childrenError } = useChildrenForParent(profile)
+  const {
+    activatedChildren,
+    pendingChildren,
+    loading: childrenLoading,
+    error: childrenError,
+    activeChildId,
+    selectedChild,
+    setSelectedChildId,
+  } = useActiveChildSelection(profile)
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const childParam = searchParams.get('child')
-  const [selectedChildId, setSelectedChildId] = useState(childParam)
-
-  useEffect(() => {
-    if (childParam !== selectedChildId) {
-      setSelectedChildId(childParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [childParam])
-
-  useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      const id = children[0].id
-      setSelectedChildId(id)
-      const next = new URLSearchParams(searchParams)
-      next.set('child', id)
-      setSearchParams(next, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children, selectedChildId])
-
-  const selectedChild = useMemo(() => {
-    return (children ?? []).find((c) => c?.id === selectedChildId) ?? null
-  }, [children, selectedChildId])
-
-  const dashboard = useParentDashboardData(selectedChildId)
+  const dashboard = useParentDashboardData(activeChildId)
 
   const parentWelcomeTitle = useMemo(() => {
     const first = profile?.firstname?.trim() ?? ''
@@ -96,27 +79,20 @@ export default function DashboardOuder() {
   const focusValue = dashboard.header?.goal ?? (selectedChild?.treatment_goal?.trim() || null)
   const goal = focusValue ? `Doel : ${focusValue}` : 'Doel : —'
   const avatarSrcRaw = dashboard.header?.avatarUrl ?? selectedChild?.avatar_url ?? ''
-  const avatarSrc = String(avatarSrcRaw).trim() || null
-  const [avatarFailed, setAvatarFailed] = useState(false)
+  const [avatarSrc, setAvatarSrc] = useState(() => resolveProfileAvatarUrl(avatarSrcRaw))
 
   useEffect(() => {
-    setAvatarFailed(false)
-  }, [avatarSrc])
+    setAvatarSrc(resolveProfileAvatarUrl(avatarSrcRaw))
+  }, [avatarSrcRaw])
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
       <OuderSidebar
         logout={logout}
         logoutLoading={logoutLoading}
-        childrenList={children}
-        selectedChildId={selectedChildId}
-        onSelectChild={(id) => {
-          setSelectedChildId(id)
-          const next = new URLSearchParams(searchParams)
-          if (id) next.set('child', id)
-          else next.delete('child')
-          setSearchParams(next, { replace: true })
-        }}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
       />
 
       <main className="min-w-0 flex-1 overflow-auto">
@@ -124,6 +100,35 @@ export default function DashboardOuder() {
           <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
             {parentWelcomeTitle}
           </h1>
+
+          <OuderChildSwitcher
+            className="mt-5"
+            childrenList={activatedChildren}
+            selectedChildId={activeChildId}
+            onSelectChild={setSelectedChildId}
+          />
+
+          {pendingChildren.length > 0 ? (
+            <div
+              className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+              role="status"
+            >
+              <p className="text-sm font-semibold">
+                {pendingChildren.length === 1
+                  ? 'Er wacht een kind op activatie'
+                  : `Er wachten ${pendingChildren.length} kinderen op activatie`}
+              </p>
+              <p className="mt-1 text-xs opacity-90">
+                Activeer het account zodat je oefeningen en voortgang kunt volgen.
+              </p>
+              <Link
+                to={`/dashboard/ouder/kind-activeren${buildChildSearch(pendingChildren[0]?.id)}`}
+                className="mt-3 inline-flex text-sm font-bold text-nimbli underline-offset-2 hover:underline"
+              >
+                Kind nu activeren
+              </Link>
+            </div>
+          ) : null}
 
           {childrenError ? (
             <div
@@ -152,21 +157,15 @@ export default function DashboardOuder() {
           <div className="mt-6 rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
             <div className="flex items-start gap-6">
               <div className="h-[125px] w-[125px] shrink-0 overflow-hidden rounded-lg border border-[#e1dbd3] shadow-[0_2px_0_0_#e1dbd3]">
-                {avatarSrc && !avatarFailed ? (
-                  <img
-                    src={avatarSrc}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    onError={() => setAvatarFailed(true)}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-nimbli-canvas text-sm font-semibold text-nimbli-muted">
-                    —
-                  </div>
-                )}
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarSrc(FALLBACK_PROFILE_PIC)}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-nimbli-heading text-2xl font-bold text-[#1a1a1a]">{childLine}</p>

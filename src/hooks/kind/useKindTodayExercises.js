@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
-import { useAuth } from '@/hooks/useAuth.js'
+import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 import { categoryToneClasses, EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import { addDaysLocal, isAssignmentScheduledOnDate, startOfDayLocal } from '@/lib/kind/weekCalendar.js'
 
@@ -13,12 +13,12 @@ function formatRepsLine(assignment, exerciseRow) {
   const n = assignment?.reps
   if (typeof n === 'number' && Number.isFinite(n)) {
     const u = (assignment?.rep_unit || '').trim()
-    if (u) return `${n} ${u}`
-    return `${n} herhalingen`
+    if (u) return `${n} ⟲ ${u}` // Voeg icon Repeat toe tussen n en eenheid
+    return `⟲ ${n}`
   }
   const norm = normalizeExerciseRow(exerciseRow)
   if (typeof norm.reps === 'number' && Number.isFinite(norm.reps)) {
-    return `${norm.reps} herhalingen`
+    return `${norm.reps}`
   }
   if (typeof norm.reps === 'string' && norm.reps.trim() && norm.reps !== '—') {
     return norm.reps.trim()
@@ -31,54 +31,10 @@ function formatRepsLine(assignment, exerciseRow) {
  * and loads exercise assignments with exercise details for the “oefeningen van vandaag” popover.
  */
 export function useKindTodayExercises() {
-  const { role, profile } = useAuth()
-  const [childId, setChildId] = useState(null)
-  const [resolving, setResolving] = useState(true)
+  const { childId, loading: resolving } = useActiveChildId()
   const [rows, setRows] = useState([])
   const [assignmentsLoading, setAssignmentsLoading] = useState(false)
   const [error, setError] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function resolveChild() {
-      if (!profile?.id) {
-        setChildId(null)
-        setResolving(false)
-        return
-      }
-      if (role === 'child') {
-        setChildId(profile.id)
-        setResolving(false)
-        return
-      }
-      if (role === 'parent' && profile.invite_code) {
-        const { data, error: qErr } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('invite_code', profile.invite_code)
-          .eq('role', 'child')
-          .limit(1)
-          .maybeSingle()
-        if (cancelled) return
-        if (qErr) {
-          setChildId(null)
-          setResolving(false)
-          return
-        }
-        setChildId(data?.id ?? null)
-        setResolving(false)
-        return
-      }
-      setChildId(null)
-      setResolving(false)
-    }
-
-    void resolveChild()
-    return () => {
-      cancelled = true
-    }
-  }, [role, profile?.id, profile?.invite_code])
 
   const refetch = useCallback(async (options = {}) => {
     const { soft = false } = options

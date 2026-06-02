@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { readAddPatientDraft } from '@/lib/addPatientDraft'
-
-const ASSETS = {
-  patientPhoto: 'https://www.figma.com/api/mcp/asset/9123c94e-5949-40f2-ad85-7eb04295e8e2',
-}
+import { FALLBACK_PROFILE_PIC } from '@/lib/profileAvatar.js'
 
 const EMPTY_EXERCISE_IDS = []
 
@@ -115,6 +112,10 @@ export default function AddPatient3() {
   const { exercises, loading: exercisesLoading } = usePracticeExercises(practiceId)
 
   const draft = useMemo(() => readAddPatientDraft() ?? {}, [])
+  const repsById = useMemo(() => {
+    const raw = draft.exerciseRepsById
+    return raw && typeof raw === 'object' ? raw : {}
+  }, [draft])
   const patientName = `${draft.childFirstname ?? ''} ${draft.childLastname ?? ''}`.trim() || 'Nieuwe patiënt'
   const birthdate = draft.childDob ? String(draft.childDob) : '—'
   const parentName = `${draft.parentFirstname ?? ''} ${draft.parentLastname ?? ''}`.trim() || 'Ouder/voogd'
@@ -130,7 +131,10 @@ export default function AddPatient3() {
 
   const selectedExercises = useMemo(() => {
     const set = new Set(selectedExerciseIds)
-    return exercises.filter((e) => set.has(e.id))
+    return exercises.filter((e) => set.has(e.id)).map((e) => {
+      const reps = repsById?.[e.id]
+      return { ...e, reps: reps != null ? reps : e.reps }
+    })
   }, [exercises, selectedExerciseIds])
 
   const selectedCount = selectedExerciseIds.length
@@ -146,7 +150,7 @@ export default function AddPatient3() {
               <div className="flex flex-col items-center gap-5">
                 <div className="h-40 w-40 overflow-hidden rounded-2xl bg-nimbli-canvas">
                   <img
-                    src={ASSETS.patientPhoto}
+                    src={FALLBACK_PROFILE_PIC}
                     alt=""
                     className="h-full w-full object-cover"
                     loading="lazy"

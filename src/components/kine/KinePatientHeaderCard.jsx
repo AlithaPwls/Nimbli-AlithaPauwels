@@ -1,4 +1,5 @@
 import { Mail, Phone, QrCode, User } from 'lucide-react'
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 
 function dash(value) {
   return value?.trim() ? value.trim() : '—'
@@ -19,11 +20,14 @@ export default function KinePatientHeaderCard({ patient, parent, onQrClick, qrDi
       <div className="flex items-start justify-between gap-6">
         <div className="flex min-w-0 flex-1 items-start gap-5">
           <img
-            src={patient?.avatarUrl}
+            src={resolveProfileAvatarUrl(patient?.avatarUrl)}
             alt={patient?.name ? `Profielfoto van ${patient.name}` : ''}
             className="size-24 shrink-0 rounded-md object-cover ring-1 ring-nimbli-slot-border/20"
             loading="lazy"
             decoding="async"
+            onError={(e) => {
+              e.currentTarget.src = FALLBACK_PROFILE_PIC
+            }}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">

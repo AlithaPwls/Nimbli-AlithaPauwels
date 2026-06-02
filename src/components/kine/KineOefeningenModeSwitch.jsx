@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 export default function KineOefeningenModeSwitch() {
   return (
     <div
-      className="inline-flex items-center gap-2 rounded-[12px] border border-nimbli bg-white px-1.5 py-1"
+      className="inline-flex items-center gap-2 rounded-[12px] border border-nimbli bg-white px-1.5 pt-1 pb-1.5"
       role="tablist"
       aria-label="Oefeningen-weergave"
     >

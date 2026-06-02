@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { categoryToneClasses, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import { rowHasUploadedVideoFile } from '@/lib/eigenExerciseCard.js'
+import { Search } from 'lucide-react'
 
 const FILTERS = [
   { id: 'all', label: 'Alle oefeningen' },
@@ -64,16 +65,17 @@ export default function KineOefeningen() {
         <label className="sr-only" htmlFor="exercise-library-search">
           Zoek een oefening
         </label>
-        <div className="flex items-center gap-3 rounded-xl border border-nimbli-slot-border bg-white px-4 py-3">
-          <span className="text-nimbli-muted" aria-hidden>
-            ⌕
-          </span>
+        <div className="relative">
+        <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-nimbli-muted"
+                aria-hidden
+              />
           <input
             id="exercise-library-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Zoek een oefening"
-            className="w-full bg-transparent text-sm text-nimbli-ink placeholder:text-nimbli-muted focus:outline-none"
+            className="h-[46px] w-full rounded-[10px] border border-[#e5e7eb] bg-white py-3 pl-11 pr-4 text-sm text-nimbli-ink placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-nimbli/30"
             type="search"
             autoComplete="off"
           />

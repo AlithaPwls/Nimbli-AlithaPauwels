@@ -1,10 +1,10 @@
 import { Camera, ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 import { cn } from '@/lib/utils'
 
 export default function OuderAvatarPicker({
   valueUrl,
-  fallbackText = 'K',
   name = 'Kind',
   onFileSelected,
   onRemove,
@@ -15,7 +15,7 @@ export default function OuderAvatarPicker({
 }) {
   const isLarge = size === 'lg'
   const avatarSize = isLarge ? 'size-28 sm:size-32' : 'size-[72px]'
-  const fallbackTextSize = isLarge ? 'text-3xl sm:text-4xl' : 'text-xl'
+  const displayUrl = resolveProfileAvatarUrl(valueUrl)
 
   return (
     <div className={cn('flex flex-col items-center gap-5', className)}>
@@ -25,24 +25,15 @@ export default function OuderAvatarPicker({
           avatarSize
         )}
       >
-        {valueUrl ? (
-          <img
-            src={valueUrl}
-            alt={`Profielfoto van ${name}`}
-            className="h-full w-full object-cover"
-            decoding="async"
-          />
-        ) : (
-          <div
-            className={cn(
-              'flex h-full w-full items-center justify-center font-nimbli-heading font-black text-nimbli',
-              fallbackTextSize
-            )}
-            aria-hidden
-          >
-            {fallbackText}
-          </div>
-        )}
+        <img
+          src={displayUrl}
+          alt={`Profielfoto van ${name}`}
+          className="h-full w-full object-cover"
+          decoding="async"
+          onError={(e) => {
+            e.currentTarget.src = FALLBACK_PROFILE_PIC
+          }}
+        />
         {saving ? (
           <div className="absolute inset-0 flex items-center justify-center bg-white/75">
             <Loader2 className="size-7 animate-spin text-nimbli" aria-hidden />

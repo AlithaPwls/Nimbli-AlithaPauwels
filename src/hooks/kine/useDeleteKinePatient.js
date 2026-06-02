@@ -21,26 +21,88 @@ function friendlyMessage(code, fallback = 'Verwijderen mislukt. Probeer het late
   return fallback
 }
 
-async function parseFunctionsError(invokeError) {
-  const response = invokeError?.context?.response
-  if (response && typeof response.json === 'function') {
+function normalizeBody(raw) {
+  if (raw == null) return null
+  if (typeof raw === 'object') return raw
+  if (typeof raw === 'string') {
     try {
-      const body = await response.json()
-      return {
-        code: typeof body?.error === 'string' ? body.error : null,
-        details: typeof body?.details === 'string' ? body.details : null,
-        body,
-      }
+      const parsed = JSON.parse(raw)
+      return parsed && typeof parsed === 'object' ? parsed : null
     } catch {
-      return { code: null, details: invokeError?.message ?? null, body: null }
+      return null
     }
   }
-  return { code: null, details: invokeError?.message ?? null, body: null }
+  return null
+}
+
+function collectErrorText(body, invokeError) {
+  const parts = [
+    body?.details,
+    body?.error,
+    body?.message,
+    invokeError?.message,
+    invokeError?.details,
+  ]
+  if (invokeError && typeof invokeError === 'object' && invokeError.context) {
+    const ctx = invokeError.context
+    parts.push(ctx.body, ctx.message)
+  }
+  return parts.filter(Boolean).join(' ')
 }
 
 /**
- * Verwijdert een patiënt (kind + gekoppelde ouder) via edge function:
- * profiles, sessies, toewijzingen én Auth-accounts indien geregistreerd.
+ * Oude edge function gaf 500 nadat het kind al weg was (ouder-delete geblokkeerd door trigger).
+ * Dat is inhoudelijk geslaagd: kind weg, ouder + siblings blijven.
+ */
+function isSuccessfulPartialDelete(body, invokeError) {
+  const blob = collectErrorText(body, invokeError)
+  return blob.includes('parent_profile_has_linked_children')
+}
+
+async function readInvokeBody(data, invokeError) {
+  const direct = normalizeBody(data)
+  if (direct) return direct
+
+  const ctx = invokeError?.context
+  if (ctx) {
+    const fromCtx = normalizeBody(ctx.body ?? ctx.data)
+    if (fromCtx) return fromCtx
+  }
+
+  const response = ctx?.response
+  if (response && typeof response.clone === 'function') {
+    try {
+      const cloned = response.clone()
+      const parsed = await cloned.json()
+      return normalizeBody(parsed)
+    } catch {
+      try {
+        const text = await response.clone().text()
+        return normalizeBody(text)
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return null
+}
+
+async function isChildProfileDeleted(patientId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', patientId)
+    .eq('role', 'child')
+    .maybeSingle()
+
+  if (error) return false
+  return !data?.id
+}
+
+/**
+ * Verwijdert een kind-profiel via edge function (sessies, toewijzingen, Auth).
+ * Ouder wordt alleen mee verwijderd als dit het laatste gekoppelde kind is.
  */
 export function useDeleteKinePatient() {
   const [loading, setLoading] = useState(false)
@@ -60,20 +122,29 @@ export function useDeleteKinePatient() {
         body: { childId: patientId },
       })
 
-      if (invokeError) {
-        const parsed = await parseFunctionsError(invokeError)
-        setError(friendlyMessage(parsed.code))
-        return { ok: false }
+      const body = await readInvokeBody(data, invokeError)
+
+      if (body?.ok === true) {
+        return { ok: true, body }
       }
 
-      if (!data?.ok) {
-        const code = typeof data?.error === 'string' ? data.error : null
-        setError(friendlyMessage(code))
-        return { ok: false }
+      if (isSuccessfulPartialDelete(body, invokeError)) {
+        return { ok: true, body, recoveredFromStaleError: true }
       }
 
-      return { ok: true }
+      const childGone = await isChildProfileDeleted(patientId)
+      if (childGone) {
+        return { ok: true, body, recoveredFromStaleError: true }
+      }
+
+      const code = typeof body?.error === 'string' ? body.error : null
+      setError(friendlyMessage(code))
+      return { ok: false }
     } catch {
+      const childGone = await isChildProfileDeleted(patientId)
+      if (childGone) {
+        return { ok: true, recoveredFromStaleError: true }
+      }
       setError('Verwijderen mislukt. Probeer het later opnieuw.')
       return { ok: false }
     } finally {

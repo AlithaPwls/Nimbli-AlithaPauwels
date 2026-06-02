@@ -5,7 +5,6 @@ import {
   formatProfileBirthDate,
   profileAgeLabel,
   profileFullName,
-  profileInitials,
 } from '@/lib/profileDisplay.js'
 
 export default function OuderChildProfileEditor({
@@ -57,7 +56,6 @@ export default function OuderChildProfileEditor({
       <div className="px-6 py-8 sm:px-8">
         <OuderAvatarPicker
           valueUrl={displayAvatar}
-          fallbackText={profileInitials(child?.firstname, child?.lastname)}
           name={name}
           onFileSelected={onAvatarSelected}
           onRemove={onAvatarRemove}
