@@ -39,6 +39,19 @@ function uniqueExerciseIdsFromDraft(draft) {
   return [...new Set(raw.map((x) => String(x).trim()).filter(Boolean))]
 }
 
+function repsByExerciseIdFromDraft(draft) {
+  const raw = draft?.exerciseRepsById
+  if (!raw || typeof raw !== 'object') return {}
+  return raw
+}
+
+function parseReps(raw, fallback = 10) {
+  if (raw == null || raw === '') return fallback
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return fallback
+  return Math.max(1, Math.round(n))
+}
+
 export function useFinalizeAddPatient() {
   const { profile } = useAuth()
   const practiceId = profile?.practice_id ?? null
@@ -72,6 +85,8 @@ export function useFinalizeAddPatient() {
       const parentFirstname = normalizeName(draft?.parentFirstname)
       const parentLastname = normalizeName(draft?.parentLastname)
       const parentEmail = normalizeEmail(draft?.parentEmail)
+      const parentPhone = normalizeName(draft?.parentPhone)
+      const parentRelation = normalizeName(draft?.parentRelation)
       const treatmentGoal = normalizeName(draft?.focus)
 
       if (!childFirstname || !childLastname) {
@@ -141,6 +156,7 @@ export function useFinalizeAddPatient() {
             role: 'parent',
             invite_code: code,
             practice_id: practiceId,
+            phone_number: parentPhone || null,
           },
         ]
 
@@ -153,6 +169,7 @@ export function useFinalizeAddPatient() {
         const { error: relErr } = await supabase.from('child_parent_relations').insert({
           parent_id: parentProfileId,
           child_id: childProfileId,
+          role_parent: parentRelation || null,
         })
         if (relErr) {
           setError('Koppeling ouder-kind mislukt. Probeer opnieuw.')
@@ -161,11 +178,13 @@ export function useFinalizeAddPatient() {
 
         const exerciseIds = uniqueExerciseIdsFromDraft(draft)
         if (exerciseIds.length > 0) {
+          const repsById = repsByExerciseIdFromDraft(draft)
           const assignmentRows = exerciseIds.map((exerciseId) => ({
             child_id: childProfileId,
             exercise_id: exerciseId,
             assigned_by: kineProfileId,
             schedule_days: defaultExerciseScheduleDays(),
+            reps: parseReps(repsById?.[exerciseId], 10),
           }))
 
           const { error: assignErr } = await supabase.from('exercise_assignments').insert(assignmentRows)

@@ -68,6 +68,14 @@ function isRpcMissing(err) {
  * Still requires FK ON UPDATE CASCADE on exercise_* tables if the kind has assignments.
  */
 async function linkPendingProfilesDirect(input, parentUserId, childUserId, email, childEmail) {
+  const { data: existingRelation } = await supabase
+    .from('child_parent_relations')
+    .select('role_parent')
+    .eq('parent_id', input.parentProfile.id)
+    .eq('child_id', input.childProfile.id)
+    .limit(1)
+    .maybeSingle()
+
   await supabase
     .from('child_parent_relations')
     .delete()
@@ -105,6 +113,7 @@ async function linkPendingProfilesDirect(input, parentUserId, childUserId, email
   await supabase.from('child_parent_relations').insert({
     parent_id: parentUserId,
     child_id: childUserId,
+    role_parent: existingRelation?.role_parent ?? null,
   })
 
   return { error: null }

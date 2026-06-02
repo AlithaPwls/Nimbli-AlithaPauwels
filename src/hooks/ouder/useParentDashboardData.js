@@ -201,7 +201,13 @@ export function useParentDashboardData(childProfileId) {
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
           const norm = ex ? normalizeExerciseRow(ex) : null
-          const reps = typeof a?.reps === 'number' ? a.reps : null
+          const repsRaw = a?.reps
+          const reps =
+            repsRaw == null
+              ? null
+              : Number.isFinite(Number(repsRaw))
+                ? Number(repsRaw)
+                : null
           const minutes =
             ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
               ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))

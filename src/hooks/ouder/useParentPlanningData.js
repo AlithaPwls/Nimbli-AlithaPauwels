@@ -177,7 +177,13 @@ export function useParentPlanningData(childProfileId, weekStart) {
         .map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
           const norm = ex ? normalizeExerciseRow(ex) : null
-          const reps = typeof a?.reps === 'number' ? a.reps : null
+          const repsRaw = a?.reps
+          const reps =
+            repsRaw == null
+              ? null
+              : Number.isFinite(Number(repsRaw))
+                ? Number(repsRaw)
+                : null
           const minutes =
             ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
               ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))
@@ -230,7 +236,13 @@ export function useParentPlanningData(childProfileId, weekStart) {
         nextPlanned[dayKey] = list.map((a) => {
           const ex = exercisesById.get(a.exercise_id) ?? null
           const norm = ex ? normalizeExerciseRow(ex) : null
-          const reps = typeof a?.reps === 'number' ? a.reps : 10
+          const repsRaw = a?.reps
+          const reps =
+            repsRaw == null
+              ? 10
+              : Number.isFinite(Number(repsRaw))
+                ? Number(repsRaw)
+                : 10
           const minutes =
             ex?.duration_seconds != null && Number.isFinite(Number(ex.duration_seconds))
               ? Math.max(1, Math.ceil(Number(ex.duration_seconds) / 60))

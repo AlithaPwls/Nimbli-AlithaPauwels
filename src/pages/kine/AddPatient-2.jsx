@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Clock, Minus, Plus, Repeat2, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
 import { readAddPatientDraft, updateAddPatientDraft } from '@/lib/addPatientDraft'
+import { cn } from '@/lib/utils'
 
 const FILTERS = [
   { id: 'all', label: 'Alle oefeningen' },
@@ -14,6 +15,8 @@ const FILTERS = [
   { id: 'kracht', label: 'Kracht' },
   { id: 'balans', label: 'Balans' },
 ]
+
+const DEFAULT_REPS = 10
 
 function StepHeader() {
   return (
@@ -44,19 +47,93 @@ function SectionCard({ title, subtitle, children }) {
   )
 }
 
-function ExerciseCard({ exercise, selected, onToggle }) {
+function MetaDot() {
+  return <span className="size-1 shrink-0 rounded-full bg-[#9ca3af]" aria-hidden />
+}
+
+function ExerciseRepsStepper({ value, onChange, exerciseTitle }) {
+  function bump(delta) {
+    onChange(Math.max(1, value + delta))
+  }
+
+  function handleInputChange(raw) {
+    const digits = String(raw).replace(/\D/g, '')
+    if (digits === '') {
+      onChange(1)
+      return
+    }
+    onChange(Math.max(1, Math.min(99, Number.parseInt(digits, 10))))
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="group"
+      aria-label={`Herhalingen voor ${exerciseTitle}`}
+      className="inline-flex h-8 shrink-0 items-center rounded-full border border-[#e5e7eb] bg-[#f9fafb]"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={() => bump(-1)}
+        disabled={value <= 1}
+        className={cn(
+          'grid size-8 place-items-center rounded-l-full text-nimbli transition-colors',
+          'cursor-pointer hover:bg-nimbli/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
+          'disabled:cursor-not-allowed disabled:opacity-40'
+        )}
+        aria-label="Minder herhalingen"
+      >
+        <Minus className="size-3.5" aria-hidden />
+      </button>
+      <div className="flex min-w-[2.25rem] items-center justify-center gap-0.5 border-x border-[#e5e7eb] px-1">
+        <Repeat2 className="size-3 shrink-0 text-nimbli-muted" aria-hidden />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => handleInputChange(e.target.value)}
+          className="w-6 bg-transparent text-center text-xs font-black text-nimbli-ink focus:outline-none"
+          aria-label="Aantal herhalingen"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => bump(1)}
+        disabled={value >= 99}
+        className={cn(
+          'grid size-8 place-items-center rounded-r-full text-nimbli transition-colors',
+          'cursor-pointer hover:bg-nimbli/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
+          'disabled:cursor-not-allowed disabled:opacity-40'
+        )}
+        aria-label="Meer herhalingen"
+      >
+        <Plus className="size-3.5" aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+function ExerciseCard({ exercise, selected, repsValue, onToggle, onChangeReps }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onToggle}
-      className={[
-        'w-full rounded-2xl border-2 bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors',
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
+      className={cn(
+        'w-full cursor-pointer rounded-2xl border-2 bg-white p-5 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
-        selected ? 'border-nimbli' : 'border-[#e1dbd3] hover:border-nimbli/50',
-      ].join(' ')}
+        selected ? 'border-nimbli ring-1 ring-nimbli/15' : 'border-[#e1dbd3] hover:border-nimbli/50'
+      )}
     >
       <div className="flex items-start gap-4">
-        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
           <img
             src={exercise.imageUrl}
             alt=""
@@ -67,35 +144,47 @@ function ExerciseCard({ exercise, selected, onToggle }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">{exercise.title}</p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-nimbli-heading text-base font-bold text-nimbli-ink">{exercise.title}</p>
+            {selected ? (
+              <span className="shrink-0 rounded-full bg-nimbli/15 px-2 py-0.5 text-[10px] font-black text-nimbli">
+                Gekozen
+              </span>
+            ) : null}
+          </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <span
-              className={[
-                'inline-flex h-5 items-center rounded-full px-2 text-xs',
-                categoryToneClasses(exercise.categoryTone),
-              ].join(' ')}
+              className={cn(
+                'inline-flex h-5 items-center rounded-full px-2 text-xs font-bold',
+                categoryToneClasses(exercise.categoryTone)
+              )}
             >
               {exercise.category}
             </span>
-            <span className="text-nimbli-muted">•</span>
+            <MetaDot />
             <span className="text-xs text-nimbli-ink">{exercise.difficulty}</span>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-nimbli-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden>↻</span>
-              {exercise.reps}
-            </span>
-            <span aria-hidden>•</span>
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden>⏱</span>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-xs text-nimbli-muted">
+              <Clock className="size-3 shrink-0" aria-hidden />
               {exercise.time}
             </span>
+            {selected ? (
+              <>
+                <MetaDot />
+                <ExerciseRepsStepper
+                  value={repsValue}
+                  onChange={onChangeReps}
+                  exerciseTitle={exercise.title}
+                />
+              </>
+            ) : null}
           </div>
         </div>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -112,6 +201,10 @@ export default function AddPatient2() {
     const fromDraft = Array.isArray(draft.selectedExerciseIds) ? draft.selectedExerciseIds : []
     return new Set(fromDraft)
   })
+  const [repsById, setRepsById] = useState(() => {
+    const raw = draft.exerciseRepsById
+    return raw && typeof raw === 'object' ? raw : {}
+  })
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -127,19 +220,45 @@ export default function AddPatient2() {
     })
   }, [query, filter, exercises])
 
+  const selectedCount = selectedIds.size
+
+  function persistReps(next) {
+    updateAddPatientDraft({ exerciseRepsById: next })
+  }
+
   function toggle(id) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+        setRepsById((prevReps) => {
+          if (prevReps?.[id] != null) return prevReps
+          const nextReps = { ...prevReps, [id]: DEFAULT_REPS }
+          persistReps(nextReps)
+          return nextReps
+        })
+      }
       updateAddPatientDraft({ selectedExerciseIds: Array.from(next) })
       return next
     })
   }
 
   function goNext() {
-    updateAddPatientDraft({ selectedExerciseIds: Array.from(selectedIds) })
+    updateAddPatientDraft({
+      selectedExerciseIds: Array.from(selectedIds),
+      exerciseRepsById: repsById,
+    })
     navigate('/dashboard/kine/patienten/nieuw/3')
+  }
+
+  function setReps(exerciseId, value) {
+    setRepsById((prev) => {
+      const next = { ...prev, [exerciseId]: value }
+      persistReps(next)
+      return next
+    })
   }
 
   return (
@@ -149,7 +268,7 @@ export default function AddPatient2() {
       <div className="mt-10">
         <SectionCard
           title="Startprogramma"
-          subtitle="Voeg al startoefeningen toe of sla dit voorlopig over."
+          subtitle="Selecteer oefeningen en stel per oefening het aantal herhalingen in."
         >
           <label className="sr-only" htmlFor="exercise-search">
             Zoek een oefening
@@ -175,19 +294,25 @@ export default function AddPatient2() {
                   key={f.id}
                   type="button"
                   onClick={() => setFilter(f.id)}
-                  className={[
-                    'h-11 rounded-md border px-5 text-sm font-bold transition-colors',
+                  className={cn(
+                    'h-11 cursor-pointer rounded-md border px-5 text-sm font-bold transition-colors duration-200',
                     'font-nimbli-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
                     active
                       ? 'border-nimbli bg-nimbli text-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_0_rgba(0,0,0,0.1)]'
-                      : 'border-nimbli bg-white text-nimbli-muted hover:bg-nimbli/5',
-                  ].join(' ')}
+                      : 'border-nimbli bg-white text-nimbli-muted hover:bg-nimbli/5'
+                  )}
                 >
                   {f.label}
                 </button>
               )
             })}
           </div>
+
+          {selectedCount > 0 ? (
+            <p className="mt-5 text-sm font-semibold text-nimbli">
+              {selectedCount} {selectedCount === 1 ? 'oefening' : 'oefeningen'} geselecteerd
+            </p>
+          ) : null}
 
           {error ? (
             <div
@@ -201,7 +326,7 @@ export default function AddPatient2() {
             </div>
           ) : null}
 
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
             {loading ? (
               <div className="col-span-full rounded-2xl border-2 border-[#e1dbd3] bg-nimbli-canvas/50 px-4 py-10 text-center text-sm text-nimbli-muted">
                 Oefeningen laden…
@@ -213,14 +338,19 @@ export default function AddPatient2() {
                   : 'Geen oefeningen gevonden met deze filters.'}
               </div>
             ) : (
-              filtered.map((exercise) => (
-                <ExerciseCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  selected={selectedIds.has(exercise.id)}
-                  onToggle={() => toggle(exercise.id)}
-                />
-              ))
+              filtered.map((exercise) => {
+                const isSelected = selectedIds.has(exercise.id)
+                return (
+                  <ExerciseCard
+                    key={exercise.id}
+                    exercise={exercise}
+                    selected={isSelected}
+                    onToggle={() => toggle(exercise.id)}
+                    repsValue={repsById?.[exercise.id] ?? DEFAULT_REPS}
+                    onChangeReps={(v) => setReps(exercise.id, v)}
+                  />
+                )
+              })
             )}
           </div>
 
@@ -260,4 +390,3 @@ export default function AddPatient2() {
     </div>
   )
 }
-

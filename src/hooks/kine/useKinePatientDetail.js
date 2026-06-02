@@ -139,7 +139,7 @@ function mapChildProfile(row) {
     name,
     age: age ?? null,
     ageLabel: age != null ? `${age} jaar` : '—',
-    avatarUrl: row.avatar_url || 'https://placehold.co/96x96?text=%20',
+    avatarUrl: row.avatar_url ?? null,
     birthdate: row.date_of_birth ?? null,
     birthdateLabel: formatBirthdate(row.date_of_birth),
     treatmentGoal: row.treatment_goal?.trim() || null,
@@ -159,8 +159,8 @@ function mapParentProfile(row) {
     id: row.id,
     name,
     email: row.email?.trim() || null,
-    phone: null,
-    relation: null,
+    phone: row.phone_number?.trim() || null,
+    relation: row.role_parent?.trim() || null,
     isRegistered: Boolean(row.user_id),
   }
 }
@@ -245,7 +245,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
 
       const { data: rel, error: relErr } = await supabase
         .from('child_parent_relations')
-        .select('parent_id')
+        .select('parent_id, role_parent')
         .eq('child_id', child.id)
         .limit(1)
         .maybeSingle()
@@ -258,7 +258,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
       } else if (rel?.parent_id) {
         const { data: parent, error: parentErr } = await supabase
           .from('profiles')
-          .select('id, firstname, lastname, email, user_id')
+          .select('id, firstname, lastname, email, user_id, phone_number')
           .eq('id', rel.parent_id)
           .eq('role', 'parent')
           .maybeSingle()
@@ -269,7 +269,7 @@ export function useKinePatientDetail({ patientId, practiceId }) {
           setParentRow(null)
           setError(parentErr)
         } else {
-          setParentRow(parent ?? null)
+          setParentRow(parent ? { ...parent, role_parent: rel?.role_parent ?? null } : null)
         }
       } else {
         setParentRow(null)

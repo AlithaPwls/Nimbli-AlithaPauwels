@@ -10,8 +10,7 @@ import OuderMiniLineChart from '@/components/ouder/OuderMiniLineChart.jsx'
 import OuderProgressRow from '@/components/ouder/OuderProgressRow.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
 import OuderRecentSection from '@/components/ouder/OuderRecentSection.jsx'
-
-// Avatar fallback is derived from Supabase `profiles` rows.
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 
 function calcAge(dateOfBirth) {
   if (!dateOfBirth) return null
@@ -96,12 +95,11 @@ export default function DashboardOuder() {
   const focusValue = dashboard.header?.goal ?? (selectedChild?.treatment_goal?.trim() || null)
   const goal = focusValue ? `Doel : ${focusValue}` : 'Doel : —'
   const avatarSrcRaw = dashboard.header?.avatarUrl ?? selectedChild?.avatar_url ?? ''
-  const avatarSrc = String(avatarSrcRaw).trim() || null
-  const [avatarFailed, setAvatarFailed] = useState(false)
+  const [avatarSrc, setAvatarSrc] = useState(() => resolveProfileAvatarUrl(avatarSrcRaw))
 
   useEffect(() => {
-    setAvatarFailed(false)
-  }, [avatarSrc])
+    setAvatarSrc(resolveProfileAvatarUrl(avatarSrcRaw))
+  }, [avatarSrcRaw])
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
@@ -152,21 +150,15 @@ export default function DashboardOuder() {
           <div className="mt-6 rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
             <div className="flex items-start gap-6">
               <div className="h-[125px] w-[125px] shrink-0 overflow-hidden rounded-lg border border-[#e1dbd3] shadow-[0_2px_0_0_#e1dbd3]">
-                {avatarSrc && !avatarFailed ? (
-                  <img
-                    src={avatarSrc}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    onError={() => setAvatarFailed(true)}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-nimbli-canvas text-sm font-semibold text-nimbli-muted">
-                    —
-                  </div>
-                )}
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarSrc(FALLBACK_PROFILE_PIC)}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-nimbli-heading text-2xl font-bold text-[#1a1a1a]">{childLine}</p>

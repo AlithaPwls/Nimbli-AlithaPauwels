@@ -3,8 +3,8 @@ import {
   formatProfileBirthDate,
   profileAgeLabel,
   profileFullName,
-  profileInitials,
 } from '@/lib/profileDisplay.js'
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 import { cn } from '@/lib/utils'
 
 export default function OuderChildCard({ child, selected = false, onSelect, avatarUrl }) {
@@ -27,19 +27,16 @@ export default function OuderChildCard({ child, selected = false, onSelect, avat
     >
       <div className="relative size-12 shrink-0">
         <div className="size-12 overflow-hidden rounded-full bg-nimbli-canvas ring-2 ring-white">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=""
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center font-nimbli-heading text-sm font-black text-nimbli">
-              {profileInitials(child?.firstname, child?.lastname)}
-            </div>
-          )}
+          <img
+            src={resolveProfileAvatarUrl(avatarUrl)}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.src = FALLBACK_PROFILE_PIC
+            }}
+          />
         </div>
         {selected ? (
           <span

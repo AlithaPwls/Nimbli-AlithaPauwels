@@ -2,8 +2,8 @@ import { Zap } from 'lucide-react'
 import {
   profileAgeLabel,
   profileFullName,
-  profileInitials,
 } from '@/lib/profileDisplay.js'
+import { FALLBACK_PROFILE_PIC, resolveProfileAvatarUrl } from '@/lib/profileAvatar.js'
 import { useKindChildProfile } from '@/hooks/kind/useKindChildProfile.js'
 import { useKindProfileStats } from '@/hooks/kind/useKindProfileStats.js'
 
@@ -14,7 +14,7 @@ export default function KindOverviewProfileCard() {
   const loading = profileLoading || xpLoading
   const name = profile ? profileFullName(profile.firstname, profile.lastname) : 'Kind'
   const age = profile ? profileAgeLabel(profile.date_of_birth) : null
-  const avatarUrl = profile?.avatar_url?.trim() || null
+  const avatarUrl = resolveProfileAvatarUrl(profile?.avatar_url)
   const xpDisplay = xpLoading ? '…' : totalXp
 
   return (
@@ -24,17 +24,16 @@ export default function KindOverviewProfileCard() {
           <div className="size-20 shrink-0 overflow-hidden rounded-full bg-kind-canvas ring-2 ring-kind-border sm:size-24">
             {loading ? (
               <div className="h-full w-full animate-pulse bg-kind-light-gray" />
-            ) : avatarUrl ? (
+            ) : (
               <img
                 src={avatarUrl}
                 alt={`Profielfoto van ${name}`}
                 className="h-full w-full object-cover"
                 decoding="async"
+                onError={(e) => {
+                  e.currentTarget.src = FALLBACK_PROFILE_PIC
+                }}
               />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center font-nimbli-heading text-2xl font-black text-kind-green-primary">
-                {profileInitials(profile?.firstname, profile?.lastname)}
-              </div>
             )}
           </div>
 

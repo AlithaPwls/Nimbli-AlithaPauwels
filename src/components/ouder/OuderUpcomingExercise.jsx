@@ -30,7 +30,7 @@ export default function OuderUpcomingExercise({
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#6b7280]">
           <span
             className={cn(
-              'inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold',
+              'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black',
               categoryToneClasses(categoryTone)
             )}
           >

@@ -9,6 +9,7 @@ import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderChildCard from '@/components/ouder/OuderChildCard.jsx'
 import OuderChildProfileEditor from '@/components/ouder/OuderChildProfileEditor.jsx'
+import { useSearchParams } from 'react-router-dom'
 
 function revokeBlobUrl(url) {
   if (typeof url === 'string' && url.startsWith('blob:')) {
@@ -26,15 +27,30 @@ export default function OuderKindProfielenBeheren() {
   const { logout, loading: logoutLoading } = useLogout()
   const { children, loading: childrenLoading, error, patchChild } = useChildrenForParent(profile)
 
-  const [selectedChildId, setSelectedChildId] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const childParam = searchParams.get('child')
+  const [selectedChildId, setSelectedChildId] = useState(childParam)
   const [previewById, setPreviewById] = useState(() => new Map())
   const [avatarSaving, setAvatarSaving] = useState(false)
   const [avatarError, setAvatarError] = useState(null)
 
   useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      setSelectedChildId(children[0].id)
+    if (childParam !== selectedChildId) {
+      setSelectedChildId(childParam)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childParam])
+
+  useEffect(() => {
+    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
+      const id = children[0]?.id ?? null
+      if (!id) return
+      setSelectedChildId(id)
+      const next = new URLSearchParams(searchParams)
+      next.set('child', id)
+      setSearchParams(next, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children, selectedChildId])
 
   useEffect(() => {
@@ -137,7 +153,20 @@ export default function OuderKindProfielenBeheren() {
 
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
-      <OuderSidebar logout={logout} logoutLoading={logoutLoading} />
+      <OuderSidebar
+        logout={logout}
+        logoutLoading={logoutLoading}
+        childrenList={children}
+        selectedChildId={selectedChildId}
+        onSelectChild={(id) => {
+          setSelectedChildId(id)
+          setAvatarError(null)
+          const next = new URLSearchParams(searchParams)
+          if (id) next.set('child', id)
+          else next.delete('child')
+          setSearchParams(next, { replace: true })
+        }}
+      />
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-5 py-8 font-nimbli-body text-nimbli-ink sm:px-8 sm:py-10">
