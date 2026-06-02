@@ -10,6 +10,7 @@ import { useDeletePracticeExercise } from '@/hooks/kine/useDeletePracticeExercis
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import { dbExerciseRowToEigenVideoCard, rowHasUploadedVideoFile } from '@/lib/eigenExerciseCard.js'
+import { Search } from 'lucide-react'
 
 const FILTER_CHIPS = [
   { id: 'all', label: 'Alle oefeningen' },
@@ -122,16 +123,17 @@ export default function KineOefeningenEigenVideos() {
         <label className="sr-only" htmlFor="eigen-videos-search">
           Zoek een oefening
         </label>
-        <div className="flex items-center gap-2 rounded-lg border border-[#7c7c7c] bg-white px-3 py-2.5">
-          <span className="text-[#7c7c7c]" aria-hidden>
-            ⌕
-          </span>
+        <div className="relative">
+        <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-nimbli-muted"
+                aria-hidden
+              />
           <input
             id="eigen-videos-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Zoek een oefening"
-            className="w-full bg-transparent text-base text-nimbli-ink placeholder:text-[#7c7c7c] focus:outline-none"
+            className="h-[46px] w-full rounded-[10px] border border-[#e5e7eb] bg-white py-3 pl-11 pr-4 text-sm text-nimbli-ink placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-nimbli/30"
             type="search"
             autoComplete="off"
           />

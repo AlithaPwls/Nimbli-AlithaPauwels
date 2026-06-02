@@ -1,5 +1,5 @@
-import { CheckCircle2, Circle, Trophy } from 'lucide-react'
-import { KIND_DAILY_MISSIONS } from '@/lib/kind/kindOverviewMock.js'
+import { CheckCircle2, Circle } from 'lucide-react'
+import { useKindDailyMissions } from '@/hooks/kind/useKindDailyMissions.js'
 import { cn } from '@/lib/utils'
 
 function progressWidthClass(current, total) {
@@ -32,19 +32,41 @@ function MissionProgress({ current, total, done, showReward }) {
   )
 }
 
+function MissionRowSkeleton() {
+  return (
+    <div
+      className="flex items-center gap-3 rounded-md border border-kind-border bg-kind-white px-[17px] py-3 shadow-[0_2px_0_0_#e1dbd3]"
+      aria-hidden
+    >
+      <div className="size-[21px] shrink-0 rounded-full bg-kind-light-gray" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="h-[18px] w-3/5 rounded bg-kind-light-gray" />
+        <div className="h-[7px] w-full rounded-full bg-kind-light-gray" />
+      </div>
+    </div>
+  )
+}
+
 export default function KindDailyMissionsCard({ className }) {
+  const { missions, loading, emptyMissions } = useKindDailyMissions()
+
   return (
     <section
       className={cn(
         'w-full rounded-lg border-2 border-kind-border bg-kind-white p-[17px] shadow-[0_2px_0_0_#e1dbd3]',
         className
       )}
+      aria-busy={loading}
     >
       <h2 className="font-nimbli-heading text-[13px] font-bold text-kind-black">Dagmissies</h2>
       <div className="my-4 h-px bg-kind-border" />
 
       <div className="flex flex-col gap-1.5">
-        {KIND_DAILY_MISSIONS.map((mission) => (
+        {loading
+          ? emptyMissions.map((mission) => <MissionRowSkeleton key={mission.id} />)
+          : null}
+        {!loading &&
+          missions.map((mission) => (
           <div
             key={mission.id}
             className="flex items-center gap-3 rounded-md border border-kind-border bg-kind-white px-[17px] py-3 shadow-[0_2px_0_0_#e1dbd3]"
@@ -70,7 +92,7 @@ export default function KindDailyMissionsCard({ className }) {
               />
             </div>
           </div>
-        ))}
+          ))}
       </div>
     </section>
   )

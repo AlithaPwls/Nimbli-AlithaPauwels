@@ -5,33 +5,6 @@ export const KIND_OVERVIEW_STATS = {
   stars: 12,
 }
 
-export const KIND_DAILY_MISSIONS = [
-  {
-    id: 'exercise',
-    title: 'Voer één oefening uit',
-    current: 1,
-    total: 1,
-    done: true,
-    showReward: true,
-  },
-  {
-    id: 'xp',
-    title: 'Verdien 150 XP',
-    current: 0,
-    total: 150,
-    done: false,
-    showReward: false,
-  },
-  {
-    id: 'all',
-    title: 'Voltooi al je dagmissies',
-    current: 1,
-    total: 3,
-    done: false,
-    showReward: false,
-  },
-]
-
 export const KIND_BADGES = [
   { id: 'first', label: 'Eerste oefening', tone: 'blue', unlocked: true, icon: 'star' },
   { id: 'streak5', label: '5 Dagen Streak', tone: 'pink', unlocked: true, icon: 'flame' },

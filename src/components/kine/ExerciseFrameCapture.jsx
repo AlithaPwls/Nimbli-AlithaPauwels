@@ -338,16 +338,6 @@ export default function ExerciseFrameCapture({
               </span>
             </p>
           ) : null}
-          {lastPayload ? (
-            <details className="rounded-md border border-[#e1dbd3] bg-nimbli-canvas/40 text-xs">
-              <summary className="cursor-pointer select-none px-3 py-2 font-medium text-nimbli-ink hover:bg-nimbli-canvas/70">
-                Toon landmarks (JSON)
-              </summary>
-              <pre className="max-h-64 overflow-auto whitespace-pre px-3 pb-3 font-mono text-[11px] leading-relaxed text-nimbli-ink/90">
-                {JSON.stringify(lastPayload, null, 2)}
-              </pre>
-            </details>
-          ) : null}
         </div>
       ) : null}
 

@@ -238,7 +238,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
         <button
           type="button"
           className={cn(
-            'inline-flex size-[30px] items-center justify-center rounded-md text-nimbli',
+            'inline-flex size-9 items-center justify-center rounded-md text-nimbli',
             SIDEBAR_BTN_INTERACTION,
             SIDEBAR_BTN_HOVER,
             SIDEBAR_ICON_BTN_PRESS,
@@ -249,7 +249,7 @@ export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen
           disabled={logoutLoading}
           aria-label={logoutLoading ? 'Bezig met uitloggen' : 'Uitloggen'}
         >
-          <LogOut className="size-[30px] rotate-180" strokeWidth={2} />
+          <LogOut className="size-5 rotate-180" strokeWidth={2} />
         </button>
       </div>
     </aside>

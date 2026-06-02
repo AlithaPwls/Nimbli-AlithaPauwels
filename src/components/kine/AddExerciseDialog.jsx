@@ -650,16 +650,6 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                     {poseGenerateError}
                   </p>
                 ) : null}
-                {generatedPoseConfig ? (
-                  <details className="rounded-md border border-[#e1dbd3] bg-white text-xs">
-                    <summary className="cursor-pointer select-none px-3 py-2 font-medium text-nimbli-ink hover:bg-nimbli-canvas/50">
-                      Bekijk pose_config (JSON)
-                    </summary>
-                    <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words border-t border-[#e1dbd3] bg-nimbli-canvas/40 p-3 font-mono text-[11px] text-nimbli-ink">
-                      {JSON.stringify(generatedPoseConfig, null, 2)}
-                    </pre>
-                  </details>
-                ) : null}
               </div>
             </>
           ) : null}
