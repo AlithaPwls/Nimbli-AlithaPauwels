@@ -67,3 +67,10 @@ export function scheduleDaysSummary(days) {
   )
   return labels.join(', ')
 }
+
+/** Per-exercise schedule from add-patient draft (`exerciseScheduleDaysById`). */
+export function scheduleDaysByExerciseIdFromDraft(draft) {
+  const raw = draft?.exerciseScheduleDaysById
+  if (!raw || typeof raw !== 'object') return {}
+  return raw
+}

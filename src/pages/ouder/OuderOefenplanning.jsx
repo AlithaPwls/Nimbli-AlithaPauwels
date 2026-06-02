@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ExerciseDetailDialog from '@/components/kine/ExerciseDetailDialog.jsx'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
@@ -44,6 +45,7 @@ export default function OuderOefenplanning() {
   } = useActiveChildSelection(profile)
 
   const [weekStart, setWeekStart] = useState(() => startOfWeekLocal(new Date()))
+  const [selectedExercise, setSelectedExercise] = useState(null)
 
   const planning = useParentPlanningData(activeChildId, weekStart)
 
@@ -80,6 +82,12 @@ export default function OuderOefenplanning() {
 
       <main className="min-w-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
+          <ExerciseDetailDialog
+            exercise={selectedExercise}
+            onOpenChange={(open) => {
+              if (!open) setSelectedExercise(null)
+            }}
+          />
           <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
             Oefenplanning
           </h1>
@@ -122,6 +130,11 @@ export default function OuderOefenplanning() {
                         minutes={p.minutes}
                         imageUrl={p.imageUrl}
                         done={p.done}
+                        onSelect={
+                          p.detail
+                            ? () => setSelectedExercise(p.detail)
+                            : undefined
+                        }
                       />
                     ))
                   )}
@@ -145,6 +158,9 @@ export default function OuderOefenplanning() {
                         reps={u.reps}
                         minutes={u.minutes}
                         imageUrl={u.imageUrl}
+                        onSelect={
+                          u.detail ? () => setSelectedExercise(u.detail) : undefined
+                        }
                       />
                     ))
                   )}

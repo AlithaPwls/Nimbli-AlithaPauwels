@@ -13,9 +13,21 @@ export default function OuderUpcomingExercise({
   reps,
   minutes,
   imageUrl,
+  onSelect,
 }) {
+  const Tag = onSelect ? 'button' : 'div'
+
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[#e5e7eb] bg-white px-3 py-3">
+    <Tag
+      type={onSelect ? 'button' : undefined}
+      onClick={onSelect}
+      aria-label={onSelect ? `Bekijk details van ${title}` : undefined}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-lg border border-[#e5e7eb] bg-white px-3 py-3 text-left',
+        onSelect &&
+          'cursor-pointer transition-colors hover:border-nimbli/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40'
+      )}
+    >
       <div className="size-10 shrink-0 overflow-hidden rounded-md bg-nimbli-canvas ring-1 ring-nimbli-slot-border/15">
         <img
           src={imageUrl || EXERCISE_PLACEHOLDER_IMG}
@@ -56,6 +68,6 @@ export default function OuderUpcomingExercise({
           ) : null}
         </div>
       </div>
-    </div>
+    </Tag>
   )
 }

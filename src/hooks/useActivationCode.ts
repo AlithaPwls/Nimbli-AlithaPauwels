@@ -63,6 +63,20 @@ export function useActivationCode() {
     requestAnimationFrame(() => focusAt(Math.min(pasted.length, LENGTH - 1)))
   }, [focusAt])
 
+  const setCodeFromString = useCallback(
+    (raw: string) => {
+      const pasted = String(raw).replace(/\D/g, '').slice(0, LENGTH)
+      if (!pasted) return
+      setDigits(() => {
+        const next = Array(LENGTH).fill('')
+        for (let i = 0; i < pasted.length; i++) next[i] = pasted[i]
+        return next
+      })
+      requestAnimationFrame(() => focusAt(Math.min(pasted.length, LENGTH - 1)))
+    },
+    [focusAt]
+  )
+
   const code = digits.join('')
   const isComplete = code.length === LENGTH
 
@@ -72,6 +86,7 @@ export function useActivationCode() {
     handleChange,
     handleKeyDown,
     handlePaste,
+    setCodeFromString,
     isComplete,
     code,
   }

@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import NimbliDatePicker from '@/components/NimbliDatePicker.jsx'
 import { Button } from '@/components/ui/button'
 import { readAddPatientDraft, updateAddPatientDraft } from '@/lib/addPatientDraft'
 import { useKineParentProfile } from '@/hooks/kine/useKineParentProfile.js'
@@ -19,7 +20,10 @@ function Field({
 }) {
   return (
     <label className="flex w-full flex-col gap-1.5 text-left">
-      <span className="text-sm font-semibold text-nimbli-ink">{label}</span>
+      <span className="text-sm font-semibold text-nimbli-ink">
+        {label}
+        {required ? '*' : ''}
+      </span>
       <input
         className={cn(
           'h-12 w-full rounded-lg border border-[#7c7c7c] px-3 text-sm text-nimbli-ink placeholder:text-[#7c7c7c] focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
@@ -270,16 +274,15 @@ export default function AddPatient1() {
               }}
               required
             />
-            <Field
+            <NimbliDatePicker
+              id="child-dob"
               label="Geboortedatum patiënt"
-              placeholder="dd/mm/jjjj"
-              type="date"
-              autoComplete="bday"
+              required
               value={childDob}
-              onChange={(e) => {
+              onChange={(iso) => {
                 setError(null)
-                setChildDob(e.target.value)
-                persist({ childDob: e.target.value })
+                setChildDob(iso)
+                persist({ childDob: iso })
               }}
             />
           </div>
@@ -295,6 +298,7 @@ export default function AddPatient1() {
                 setFocus(e.target.value)
                 persist({ focus: e.target.value })
               }}
+              required
             />
           </div>
         </SectionCard>
@@ -400,7 +404,7 @@ export default function AddPatient1() {
         <SectionCard title="Gegevens contactpersonen">
           <div className="grid gap-6 md:grid-cols-2">
             <Field
-              label="Voornaam ouder/voogd*"
+              label="Voornaam ouder/voogd"
               placeholder="Voornaam"
               autoComplete="given-name"
               value={parentFirstname}
@@ -412,7 +416,7 @@ export default function AddPatient1() {
               required
             />
             <Field
-              label="Achternaam ouder/voogd*"
+              label="Achternaam ouder/voogd"
               placeholder="Achternaam"
               autoComplete="family-name"
               value={parentLastname}
@@ -438,7 +442,7 @@ export default function AddPatient1() {
               }}
             />
             <Field
-              label="Telefoonnummer ouder/voogd*"
+              label="Telefoonnummer ouder/voogd"
               placeholder="Telefoonnummer"
               type="tel"
               autoComplete="tel"
@@ -450,7 +454,7 @@ export default function AddPatient1() {
               }}
             />
             <Field
-              label="Email adres ouder/voogd*"
+              label="Email adres ouder/voogd"
               placeholder="Email adres"
               type="email"
               autoComplete="email"

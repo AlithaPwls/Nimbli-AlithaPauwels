@@ -3,7 +3,7 @@ export const EXERCISE_PLACEHOLDER_IMG =
 
 /** PostgREST select for list/card views that need thumbnails. */
 export const EXERCISE_THUMBNAIL_SELECT =
-  'id, title, name, description, media_url, thumbnail_url, video_url, focus, duration_seconds'
+  'id, title, name, description, media_url, thumbnail_url, video_url, focus, duration_seconds, difficulty, reps'
 
 const PLACEHOLDER_IMG = EXERCISE_PLACEHOLDER_IMG
 
@@ -216,4 +216,26 @@ export function normalizeExerciseRow(row) {
     description: row.description,
     mediaUrl: videoUrl ?? youtubeUrl ?? mediaCandidates[0] ?? null,
   }
+}
+
+/**
+ * Detail dialog shape from a Supabase `exercises` row; optional assignment reps/minutes override list UI.
+ */
+export function buildExerciseDetailFromRow(row, overrides = {}) {
+  if (!row) return null
+  const norm = normalizeExerciseRow(row)
+  const repsOverride = overrides.reps
+  const minutesOverride = overrides.minutes
+
+  let reps = norm.reps
+  if (repsOverride != null && Number.isFinite(Number(repsOverride))) {
+    reps = String(Math.round(Number(repsOverride)))
+  }
+
+  let time = norm.time
+  if (minutesOverride != null && Number.isFinite(Number(minutesOverride))) {
+    time = `${Math.max(1, Math.round(Number(minutesOverride)))} min`
+  }
+
+  return { ...norm, reps, time }
 }

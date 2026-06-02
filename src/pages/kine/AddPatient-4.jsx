@@ -2,6 +2,7 @@ import { Check, Copy, Mail, MessageSquare, QrCode } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import KinePatientInviteDialog from '@/components/kine/KinePatientInviteDialog.jsx'
 import { Button } from '@/components/ui/button'
 import { clearAddPatientDraft, readAddPatientDraft } from '@/lib/addPatientDraft'
 import { runFinalizeAddPatientOnce } from '@/lib/finalizeAddPatientOnce'
@@ -24,13 +25,14 @@ function StepHeader() {
   )
 }
 
-function ShareCard({ title, Icon, onClick }) {
+function ShareCard({ title, Icon, onClick, disabled = false }) {
   const IconComponent = Icon
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex h-[132px] w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-[#e5e7eb] bg-white shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+      disabled={disabled}
+      className="group flex h-[132px] w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-[#e5e7eb] bg-white shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <div className="grid size-12 place-items-center rounded-2xl bg-nimbli text-white">
         <IconComponent className="size-6" aria-hidden />
@@ -45,6 +47,7 @@ export default function AddPatient4() {
   const { finalize, loading: finalizing, error } = useFinalizeAddPatient()
   const [code, setCode] = useState('')
   const [copied, setCopied] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -122,12 +125,23 @@ export default function AddPatient4() {
           <div className="mt-7 border-t border-[#e5e7eb] pt-6">
             <p className="font-nimbli-heading text-lg font-normal text-nimbli-ink">Deel via:</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <ShareCard title="QR-code" Icon={QrCode} onClick={() => {}} />
+              <ShareCard
+                title="QR-code"
+                Icon={QrCode}
+                disabled={finalizing || !code}
+                onClick={() => setShareOpen(true)}
+              />
               <ShareCard title="Email" Icon={Mail} onClick={() => {}} />
               <ShareCard title="SMS" Icon={MessageSquare} onClick={() => {}} />
             </div>
           </div>
         </section>
+
+        <KinePatientInviteDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          inviteCode={code}
+        />
 
         {error ? (
           <p className="text-sm font-semibold text-red-600" role="alert">

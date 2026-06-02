@@ -1,4 +1,4 @@
-import { Activity, Search, Target, UserPlus, Users } from 'lucide-react'
+import { Activity, ArrowDownAZ, ArrowUpAZ, Search, Target, UserPlus, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -13,10 +13,11 @@ export default function DashboardKine() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const [nameSort, setNameSort] = useState('asc')
 
   const practiceId = profile?.practice_id ?? null
   const { kpis, loading: kpisLoading } = useKineDashboardKpis({ practiceId })
-  const { patients, loading: patientsLoading } = useKinePatients({ practiceId, query })
+  const { patients, loading: patientsLoading } = useKinePatients({ practiceId, query, nameSort })
 
   const greetingName = useMemo(() => {
     const first = profile?.firstname?.trim()
@@ -88,25 +89,45 @@ export default function DashboardKine() {
             </Button>
           </div>
 
-          <div>
-            <label className="sr-only" htmlFor="kine-patient-search">
-              Zoek patiënt
-            </label>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-nimbli-muted"
-                aria-hidden
-              />
-              <input
-                id="kine-patient-search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Zoek patiënt..."
-                className="h-[46px] w-full rounded-[10px] border border-[#e5e7eb] bg-white py-3 pl-11 pr-4 text-sm text-nimbli-ink placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-nimbli/30"
-                type="search"
-                autoComplete="off"
-              />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <label className="sr-only" htmlFor="kine-patient-search">
+                Zoek patiënt
+              </label>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-nimbli-muted"
+                  aria-hidden
+                />
+                <input
+                  id="kine-patient-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Zoek patiënt..."
+                  className="h-[46px] w-full rounded-[10px] border border-[#e5e7eb] bg-white py-3 pl-11 pr-4 text-sm text-nimbli-ink placeholder:text-[rgba(10,10,10,0.5)] focus:outline-none focus:ring-2 focus:ring-nimbli/30"
+                  type="search"
+                  autoComplete="off"
+                />
+              </div>
             </div>
+            <button
+              type="button"
+              id="kine-patient-sort"
+              aria-label={
+                nameSort === 'desc'
+                  ? 'Sorteer op naam van Z naar A'
+                  : 'Sorteer op naam van A naar Z'
+              }
+              title={nameSort === 'desc' ? 'Naam Z → A' : 'Naam A → Z'}
+              onClick={() => setNameSort((s) => (s === 'asc' ? 'desc' : 'asc'))}
+              className="flex size-[46px] shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-[#e5e7eb] bg-white p-0 text-nimbli-muted transition-colors hover:border-nimbli/40 hover:text-nimbli-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/30"
+            >
+              {nameSort === 'desc' ? (
+                <ArrowDownAZ className="size-4" aria-hidden />
+              ) : (
+                <ArrowUpAZ className="size-4" aria-hidden />
+              )}
+            </button>
           </div>
 
           {patientsLoading ? (
