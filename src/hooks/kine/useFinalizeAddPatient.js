@@ -3,7 +3,10 @@ import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useFinalizeAddSibling } from '@/hooks/kine/useFinalizeAddSibling.js'
 import { childPendingEmailFromInviteCode } from '@/lib/childAuthEmail.js'
-import { defaultExerciseScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
+import {
+  normalizeScheduleDays,
+  scheduleDaysByExerciseIdFromDraft,
+} from '@/lib/kine/exerciseScheduleDays.js'
 
 function onlyDigits(value) {
   return String(value ?? '').replace(/\D/g, '')
@@ -187,11 +190,12 @@ export function useFinalizeAddPatient() {
         const exerciseIds = uniqueExerciseIdsFromDraft(draft)
         if (exerciseIds.length > 0) {
           const repsById = repsByExerciseIdFromDraft(draft)
+          const scheduleById = scheduleDaysByExerciseIdFromDraft(draft)
           const assignmentRows = exerciseIds.map((exerciseId) => ({
             child_id: childProfileId,
             exercise_id: exerciseId,
             assigned_by: kineProfileId,
-            schedule_days: defaultExerciseScheduleDays(),
+            schedule_days: normalizeScheduleDays(scheduleById?.[exerciseId]),
             reps: parseReps(repsById?.[exerciseId], 10),
           }))
 

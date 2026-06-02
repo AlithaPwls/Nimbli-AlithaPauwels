@@ -7,17 +7,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-
-function formatInviteCode(code) {
-  const digits = String(code ?? '').replace(/\D/g, '')
-  if (digits.length !== 6) return digits || '—'
-  return `${digits.slice(0, 3)}-${digits.slice(3)}`
-}
+import { useInviteQrDataUrl } from '@/hooks/useInviteQrDataUrl.js'
+import { formatInviteCodeDisplay, normalizeInviteCodeDigits } from '@/lib/inviteRegisterLink.js'
 
 export default function KinePatientInviteDialog({ open, onOpenChange, inviteCode }) {
   const [copied, setCopied] = useState(false)
-  const displayCode = formatInviteCode(inviteCode)
-  const rawCode = String(inviteCode ?? '').replace(/\D/g, '')
+  const displayCode = formatInviteCodeDisplay(inviteCode)
+  const rawCode = normalizeInviteCodeDigits(inviteCode)
+  const { dataUrl: qrDataUrl, registerUrl, error: qrError } = useInviteQrDataUrl(
+    inviteCode,
+    open && rawCode.length === 6
+  )
 
   async function copyCode() {
     if (!rawCode) return
@@ -32,13 +32,13 @@ export default function KinePatientInviteDialog({ open, onOpenChange, inviteCode
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-4 sm:max-w-md">
+      <DialogContent className="gap-5 sm:max-w-md">
         <DialogHeader className="text-left">
           <DialogTitle className="font-nimbli-heading text-xl font-bold text-nimbli-ink">
             Activatiecode
           </DialogTitle>
           <DialogDescription className="text-sm text-nimbli-muted">
-            Deel deze code met de ouder zodat ze zich kunnen registreren.
+            Deel de code of laat de ouder de QR-code scannen met de telefooncamera.
           </DialogDescription>
         </DialogHeader>
 
@@ -54,6 +54,35 @@ export default function KinePatientInviteDialog({ open, onOpenChange, inviteCode
             {copied ? 'Gekopieerd' : 'Kopieer code'}
           </button>
         </div>
+
+        {rawCode.length === 6 ? (
+          <div className="rounded-2xl border border-[#e1dbd3] bg-nimbli-canvas/40 p-5 text-center">
+            <p className="font-nimbli-heading text-sm font-bold text-nimbli-ink">QR-code voor ouders</p>
+            <p className="mt-1 text-xs text-nimbli-muted">
+              Scan opent de registratiepagina met de code al ingevuld.
+            </p>
+            <div className="mx-auto mt-4 flex size-[200px] items-center justify-center rounded-xl border border-[#e1dbd3] bg-white p-3">
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR-code om te registreren met code ${displayCode}`}
+                  className="size-full object-contain"
+                  width={200}
+                  height={200}
+                />
+              ) : qrError ? (
+                <p className="px-2 text-xs text-red-600" role="alert">
+                  {qrError}
+                </p>
+              ) : (
+                <p className="text-xs text-nimbli-muted">QR-code laden…</p>
+              )}
+            </div>
+            {registerUrl ? (
+              <p className="mt-3 break-all text-[10px] text-nimbli-muted">{registerUrl}</p>
+            ) : null}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   )

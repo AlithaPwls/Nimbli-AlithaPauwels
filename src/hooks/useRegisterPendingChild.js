@@ -1,8 +1,9 @@
-import supabase from '@/lib/supabaseClient.js'
+import supabase, { supabaseEphemeralAuth } from '@/lib/supabaseClient.js'
 import { childAuthEmailForChildProfile } from '@/lib/childAuthEmail.js'
 
 /**
  * Activates a pending child: verifies parent password, creates child Auth with that same password.
+ * Child auth runs on an ephemeral client so the parent session is never cleared.
  */
 export async function registerPendingChild({
   childProfileId,
@@ -54,7 +55,7 @@ export async function registerPendingChild({
 
   let childUserId = null
 
-  const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpErr } = await supabaseEphemeralAuth.auth.signUp({
     email: childEmail,
     password: parentPassword,
   })
@@ -62,7 +63,8 @@ export async function registerPendingChild({
   if (!signUpErr && signUpData.user?.id) {
     childUserId = signUpData.user.id
   } else {
-    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInErr } =
+      await supabaseEphemeralAuth.auth.signInWithPassword({
       email: childEmail,
       password: parentPassword,
     })
@@ -88,20 +90,6 @@ export async function registerPendingChild({
     return {
       ok: false,
       message: 'Het kindaccount kon niet worden aangemaakt. Probeer opnieuw.',
-    }
-  }
-
-  await supabase.auth.signOut()
-
-  const { error: restoreErr } = await supabase.auth.signInWithPassword({
-    email: parentEmailNorm,
-    password: parentPassword,
-  })
-  if (restoreErr) {
-    return {
-      ok: false,
-      message:
-        'Kindaccount is aangemaakt, maar opnieuw inloggen als ouder mislukte. Log in via het inlogscherm met je ouderwachtwoord.',
     }
   }
 

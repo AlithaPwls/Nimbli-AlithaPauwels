@@ -5,7 +5,12 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
+import ExerciseScheduleDayChips from '@/components/kine/ExerciseScheduleDayChips.jsx'
 import { readAddPatientDraft } from '@/lib/addPatientDraft'
+import {
+  defaultExerciseScheduleDays,
+  normalizeScheduleDays,
+} from '@/lib/kine/exerciseScheduleDays.js'
 import { FALLBACK_PROFILE_PIC } from '@/lib/profileAvatar.js'
 
 const EMPTY_EXERCISE_IDS = []
@@ -65,7 +70,7 @@ function Pill({ tone = 'yellow', children }) {
   return <span className={['inline-flex h-5 items-center rounded-full px-2 text-xs', cls].join(' ')}>{children}</span>
 }
 
-function ExerciseRow({ exercise }) {
+function ExerciseRow({ exercise, scheduleDays }) {
   return (
     <SmallCard className="p-6">
       <div className="flex items-start gap-4">
@@ -99,6 +104,11 @@ function ExerciseRow({ exercise }) {
               {exercise.time}
             </span>
           </div>
+
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold text-nimbli-muted">Uitvoeren op</p>
+            <ExerciseScheduleDayChips value={scheduleDays} readOnly className="mt-2" />
+          </div>
         </div>
       </div>
     </SmallCard>
@@ -114,6 +124,10 @@ export default function AddPatient3() {
   const draft = useMemo(() => readAddPatientDraft() ?? {}, [])
   const repsById = useMemo(() => {
     const raw = draft.exerciseRepsById
+    return raw && typeof raw === 'object' ? raw : {}
+  }, [draft])
+  const scheduleDaysById = useMemo(() => {
+    const raw = draft.exerciseScheduleDaysById
     return raw && typeof raw === 'object' ? raw : {}
   }, [draft])
   const patientName = `${draft.childFirstname ?? ''} ${draft.childLastname ?? ''}`.trim() || 'Nieuwe patiënt'
@@ -135,7 +149,13 @@ export default function AddPatient3() {
       const reps = repsById?.[e.id]
       return { ...e, reps: reps != null ? reps : e.reps }
     })
-  }, [exercises, selectedExerciseIds])
+  }, [exercises, selectedExerciseIds, repsById])
+
+  function scheduleDaysForExercise(exerciseId) {
+    return normalizeScheduleDays(
+      scheduleDaysById?.[exerciseId] ?? defaultExerciseScheduleDays()
+    )
+  }
 
   const selectedCount = selectedExerciseIds.length
 
@@ -218,7 +238,13 @@ export default function AddPatient3() {
                       Geselecteerde oefeningen niet gevonden. Ga terug naar stap 2 om opnieuw te kiezen.
                     </div>
                   ) : (
-                    selectedExercises.map((ex) => <ExerciseRow key={ex.id} exercise={ex} />)
+                    selectedExercises.map((ex) => (
+                      <ExerciseRow
+                        key={ex.id}
+                        exercise={ex}
+                        scheduleDays={scheduleDaysForExercise(ex.id)}
+                      />
+                    ))
                   )}
                 </div>
               </div>

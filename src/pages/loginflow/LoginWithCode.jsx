@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -45,13 +45,31 @@ function CodeSlots({ digits, setRef, onChange, onKeyDown, onPaste }) {
 
 export default function LoginWithCode() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [checking, setChecking] = useState(false)
   const [inviteError, setInviteError] = useState(null)
-  const { digits, setRef, handleChange, handleKeyDown, handlePaste, isComplete, code } =
-    useActivationCode()
+  const autoSubmitRef = useRef(false)
+  const {
+    digits,
+    setRef,
+    handleChange,
+    handleKeyDown,
+    handlePaste,
+    setCodeFromString,
+    isComplete,
+    code,
+  } = useActivationCode()
+
+  useEffect(() => {
+    const fromUrl = searchParams.get('code') ?? searchParams.get('invite')
+    if (fromUrl) {
+      setCodeFromString(fromUrl)
+      autoSubmitRef.current = true
+    }
+  }, [searchParams, setCodeFromString])
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    if (e?.preventDefault) e.preventDefault()
     if (!isComplete || checking) return
     setInviteError(null)
     setChecking(true)
@@ -146,6 +164,14 @@ export default function LoginWithCode() {
       setChecking(false)
     }
   }
+
+  useEffect(() => {
+    if (!autoSubmitRef.current || !isComplete || checking) return
+    autoSubmitRef.current = false
+    void handleSubmit(undefined)
+    // Only auto-continue after QR / deep link prefilled the code.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSubmit reads latest code/checking
+  }, [isComplete, checking])
 
   function handleResend() {
     /* frontend only — wire to API later */

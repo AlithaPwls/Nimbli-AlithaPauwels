@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { EXERCISE_THUMBNAIL_SELECT, normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
+import {
+  buildExerciseDetailFromRow,
+  EXERCISE_THUMBNAIL_SELECT,
+  normalizeExerciseRow,
+} from '@/lib/exerciseDisplay.js'
 import { distributeAssignmentsByScheduleDays } from '@/lib/kind/weekCalendar.js'
 import supabase from '@/lib/supabaseClient.js'
 
@@ -197,6 +201,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
             reps,
             minutes,
             imageUrl: norm?.imageUrl,
+            detail: ex ? buildExerciseDetailFromRow(ex, { reps, minutes }) : null,
           }
         })
         .slice(0, 3)
@@ -258,6 +263,7 @@ export function useParentPlanningData(childProfileId, weekStart) {
             reps,
             minutes,
             done,
+            detail: ex ? buildExerciseDetailFromRow(ex, { reps, minutes }) : null,
           }
         })
       }

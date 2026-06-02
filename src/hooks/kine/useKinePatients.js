@@ -45,7 +45,9 @@ function buildPatientExtras(childIds, assignments, sessions) {
   return extras
 }
 
-export function useKinePatients({ practiceId, query = '' }) {
+/** @typedef {'asc' | 'desc'} PatientNameSort */
+
+export function useKinePatients({ practiceId, query = '', nameSort = 'asc' }) {
   const [rows, setRows] = useState([])
   const [extras, setExtras] = useState({})
   const [loading, setLoading] = useState(false)
@@ -164,9 +166,13 @@ export function useKinePatients({ practiceId, query = '' }) {
       }
     })
 
-    if (!q) return normalized
-    return normalized.filter((p) => p.name.toLowerCase().includes(q))
-  }, [rows, query, extras])
+    const filtered = !q ? normalized : normalized.filter((p) => p.name.toLowerCase().includes(q))
+
+    return [...filtered].sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, 'nl-BE', { sensitivity: 'base' })
+      return nameSort === 'desc' ? -cmp : cmp
+    })
+  }, [rows, query, extras, nameSort])
 
   return {
     patients,

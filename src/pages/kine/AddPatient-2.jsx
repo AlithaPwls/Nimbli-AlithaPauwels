@@ -2,10 +2,12 @@ import { ArrowLeft, ArrowRight, Clock, Minus, Plus, Repeat2, Search } from 'luci
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import ExerciseScheduleDayChips from '@/components/kine/ExerciseScheduleDayChips.jsx'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth.js'
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { categoryToneClasses } from '@/lib/exerciseDisplay.js'
+import { defaultExerciseScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
 import { readAddPatientDraft, updateAddPatientDraft } from '@/lib/addPatientDraft'
 import { cn } from '@/lib/utils'
 
@@ -114,7 +116,15 @@ function ExerciseRepsStepper({ value, onChange, exerciseTitle }) {
   )
 }
 
-function ExerciseCard({ exercise, selected, repsValue, onToggle, onChangeReps }) {
+function ExerciseCard({
+  exercise,
+  selected,
+  repsValue,
+  scheduleDays,
+  onToggle,
+  onChangeReps,
+  onChangeScheduleDays,
+}) {
   return (
     <div
       role="button"
@@ -182,6 +192,21 @@ function ExerciseCard({ exercise, selected, repsValue, onToggle, onChangeReps })
               </>
             ) : null}
           </div>
+
+          {selected ? (
+            <div
+              className="mt-4 border-t border-[#e1dbd3] pt-3"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <p className="text-[11px] font-semibold text-nimbli-muted">Uitvoeren op</p>
+              <ExerciseScheduleDayChips
+                className="mt-2"
+                value={scheduleDays}
+                onChange={onChangeScheduleDays}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -205,6 +230,10 @@ export default function AddPatient2() {
     const raw = draft.exerciseRepsById
     return raw && typeof raw === 'object' ? raw : {}
   })
+  const [scheduleDaysById, setScheduleDaysById] = useState(() => {
+    const raw = draft.exerciseScheduleDaysById
+    return raw && typeof raw === 'object' ? raw : {}
+  })
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -226,6 +255,10 @@ export default function AddPatient2() {
     updateAddPatientDraft({ exerciseRepsById: next })
   }
 
+  function persistScheduleDays(next) {
+    updateAddPatientDraft({ exerciseScheduleDaysById: next })
+  }
+
   function toggle(id) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -239,6 +272,12 @@ export default function AddPatient2() {
           persistReps(nextReps)
           return nextReps
         })
+        setScheduleDaysById((prevDays) => {
+          if (prevDays?.[id] != null) return prevDays
+          const nextDays = { ...prevDays, [id]: defaultExerciseScheduleDays() }
+          persistScheduleDays(nextDays)
+          return nextDays
+        })
       }
       updateAddPatientDraft({ selectedExerciseIds: Array.from(next) })
       return next
@@ -249,6 +288,7 @@ export default function AddPatient2() {
     updateAddPatientDraft({
       selectedExerciseIds: Array.from(selectedIds),
       exerciseRepsById: repsById,
+      exerciseScheduleDaysById: scheduleDaysById,
     })
     navigate('/dashboard/kine/patienten/nieuw/3')
   }
@@ -261,6 +301,14 @@ export default function AddPatient2() {
     })
   }
 
+  function setScheduleDays(exerciseId, days) {
+    setScheduleDaysById((prev) => {
+      const next = { ...prev, [exerciseId]: days }
+      persistScheduleDays(next)
+      return next
+    })
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
       <StepHeader />
@@ -268,7 +316,7 @@ export default function AddPatient2() {
       <div className="mt-10">
         <SectionCard
           title="Startprogramma"
-          subtitle="Selecteer oefeningen en stel per oefening het aantal herhalingen in."
+          subtitle="Selecteer oefeningen, stel herhalingen en planningsdagen per oefening in."
         >
           <label className="sr-only" htmlFor="exercise-search">
             Zoek een oefening
@@ -347,7 +395,9 @@ export default function AddPatient2() {
                     selected={isSelected}
                     onToggle={() => toggle(exercise.id)}
                     repsValue={repsById?.[exercise.id] ?? DEFAULT_REPS}
+                    scheduleDays={scheduleDaysById?.[exercise.id] ?? defaultExerciseScheduleDays()}
                     onChangeReps={(v) => setReps(exercise.id, v)}
+                    onChangeScheduleDays={(days) => setScheduleDays(exercise.id, days)}
                   />
                 )
               })

@@ -1,4 +1,11 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import KinePatientSessionRow from '@/components/kine/KinePatientSessionRow.jsx'
+import { cn } from '@/lib/utils'
+
+const SESSIONS_VISIBLE_WITHOUT_SCROLL = 8
+/** ~8 session rows (py-3 + 2 lines) + gaps between */
+const SESSIONS_LIST_MAX_HEIGHT =
+  'max-h-[calc(8*3.5rem+7*0.75rem)]'
 
 export default function KinePatientSessionsSection({
   sessions = [],
@@ -7,6 +14,33 @@ export default function KinePatientSessionsSection({
 }) {
   const list = Array.isArray(sessions) ? sessions : []
   const isEmpty = !loading && list.length === 0
+  const listScrollable = list.length > SESSIONS_VISIBLE_WITHOUT_SCROLL
+  const listRef = useRef(null)
+  const [showBottomFade, setShowBottomFade] = useState(false)
+
+  const updateBottomFade = useCallback(() => {
+    const el = listRef.current
+    if (!el || !listScrollable) {
+      setShowBottomFade(false)
+      return
+    }
+    const hasMoreBelow = el.scrollHeight - el.clientHeight - el.scrollTop > 4
+    setShowBottomFade(hasMoreBelow)
+  }, [listScrollable])
+
+  useEffect(() => {
+    updateBottomFade()
+    const el = listRef.current
+    if (!el || !listScrollable) return undefined
+
+    el.addEventListener('scroll', updateBottomFade, { passive: true })
+    const observer = new ResizeObserver(updateBottomFade)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener('scroll', updateBottomFade)
+      observer.disconnect()
+    }
+  }, [listScrollable, list.length, updateBottomFade])
 
   return (
     <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3]">
@@ -28,18 +62,33 @@ export default function KinePatientSessionsSection({
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {list.map((session) => (
-              <li key={session.id}>
-                <KinePatientSessionRow
-                  title={session.title}
-                  time={session.time}
-                  score={session.score}
-                  success={session.success}
-                />
-              </li>
-            ))}
-          </ul>
+          <div className="relative">
+            <ul
+              ref={listRef}
+              className={cn(
+                'flex flex-col gap-3',
+                listScrollable &&
+                  `${SESSIONS_LIST_MAX_HEIGHT} overflow-y-auto overscroll-contain pr-1`
+              )}
+            >
+              {list.map((session) => (
+                <li key={session.id}>
+                  <KinePatientSessionRow
+                    title={session.title}
+                    time={session.time}
+                    score={session.score}
+                    success={session.success}
+                  />
+                </li>
+              ))}
+            </ul>
+            {showBottomFade ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white via-white/80 to-transparent"
+              />
+            ) : null}
+          </div>
         )}
       </div>
     </section>

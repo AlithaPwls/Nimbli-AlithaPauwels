@@ -14,12 +14,20 @@ export default function OuderPlannedExerciseRow({
   minutes,
   imageUrl,
   done = false,
+  onSelect,
 }) {
+  const Tag = onSelect ? 'button' : 'div'
+
   return (
-    <div
+    <Tag
+      type={onSelect ? 'button' : undefined}
+      onClick={onSelect}
+      aria-label={onSelect ? `Bekijk details van ${title}` : undefined}
       className={cn(
-        'flex items-center justify-between rounded-lg border px-5 py-4',
-        done ? 'border-nimbli/25 bg-nimbli/10' : 'border-[#eef2f7] bg-white'
+        'flex w-full items-center justify-between rounded-lg border px-5 py-4 text-left',
+        done ? 'border-nimbli/25 bg-nimbli/10' : 'border-[#eef2f7] bg-white',
+        onSelect &&
+          'cursor-pointer transition-colors hover:border-nimbli/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40'
       )}
     >
       <div className="flex min-w-0 items-center gap-4">
@@ -67,6 +75,6 @@ export default function OuderPlannedExerciseRow({
       ) : (
         <span className="size-6 shrink-0" aria-hidden />
       )}
-    </div>
+    </Tag>
   )
 }

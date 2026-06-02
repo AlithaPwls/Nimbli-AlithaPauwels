@@ -12,4 +12,14 @@ const supabaseAnonKey = import.meta.env.DEV
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+/** Auth-only client: child signUp/signIn without touching the main browser session. */
+const supabaseEphemeralAuth = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+})
+
 export default supabase
+export { supabaseEphemeralAuth }
