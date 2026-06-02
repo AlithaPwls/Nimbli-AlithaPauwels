@@ -5,64 +5,44 @@ alwaysApply: true
 # Nimbli Authentication Flow
 
 ## Overview
-Nimbli uses a custom authentication flow where the kinesiologist creates accounts for both the child and parent. The parent then sets a password using an invite code.
+Nimbli uses a custom authentication flow where the kinesiologist creates profiles in Postgres first. The parent activates via an invite code. Families with multiple children use `child_parent_relations` as the source of truth (not a shared `invite_code` on all profiles).
 
-## Step-by-step Flow
+## Family model
+- **One parent profile** can link to **many child profiles** via `child_parent_relations (parent_id, child_id)`.
+- Each **child** has its own `invite_code` for onboarding (pending until `user_id` is set).
+- Parent RLS and parent UI resolve children through `child_parent_relations`, not `invite_code` equality.
+
+## Step-by-step Flow — first child (new family)
 
 ### Step 1: Kinesiologist creates profiles (no auth accounts yet)
-- The kinesiologist creates rows directly in the `profiles` table (not in Supabase Auth)
-- He creates two rows: one for the child (role: 'child') and one for the parent (role: 'parent')
-- Both rows share the same `invite_code` (e.g. six digits or `XXX-XXX`)
-- `email` is required on `profiles` — use placeholders until the parent registers (e.g. `ouder@pending.local` / `kind@pending.local`); real addresses are written at registration
-- `user_id` stays null until Step 4; `id` is a temporary UUID until the row is linked to Auth (then `id` becomes the same UUID as `auth.users.id`)
+- Creates child + parent rows in `profiles` and one `child_parent_relations` row.
+- Both rows share the same `invite_code` for the first registration only.
+- Placeholder emails until registration (e.g. `kind.{code}@pending.local`, parent real email).
+- `user_id` stays null until activation.
 
-### Step 2: Parent enters invite code
-- Parent goes to `/register` (`LoginWithCode.tsx`, 6 digits; also tries `XXX-XXX` if stored that way)
-- App loads `profiles` rows for that `invite_code` and requires **one** child + **one** parent row with `user_id` still null (not yet linked to Auth)
-```js
-  supabase.from('profiles').select('*').in('invite_code', [digitsOnly, `${digitsOnly.slice(0,3)}-${digitsOnly.slice(3)}`])
-```
-- If valid → `navigate('/register/ouder', { state: { inviteCode, childProfile, parentProfile } })`
-- Otherwise → show an error message
+### Step 2: Parent enters invite code (`/register`)
+- **New family:** one pending child + one pending parent with the same code → `/register/ouder`.
+- **Additional child:** one pending child, parent already has `user_id` → `/register/kind` (login + activate) or `/dashboard/ouder/kind-activeren` when already logged in.
 
-### Step 3: Parent creates account on `RegisterOuder.tsx` (`/register/ouder`)
-- Parent fills in: own name, email, password, repeat password
-- Two Supabase Auth accounts are created with the same password:
-```js
-  // Parent account
-  supabase.auth.signUp({ email: parentEmail, password: password })
+### Step 3: Parent creates account (`RegisterOuder.tsx`)
+- Two Supabase Auth accounts (same password):
+  - Parent: real email
+  - First child: `kind.{inviteDigits}@nimbli.be`
+- RPC `complete_pending_family_registration` links both profile PKs to Auth UUIDs and re-inserts the relation.
 
-  // Child account (generated email, child has no real email)
-  const childEmail = `kind.${inviteCode}@nimbli.be`
-  supabase.auth.signUp({ email: childEmail, password: password })
-```
-- Both accounts use the same password so the parent can switch to the child view without re-entering the password
+### Step 4: Additional child (kine adds sibling)
+- Kine creates **only** a child profile + relation to existing parent; new `invite_code` on the child.
+- Child placeholder email: `kind.{inviteDigits}@pending.local` (per child invite_code)
+- After activation: `kind.{inviteDigits}@nimbli.be` (first child and siblings each use their own invite_code)
+- Legacy fallback if invite_code missing: `kind.{childProfileId}@…`
+- RPC `complete_pending_child_registration` updates **only** the child profile PK; parent unchanged.
 
-### Step 4: Link profiles to Auth (`id` + `user_id`)
-- After both `signUp` calls, set **both** `id` and `user_id` to the new `auth.users.id` (same value), and set emails. Foreign keys to `profiles(id)` use `ON UPDATE CASCADE` so related rows stay valid when the PK changes from the pending UUID to the Auth UUID.
-```js
-  supabase.from('profiles')
-    .update({ id: parentAuthId, user_id: parentAuthId, email: parentEmail })
-    .eq('id', parentProfileRowId)
-    .is('user_id', null)
-
-  supabase.from('profiles')
-    .update({ id: childAuthId, user_id: childAuthId, email: childEmail })
-    .eq('id', childProfileRowId)
-    .is('user_id', null)
-```
-- Login and session code resolve the app role with `.eq('id', authUser.id)` (equivalent to `user_id` once linked; RLS policies may still reference `user_id`).
-
-## Switching between parent and child
-- Parent → Child: no password needed, just switch the active role in context
-- Child → Parent: require password verification before switching
-```js
-  supabase.auth.signInWithPassword({ email: parentEmail, password: enteredPassword })
-```
+## Parent ↔ child in the app
+- **Parent session on kind dashboard:** parent stays logged in as `role: parent`; active child via `?child=<uuid>` and `localStorage` (`nimbli.activeChildId`). No auth switch to the child account. Switching to another child on the kind dashboard: **parent password**. Back to ouder dashboard from kind view: **parent password**.
+- **Child session:** rare; child logs in with technical email. Switching to another child's kind view or to the ouder dashboard: **parent password** required (`KindSidebar` → `verifyParentPassword` re-signs parent session).
+- **Ouder dashboard:** child selector sets `?child=` without password; data scoped to that child id.
 
 ## Important notes
-- The child never logs in with email — only the parent logs in and switches to child view
-- The generated child email (kind.{inviteCode}@nimbli.be) is purely technical
-- The invite_code is stored on both the child and parent profile row in the `profiles` table
-- Never create Supabase Auth accounts in Step 1 — only create rows in the `profiles` table
-- The `profiles` table rows are created by the kinesiologist BEFORE the parent registers
+- Never create Supabase Auth accounts in Step 1 — only `profiles` rows.
+- Do not rely on `invite_code` matching between parent and all children for data access — use `child_parent_relations`.
+- Helper `parent_can_access_child(child_id)` backs parent RLS policies.

@@ -1,9 +1,5 @@
 import supabase from '@/lib/supabaseClient.js'
-
-function childAuthEmail(inviteCode) {
-  const digits = String(inviteCode ?? '').replace(/\D/g, '')
-  return `kind.${digits || inviteCode}@nimbli.be`
-}
+import { childAuthEmailFromInviteCode } from '@/lib/childAuthEmail.js'
 
 /**
  * After failed signUp (duplicate / 422 / validation), try signIn once with the same password.
@@ -138,7 +134,7 @@ async function linkPendingProfilesRpc(input, inviteDigits, parentUserId, childUs
  */
 export async function registerFamily(input) {
   const email = String(input.parentEmail ?? '').trim()
-  const childEmail = childAuthEmail(input.inviteCode)
+  const childEmail = childAuthEmailFromInviteCode(input.inviteCode)
 
   const parent = await ensureAuthUser({ email, password: input.password })
   if (!parent.userId) {

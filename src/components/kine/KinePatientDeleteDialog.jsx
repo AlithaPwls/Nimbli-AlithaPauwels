@@ -14,6 +14,7 @@ export default function KinePatientDeleteDialog({
   onOpenChange,
   patientName,
   isRegistered,
+  hasOtherChildren = false,
   loading,
   error,
   onConfirm,
@@ -27,15 +28,22 @@ export default function KinePatientDeleteDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-nimbli-muted">
             Weet je zeker dat je <strong className="font-semibold text-nimbli-ink">{patientName}</strong>{' '}
-            wilt verwijderen? Het profiel van de ouder/voogd wordt ook verwijderd. Alle oefeningen en
-            sessies van deze patiënt gaan verloren.
-            {isRegistered ? (
+            wilt verwijderen? Alle oefeningen en sessies van dit kind gaan verloren.
+            {hasOtherChildren ? (
               <>
                 {' '}
-                Deze familie heeft al een account: inloggegevens van ouder en kind worden permanent
-                verwijderd.
+                Alleen dit kind wordt verwijderd. Het ouderaccount en je andere kind(eren)
+                blijven bestaan.
+                {isRegistered ? ' Het inlogaccount van dit kind wordt verwijderd.' : null}
               </>
-            ) : null}{' '}
+            ) : (
+              <>
+                {' '}
+                {isRegistered
+                  ? 'Dit is het enige gekoppelde kind: het ouderprofiel en de bijbehorende inlogaccounts (ouder en kind) worden ook permanent verwijderd.'
+                  : 'Het profiel van de ouder/voogd wordt ook verwijderd als er geen andere kinderen gekoppeld zijn.'}
+              </>
+            )}{' '}
             Dit kan niet ongedaan worden gemaakt.
           </DialogDescription>
         </DialogHeader>

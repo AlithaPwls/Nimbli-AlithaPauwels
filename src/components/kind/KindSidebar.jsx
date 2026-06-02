@@ -1,19 +1,15 @@
-import { LogOut, Star, Trophy } from 'lucide-react'
+import { LogOut, Star, Trophy, ChevronDown } from 'lucide-react'
 import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
-import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useLogout } from '@/hooks/useLogout.js'
 import { useAuth } from '@/hooks/useAuth.js'
-import supabase from '@/lib/supabaseClient.js'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
+import { useSwitchToParentDashboard } from '@/hooks/useSwitchToParentDashboard.js'
+import ParentPasswordDialog from '@/components/ParentPasswordDialog.jsx'
+import { CHILD_PROFILE_SWITCH_COPY, useParentPasswordGate } from '@/hooks/useParentPasswordGate.js'
+import { readActiveChildId, withChildSearch, writeActiveChildId } from '@/lib/activeChild.js'
 import {
   SIDEBAR_BTN_FOCUS,
   SIDEBAR_BTN_HOVER,
@@ -54,164 +50,201 @@ const KIND_ROUTES = {
 export default function KindSidebar({ displayName = 'Kind', active = 'oefeningen', onNavigate }) {
   const { logout, loading: logoutLoading } = useLogout()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { role, profile } = useAuth()
+  const { childId, children: linkedChildren } = useActiveChildId()
 
-  const [switchOpen, setSwitchOpen] = useState(false)
-  const [password, setPassword] = useState('')
-  const [switchLoading, setSwitchLoading] = useState(false)
-  const [switchError, setSwitchError] = useState(null)
+  const [childMenuOpen, setChildMenuOpen] = useState(false)
+  const childMenuRef = useRef(null)
 
-  const canSwitchToParent = useMemo(() => Boolean(profile?.invite_code), [profile?.invite_code])
+  const isParentView = role === 'parent'
+  const childList = Array.isArray(linkedChildren) ? linkedChildren : []
+  const hasMultipleChildren = childList.length > 1
+
+  const childSearchSuffix = childId ? readActiveChildId(searchParams) || childId : null
+
+  const parentSwitch = useSwitchToParentDashboard(childSearchSuffix)
+  const childSwitchGate = useParentPasswordGate()
+
+  const activeChild = useMemo(() => {
+    if (!childId) return null
+    return childList.find((c) => c?.id === childId) ?? null
+  }, [childId, childList])
+
+  const headerLabel = useMemo(() => {
+    if (activeChild?.firstname) {
+      return activeChild.firstname.trim()
+    }
+    return displayName
+  }, [activeChild, displayName])
+
+  const canLeaveKindView = isParentView || (role === 'child' && Boolean(profile?.id))
 
   function goTo(section) {
+    const path = KIND_ROUTES[section]
+    if (!path) return
+    const target = isParentView && childSearchSuffix
+      ? withChildSearch(path, childSearchSuffix)
+      : path
     if (onNavigate) {
       onNavigate(section)
       return
     }
-    const path = KIND_ROUTES[section]
-    if (path) navigate(path)
+    navigate(target)
   }
 
-  const doSwitchToParent = useCallback(async () => {
-    if (!canSwitchToParent) return
-    setSwitchLoading(true)
-    setSwitchError(null)
-    try {
-      const inviteCode = profile?.invite_code
-      const { data: parentRow, error: pErr } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('invite_code', inviteCode)
-        .eq('role', 'parent')
-        .limit(1)
-        .maybeSingle()
-      if (pErr) throw pErr
-      const parentEmail = parentRow?.email?.trim()
-      if (!parentEmail) throw new Error('Parent email niet gevonden.')
-      if (!password.trim()) throw new Error('Vul je wachtwoord in.')
+  const applyChildSelection = useCallback(
+    (id) => {
+      if (!id) return
+      writeActiveChildId(id)
+      const next = new URLSearchParams(searchParams)
+      next.set('child', id)
+      setSearchParams(next, { replace: true })
+      setChildMenuOpen(false)
+      const path = KIND_ROUTES[active] ?? '/dashboard/kind'
+      navigate(isParentView ? withChildSearch(path, id) : path, { replace: true })
+    },
+    [active, isParentView, navigate, searchParams, setSearchParams]
+  )
 
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: parentEmail,
-        password,
-      })
-      if (signInErr) throw signInErr
+  function requestChildSwitch(id) {
+    if (!id || id === childId) return
+    childSwitchGate.runProtected(() => {
+      if (isParentView) {
+        applyChildSelection(id)
+        return
+      }
+      navigate(withChildSearch('/dashboard/kind', id))
+    }, CHILD_PROFILE_SWITCH_COPY)
+  }
 
-      setPassword('')
-      setSwitchOpen(false)
-      navigate('/dashboard/ouder')
-    } catch (e) {
-      setSwitchError(e)
-    } finally {
-      setSwitchLoading(false)
+  useEffect(() => {
+    function onDocPointerDown(e) {
+      if (!childMenuOpen) return
+      const el = childMenuRef.current
+      if (!el?.contains(e.target)) setChildMenuOpen(false)
     }
-  }, [canSwitchToParent, navigate, password, profile?.invite_code])
+    document.addEventListener('pointerdown', onDocPointerDown)
+    return () => document.removeEventListener('pointerdown', onDocPointerDown)
+  }, [childMenuOpen])
 
-  function handleSwitchSubmit(e) {
-    e.preventDefault()
-    if (switchLoading || !canSwitchToParent) return
-    void doSwitchToParent()
+  function handleHeaderClick() {
+    if (hasMultipleChildren) {
+      setChildMenuOpen((v) => !v)
+      return
+    }
+    if (canLeaveKindView) {
+      parentSwitch.requestSwitch()
+    }
+  }
+
+  function handleGoToParentDashboard() {
+    setChildMenuOpen(false)
+    parentSwitch.requestSwitch()
   }
 
   return (
     <aside className="flex h-svh w-[216px] shrink-0 flex-col border-r-2 border-[#e5e7eb] bg-kind-white px-6 py-3 font-nimbli-body text-nimbli-ink">
-      <button
-        type="button"
-        onClick={() => {
-          // Kind → Ouder: always require password verification before switching.
-          // (Even when the logged-in auth role is 'parent', the user is currently in the kind view.)
-          setSwitchError(null)
-          setPassword('')
-          setSwitchOpen(true)
-        }}
-        className={cn(
-          'mx-auto flex h-[30px] w-full max-w-[173px] items-center justify-center overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2',
-          SIDEBAR_BTN_INTERACTION,
-          SIDEBAR_BTN_HOVER,
-          SIDEBAR_BTN_PRESS,
-          SIDEBAR_BTN_FOCUS,
-          'shadow-[0_2px_0_0_#e1dbd3]'
-        )}
-        aria-label="Wissel naar ouderdashboard"
-      >
-        <span className="truncate font-nimbli-heading text-sm font-normal text-kind-black">{displayName}</span>
-      </button>
+      <div className="relative mx-auto w-full max-w-[173px]" ref={childMenuRef}>
+        <button
+          type="button"
+          onClick={handleHeaderClick}
+          className={cn(
+            'flex h-[30px] w-full items-center justify-center gap-1 overflow-hidden rounded-[6px] border border-[#f9fafb] bg-kind-white px-2',
+            SIDEBAR_BTN_INTERACTION,
+            SIDEBAR_BTN_HOVER,
+            SIDEBAR_BTN_PRESS,
+            SIDEBAR_BTN_FOCUS,
+            'shadow-[0_2px_0_0_#e1dbd3]'
+          )}
+          aria-haspopup={hasMultipleChildren ? 'menu' : undefined}
+          aria-expanded={hasMultipleChildren ? childMenuOpen : undefined}
+          aria-label={
+            hasMultipleChildren
+              ? 'Kies kind of ga naar ouderdashboard'
+              : 'Ga naar ouderdashboard'
+          }
+        >
+          <span className="truncate font-nimbli-heading text-sm font-normal text-kind-black">
+            {headerLabel}
+          </span>
+          {hasMultipleChildren ? <ChevronDown className="size-3 shrink-0" aria-hidden /> : null}
+        </button>
 
-      <Dialog open={switchOpen} onOpenChange={setSwitchOpen}>
-        <DialogContent className="gap-5 bg-kind-white sm:max-w-sm">
-          <form onSubmit={handleSwitchSubmit} className="flex flex-col gap-5">
-            <DialogHeader className="gap-2 text-left">
-              <DialogTitle className="font-nimbli-heading text-xl font-black tracking-tight text-kind-black">
-                Naar ouderdashboard
-              </DialogTitle>
-              <DialogDescription className="font-nimbli-body text-sm leading-relaxed text-kind-gray">
-                Voor je veiligheid vragen we je wachtwoord om terug te schakelen naar het ouderaccount.
-              </DialogDescription>
-            </DialogHeader>
-
-            {!canSwitchToParent ? (
-              <p className="rounded-xl border border-kind-border bg-kind-white px-3 py-2 font-nimbli-body text-sm text-kind-red shadow-[0px_2px_0px_#e1dbd3]">
-                Geen gekoppeld ouderaccount gevonden.
-              </p>
-            ) : (
-              <div className="grid gap-2">
-                <label
-                  htmlFor="kind-switch-parent-password"
-                  className="font-nimbli-body text-xs font-semibold tracking-wide text-kind-gray"
-                >
-                  Wachtwoord
-                </label>
-                <input
-                  id="kind-switch-parent-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+        {childMenuOpen && hasMultipleChildren ? (
+          <div
+            role="menu"
+            aria-label="Kies kind"
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 rounded-xl border border-[#e5e7eb] bg-white p-2 shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
+          >
+            {childList.map((c) => {
+              const name = `${c?.firstname ?? ''} ${c?.lastname ?? ''}`.trim() || 'Kind'
+              const activeChildRow = c?.id === childId
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => requestChildSwitch(c.id)}
                   className={cn(
-                    'h-11 w-full rounded-xl border bg-kind-white px-3 font-nimbli-body text-sm text-kind-black outline-none',
-                    'shadow-[0px_2px_0px_#e1dbd3] transition-colors',
-                    'focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
-                    switchError ? 'border-kind-red' : 'border-kind-border'
+                    'flex w-full items-center justify-between rounded-lg border border-transparent px-3 py-2 text-left text-sm',
+                    SIDEBAR_BTN_INTERACTION,
+                    SIDEBAR_BTN_HOVER,
+                    SIDEBAR_BTN_PRESS,
+                    SIDEBAR_BTN_FOCUS,
+                    activeChildRow ? 'border-kind-blue/25 bg-[#ebf4fb] text-nimbli' : 'text-[#1a1a1a]'
                   )}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
-                {switchError ? (
-                  <p className="rounded-lg bg-kind-red/10 px-2 py-1 font-nimbli-body text-xs text-kind-red">
-                    {switchError?.message ? String(switchError.message) : 'Wachtwoordcontrole mislukt.'}
-                  </p>
-                ) : null}
-              </div>
-            )}
+                >
+                  <span className="truncate font-nimbli-heading font-bold">{name}</span>
+                  {activeChildRow ? <span className="text-xs font-bold">Actief</span> : null}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleGoToParentDashboard}
+              className={cn(
+                'mt-1 flex w-full rounded-lg border border-transparent px-3 py-2 text-left text-sm font-nimbli-heading font-bold text-nimbli',
+                SIDEBAR_BTN_INTERACTION,
+                SIDEBAR_BTN_HOVER,
+                SIDEBAR_BTN_PRESS,
+                SIDEBAR_BTN_FOCUS
+              )}
+            >
+              Naar ouderdashboard
+            </button>
+          </div>
+        ) : null}
+      </div>
 
-            <DialogFooter className="mt-1 gap-2 sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setSwitchOpen(false)}
-                disabled={switchLoading}
-                className={cn(
-                  'h-11 rounded-xl border border-kind-border bg-kind-white px-4 font-nimbli-heading text-sm font-bold text-kind-black',
-                  'shadow-[0px_2px_0px_#e1dbd3] transition-colors',
-                  'hover:bg-kind-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary/40',
-                  'disabled:opacity-60'
-                )}
-              >
-                Annuleren
-              </button>
-              <button
-                type="submit"
-                disabled={switchLoading || !canSwitchToParent}
-                className={cn(
-                  'h-11 rounded-xl border-0 bg-kind-green-primary px-5 font-nimbli-heading text-sm font-black text-kind-canvas',
-                  'shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-white',
-                  'disabled:opacity-60 disabled:shadow-none'
-                )}
-              >
-                {switchLoading ? 'Bezig…' : 'Doorgaan'}
-              </button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ParentPasswordDialog
+        open={parentSwitch.open}
+        onOpenChange={parentSwitch.setOpen}
+        title={parentSwitch.dialogCopy.title}
+        description={parentSwitch.dialogCopy.description}
+        password={parentSwitch.password}
+        onPasswordChange={parentSwitch.setPassword}
+        error={parentSwitch.error}
+        loading={parentSwitch.loading}
+        canVerify={parentSwitch.canSwitch}
+        onSubmit={() => void parentSwitch.confirmSwitch()}
+        inputId="kind-switch-parent-password"
+      />
+
+      <ParentPasswordDialog
+        open={childSwitchGate.open}
+        onOpenChange={childSwitchGate.setOpen}
+        title={childSwitchGate.dialogCopy.title}
+        description={childSwitchGate.dialogCopy.description}
+        password={childSwitchGate.password}
+        onPasswordChange={childSwitchGate.setPassword}
+        error={childSwitchGate.error}
+        loading={childSwitchGate.loading}
+        canVerify={childSwitchGate.canVerify}
+        onSubmit={() => void childSwitchGate.confirm()}
+        inputId="kind-switch-child-password"
+      />
 
       <NimbliSidebarLogo className="mt-10" />
 

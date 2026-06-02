@@ -8,7 +8,14 @@ export type ChoosePasswordErrors = {
   terms?: string
 }
 
-export function useChoosePasswordForm() {
+type ChoosePasswordFormOptions = {
+  /** Registration flows require terms checkbox; activation only confirms password. */
+  requireTerms?: boolean
+}
+
+export function useChoosePasswordForm(options: ChoosePasswordFormOptions = {}) {
+  const requireTerms = options.requireTerms !== false
+
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
   const [agreed, setAgreed] = useState(false)
@@ -22,24 +29,24 @@ export function useChoosePasswordForm() {
       e.password = `Minimaal ${MIN_LENGTH} tekens.`
     if (!repeatPassword) e.repeat = 'Herhaal je wachtwoord.'
     else if (password !== repeatPassword) e.repeat = 'Wachtwoorden komen niet overeen.'
-    if (!agreed) e.terms = 'Ga akkoord met de voorwaarden om verder te gaan.'
+    if (requireTerms && !agreed) e.terms = 'Ga akkoord met de voorwaarden om verder te gaan.'
     return e
-  }, [password, repeatPassword, agreed, touched])
+  }, [password, repeatPassword, agreed, touched, requireTerms])
 
   const isValid =
     password.length >= MIN_LENGTH &&
     repeatPassword === password &&
     repeatPassword.length > 0 &&
-    agreed
+    (!requireTerms || agreed)
 
   const validate = useCallback(() => {
     setTouched(true)
     return (
       password.length >= MIN_LENGTH &&
       password === repeatPassword &&
-      agreed
+      (!requireTerms || agreed)
     )
-  }, [password, repeatPassword, agreed])
+  }, [password, repeatPassword, agreed, requireTerms])
 
   return {
     password,

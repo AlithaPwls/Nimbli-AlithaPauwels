@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useSearchParams } from 'react-router-dom'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderChildSwitcher from '@/components/ouder/OuderChildSwitcher.jsx'
 import OuderWeekStrip from '@/components/ouder/OuderWeekStrip.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
 import OuderRecentSection from '@/components/ouder/OuderRecentSection.jsx'
 import OuderPlannedExerciseRow from '@/components/ouder/OuderPlannedExerciseRow.jsx'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { useParentPlanningData } from '@/hooks/ouder/useParentPlanningData.js'
 
 function startOfWeekLocal(d) {
@@ -35,30 +35,17 @@ function formatDayHeader(d) {
 export default function OuderOefenplanning() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children, loading: childrenLoading, error: childrenError } = useChildrenForParent(profile)
-
-  const [searchParams, setSearchParams] = useSearchParams()
-  const childParam = searchParams.get('child')
-  const [selectedChildId, setSelectedChildId] = useState(childParam)
-
-  useEffect(() => {
-    setSelectedChildId(childParam)
-  }, [childParam])
-
-  useEffect(() => {
-    if (!selectedChildId && (children ?? []).length > 0) {
-      const first = children[0]?.id ?? null
-      if (!first) return
-      setSelectedChildId(first)
-      const next = new URLSearchParams(searchParams)
-      next.set('child', first)
-      setSearchParams(next, { replace: true })
-    }
-  }, [children, selectedChildId, searchParams, setSearchParams])
+  const {
+    activatedChildren,
+    loading: childrenLoading,
+    error: childrenError,
+    activeChildId,
+    setSelectedChildId,
+  } = useActiveChildSelection(profile)
 
   const [weekStart, setWeekStart] = useState(() => startOfWeekLocal(new Date()))
 
-  const planning = useParentPlanningData(selectedChildId, weekStart)
+  const planning = useParentPlanningData(activeChildId, weekStart)
 
   const selectedDay = useMemo(() => {
     return (planning.days ?? []).find((d) => d?.key === planning.selectedDayKey) ?? null
@@ -86,15 +73,9 @@ export default function OuderOefenplanning() {
       <OuderSidebar
         logout={logout}
         logoutLoading={logoutLoading}
-        childrenList={children}
-        selectedChildId={selectedChildId}
-        onSelectChild={(id) => {
-          setSelectedChildId(id)
-          const next = new URLSearchParams(searchParams)
-          if (id) next.set('child', id)
-          else next.delete('child')
-          setSearchParams(next, { replace: true })
-        }}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
       />
 
       <main className="min-w-0 flex-1 overflow-auto">
@@ -102,6 +83,13 @@ export default function OuderOefenplanning() {
           <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
             Oefenplanning
           </h1>
+
+          <OuderChildSwitcher
+            className="mt-5"
+            childrenList={activatedChildren}
+            selectedChildId={activeChildId}
+            onSelectChild={setSelectedChildId}
+          />
 
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[590px_313px]">
             <div className="flex min-w-0 flex-col gap-4">

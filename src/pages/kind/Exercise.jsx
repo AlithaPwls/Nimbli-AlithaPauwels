@@ -1,7 +1,9 @@
 import { ArrowLeft, Play, Square, Volume2 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth.js'
 import { useKindExerciseDetail } from '@/hooks/kind/useKindExerciseDetail.js'
+import { applyActiveChildToParams, readActiveChildId, withChildSearch } from '@/lib/activeChild.js'
 import { useSpeechGuide } from '@/hooks/kind/useSpeechGuide.js'
 import { routineFromExerciseTitle } from '@/lib/kind/routineFromExerciseTitle.js'
 
@@ -64,7 +66,9 @@ function StatCard({ label, value, valueClassName }) {
 export default function Exercise() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { role } = useAuth()
   const { state } = useLocation()
+  const parentChildId = role === 'parent' ? readActiveChildId(searchParams) : null
 
   const fromState = state?.exercise
   const exerciseId = searchParams.get('exerciseId') || fromState?.id || null
@@ -109,6 +113,7 @@ export default function Exercise() {
     if (data?.xpValue != null && Number.isFinite(Number(data.xpValue))) {
       qs.set('xp', String(Math.max(0, Math.round(Number(data.xpValue)))))
     }
+    applyActiveChildToParams(qs, parentChildId)
     navigate({ pathname: '/dashboard/kind/oefening/pose', search: `?${qs.toString()}` })
   }
 
@@ -142,7 +147,11 @@ export default function Exercise() {
             <div className="flex min-w-0 flex-1 gap-6 sm:gap-10">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard/kind')}
+                onClick={() =>
+                  navigate(
+                    parentChildId ? withChildSearch('/dashboard/kind', parentChildId) : '/dashboard/kind'
+                  )
+                }
                 className="inline-flex h-fit w-fit shrink-0 items-center gap-2 self-start rounded-sm pt-1.5 text-nimbli-ink transition-colors hover:text-kind-green-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
               >
                 <ArrowLeft className="size-5 shrink-0" aria-hidden strokeWidth={2.25} />

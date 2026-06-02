@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
-import { useFinalizeAddSibling } from '@/hooks/kine/useFinalizeAddSibling.js'
 import { childPendingEmailFromInviteCode } from '@/lib/childAuthEmail.js'
 import { defaultExerciseScheduleDays } from '@/lib/kine/exerciseScheduleDays.js'
+
+const MAX_CHILDREN_PER_PARENT = 10
 
 function onlyDigits(value) {
   return String(value ?? '').replace(/\D/g, '')
@@ -16,16 +17,6 @@ function generateSixDigitCode() {
 
 function normalizeName(value) {
   return String(value ?? '').trim()
-}
-
-function normalizeEmail(value) {
-  return String(value ?? '').trim().toLowerCase()
-}
-
-function isValidEmail(value) {
-  const v = normalizeEmail(value)
-  if (!v) return false
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 }
 
 function newId() {
@@ -54,63 +45,55 @@ function parseReps(raw, fallback = 10) {
   return Math.max(1, Math.round(n))
 }
 
-export function useFinalizeAddPatient() {
+export function useFinalizeAddSibling() {
   const { profile } = useAuth()
   const practiceId = profile?.practice_id ?? null
   const kineProfileId = profile?.id ?? null
-  const { finalize: finalizeSibling, loading: siblingLoading, error: siblingError, inviteCode: siblingInviteCode } =
-    useFinalizeAddSibling()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [inviteCode, setInviteCode] = useState(null)
 
-  const canFinalize = useMemo(
-    () => Boolean(practiceId && kineProfileId),
-    [practiceId, kineProfileId]
-  )
-
   const finalize = useCallback(
     async (draft) => {
-      if (draft?.mode === 'existing_parent') {
-        return finalizeSibling(draft)
-      }
-
       setError(null)
       setInviteCode(null)
 
-      if (!practiceId) {
-        setError('Je praktijk is nog niet gekoppeld. Rond eerst je praktijkregistratie af.')
+      if (!practiceId || !kineProfileId) {
+        setError('Je bent niet gekoppeld aan een praktijk.')
         return { ok: false }
       }
-      if (!kineProfileId) {
-        setError('Je profiel is niet geladen. Vernieuw de pagina en probeer opnieuw.')
+
+      const existingParentId = draft?.existingParentId ?? null
+      if (!existingParentId) {
+        setError('Kies een bestaande ouder om het kind aan te koppelen.')
         return { ok: false }
       }
 
       const childFirstname = normalizeName(draft?.childFirstname)
       const childLastname = normalizeName(draft?.childLastname)
-      const parentFirstname = normalizeName(draft?.parentFirstname)
-      const parentLastname = normalizeName(draft?.parentLastname)
-      const parentEmail = normalizeEmail(draft?.parentEmail)
-      const parentPhone = normalizeName(draft?.parentPhone)
-      const parentRelation = normalizeName(draft?.parentRelation)
       const treatmentGoal = normalizeName(draft?.focus)
+      const childDob = draft?.childDob ? String(draft.childDob) : null
 
       if (!childFirstname || !childLastname) {
         setError('Vul de voornaam en achternaam van de patiënt in.')
         return { ok: false }
       }
-      if (!parentFirstname || !parentLastname) {
-        setError('Vul de voornaam en achternaam van de ouder/voogd in.')
-        return { ok: false }
-      }
-      if (!isValidEmail(parentEmail)) {
-        setError('Vul een geldig emailadres in voor de ouder/voogd.')
+
+      const { count: siblingCount, error: countErr } = await supabase
+        .from('child_parent_relations')
+        .select('id', { head: true, count: 'exact' })
+        .eq('parent_id', existingParentId)
+
+      if (countErr) {
+        setError('Kon gezinsgegevens niet controleren.')
         return { ok: false }
       }
 
-      const childDob = draft?.childDob ? String(draft.childDob) : null
+      if ((siblingCount ?? 0) >= MAX_CHILDREN_PER_PARENT) {
+        setError(`Een ouder kan maximaal ${MAX_CHILDREN_PER_PARENT} kinderen hebben.`)
+        return { ok: false }
+      }
 
       setLoading(true)
       try {
@@ -139,46 +122,31 @@ export function useFinalizeAddPatient() {
           return { ok: false }
         }
 
-        const childEmailPlaceholder = childPendingEmailFromInviteCode(code)
-
         const childProfileId = newId()
-        const parentProfileId = newId()
 
-        const rows = [
-          {
-            id: childProfileId,
-            firstname: childFirstname,
-            lastname: childLastname,
-            email: childEmailPlaceholder,
-            role: 'child',
-            invite_code: code,
-            practice_id: practiceId,
-            date_of_birth: childDob || null,
-            treatment_goal: treatmentGoal || null,
-          },
-          {
-            id: parentProfileId,
-            firstname: parentFirstname,
-            lastname: parentLastname,
-            email: parentEmail,
-            role: 'parent',
-            invite_code: code,
-            practice_id: practiceId,
-            phone_number: parentPhone || null,
-          },
-        ]
+        const { error: insChildErr } = await supabase.from('profiles').insert({
+          id: childProfileId,
+          firstname: childFirstname,
+          lastname: childLastname,
+          email: childPendingEmailFromInviteCode(code),
+          role: 'child',
+          invite_code: code,
+          practice_id: practiceId,
+          date_of_birth: childDob || null,
+          treatment_goal: treatmentGoal || null,
+        })
 
-        const { error: insErr } = await supabase.from('profiles').insert(rows)
-        if (insErr) {
+        if (insChildErr) {
           setError('Opslaan mislukt. Controleer je invoer en probeer opnieuw.')
           return { ok: false }
         }
 
         const { error: relErr } = await supabase.from('child_parent_relations').insert({
-          parent_id: parentProfileId,
+          parent_id: existingParentId,
           child_id: childProfileId,
-          role_parent: parentRelation || null,
+          role_parent: draft?.parentRelation?.trim() || null,
         })
+
         if (relErr) {
           setError('Koppeling ouder-kind mislukt. Probeer opnieuw.')
           return { ok: false }
@@ -198,7 +166,7 @@ export function useFinalizeAddPatient() {
           const { error: assignErr } = await supabase.from('exercise_assignments').insert(assignmentRows)
           if (assignErr) {
             setError(
-              'Oefeningen koppelen mislukt. Profielen zijn wel aangemaakt; wijs oefeningen later opnieuw toe.'
+              'Oefeningen koppelen mislukt. Het kindprofiel is wel aangemaakt; wijs oefeningen later opnieuw toe.'
             )
             return { ok: false }
           }
@@ -213,18 +181,8 @@ export function useFinalizeAddPatient() {
         setLoading(false)
       }
     },
-    [practiceId, kineProfileId, finalizeSibling]
+    [practiceId, kineProfileId]
   )
 
-  const combinedLoading = loading || siblingLoading
-  const combinedError = error ?? siblingError
-  const combinedInvite = inviteCode ?? siblingInviteCode
-
-  return {
-    finalize,
-    loading: combinedLoading,
-    error: combinedError,
-    inviteCode: combinedInvite,
-    canFinalize,
-  }
+  return { finalize, loading, error, inviteCode }
 }

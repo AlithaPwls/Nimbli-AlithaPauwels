@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { useParentDashboardData } from '@/hooks/ouder/useParentDashboardData.js'
+import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderChildSwitcher from '@/components/ouder/OuderChildSwitcher.jsx'
 import OuderStatPill from '@/components/ouder/OuderStatPill.jsx'
 import OuderMiniLineChart from '@/components/ouder/OuderMiniLineChart.jsx'
 import OuderProgressRow from '@/components/ouder/OuderProgressRow.jsx'
@@ -34,35 +36,17 @@ function formatMemberSince(dateValue) {
 export default function DashboardOuder() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children, loading: childrenLoading, error: childrenError } = useChildrenForParent(profile)
+  const {
+    activatedChildren,
+    pendingChildren,
+    loading: childrenLoading,
+    error: childrenError,
+    activeChildId,
+    selectedChild,
+    setSelectedChildId,
+  } = useActiveChildSelection(profile)
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const childParam = searchParams.get('child')
-  const [selectedChildId, setSelectedChildId] = useState(childParam)
-
-  useEffect(() => {
-    if (childParam !== selectedChildId) {
-      setSelectedChildId(childParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [childParam])
-
-  useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      const id = children[0].id
-      setSelectedChildId(id)
-      const next = new URLSearchParams(searchParams)
-      next.set('child', id)
-      setSearchParams(next, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children, selectedChildId])
-
-  const selectedChild = useMemo(() => {
-    return (children ?? []).find((c) => c?.id === selectedChildId) ?? null
-  }, [children, selectedChildId])
-
-  const dashboard = useParentDashboardData(selectedChildId)
+  const dashboard = useParentDashboardData(activeChildId)
 
   const parentWelcomeTitle = useMemo(() => {
     const first = profile?.firstname?.trim() ?? ''
@@ -106,15 +90,9 @@ export default function DashboardOuder() {
       <OuderSidebar
         logout={logout}
         logoutLoading={logoutLoading}
-        childrenList={children}
-        selectedChildId={selectedChildId}
-        onSelectChild={(id) => {
-          setSelectedChildId(id)
-          const next = new URLSearchParams(searchParams)
-          if (id) next.set('child', id)
-          else next.delete('child')
-          setSearchParams(next, { replace: true })
-        }}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
       />
 
       <main className="min-w-0 flex-1 overflow-auto">
@@ -122,6 +100,35 @@ export default function DashboardOuder() {
           <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
             {parentWelcomeTitle}
           </h1>
+
+          <OuderChildSwitcher
+            className="mt-5"
+            childrenList={activatedChildren}
+            selectedChildId={activeChildId}
+            onSelectChild={setSelectedChildId}
+          />
+
+          {pendingChildren.length > 0 ? (
+            <div
+              className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950"
+              role="status"
+            >
+              <p className="text-sm font-semibold">
+                {pendingChildren.length === 1
+                  ? 'Er wacht een kind op activatie'
+                  : `Er wachten ${pendingChildren.length} kinderen op activatie`}
+              </p>
+              <p className="mt-1 text-xs opacity-90">
+                Activeer het account zodat je oefeningen en voortgang kunt volgen.
+              </p>
+              <Link
+                to={`/dashboard/ouder/kind-activeren${buildChildSearch(pendingChildren[0]?.id)}`}
+                className="mt-3 inline-flex text-sm font-bold text-nimbli underline-offset-2 hover:underline"
+              >
+                Kind nu activeren
+              </Link>
+            </div>
+          ) : null}
 
           {childrenError ? (
             <div

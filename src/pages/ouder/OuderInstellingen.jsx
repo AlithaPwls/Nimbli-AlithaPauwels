@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useNavigate } from 'react-router-dom'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
+import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderSettingsToggleRow from '@/components/ouder/OuderSettingsToggleRow.jsx'
@@ -12,30 +13,7 @@ export default function OuderInstellingen() {
   const navigate = useNavigate()
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children } = useChildrenForParent(profile)
-
-  const [searchParams, setSearchParams] = useSearchParams()
-  const childParam = searchParams.get('child')
-  const [selectedChildId, setSelectedChildId] = useState(childParam)
-
-  useEffect(() => {
-    if (childParam !== selectedChildId) {
-      setSelectedChildId(childParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [childParam])
-
-  useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      const id = children[0]?.id ?? null
-      if (!id) return
-      setSelectedChildId(id)
-      const next = new URLSearchParams(searchParams)
-      next.set('child', id)
-      setSearchParams(next, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children, selectedChildId])
+  const { activatedChildren, activeChildId, setSelectedChildId } = useActiveChildSelection(profile)
 
   const [cameraAccess, setCameraAccess] = useState(true)
   const [shareData, setShareData] = useState(false)
@@ -56,15 +34,9 @@ export default function OuderInstellingen() {
       <OuderSidebar
         logout={logout}
         logoutLoading={logoutLoading}
-        childrenList={children}
-        selectedChildId={selectedChildId}
-        onSelectChild={(id) => {
-          setSelectedChildId(id)
-          const next = new URLSearchParams(searchParams)
-          if (id) next.set('child', id)
-          else next.delete('child')
-          setSearchParams(next, { replace: true })
-        }}
+        childrenList={activatedChildren}
+        selectedChildId={activeChildId}
+        onSelectChild={setSelectedChildId}
       />
 
       <main className="min-w-0 flex-1 overflow-auto">
@@ -142,7 +114,9 @@ export default function OuderInstellingen() {
                     <OuderSettingsActionRow
                       label="Kindprofiel(en) beheren"
                       icon="edit"
-                      onClick={() => navigate('/dashboard/ouder/kindprofielen')}
+                      onClick={() =>
+                        navigate(`/dashboard/ouder/kindprofielen${buildChildSearch(activeChildId)}`)
+                      }
                     />
                     <OuderSettingsActionRow
                       label="Ouderprofiel bewerken"

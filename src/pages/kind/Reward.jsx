@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { resolveKindRouteChildId, withChildSearch } from '@/lib/activeChild.js'
+import { useAuth } from '@/hooks/useAuth.js'
 
 import mascotImg from '@/assets/aapje-confetti-nobg.png'
 import confetti from 'canvas-confetti'
+
+const CONFETTI_COLORS = ['#2bbf9d', '#FBB92A', '#82b3e1', '#E9B5FF', '#BDE786']
 
 function StatCard({ label, value, valueClassName }) {
   return (
@@ -18,6 +22,7 @@ function StatCard({ label, value, valueClassName }) {
 export default function Reward() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { role, profile } = useAuth()
   const canvasRef = useRef(null)
   const mascotRef = useRef(null)
 
@@ -52,50 +57,52 @@ export default function Reward() {
     const rect = mascotRef.current?.getBoundingClientRect?.()
     const origin = rect
       ? {
-          x: (rect.left + rect.width * 0.62) / window.innerWidth,
-          y: (rect.top + rect.height * 0.10) / window.innerHeight,
+          x: (rect.left + rect.width * 0.67) / window.innerWidth,
+          y: (rect.top + rect.height * 0.09) / window.innerHeight,
         }
       : { x: 0.5, y: 0.45 }
 
     fire({
-      particleCount: 300,
-      spread: 1550,
-      startVelocity: 28,
+      particleCount: 350,
+      spread: 600,
+      startVelocity: 32,
       gravity: 0.9,
-      scalar: 0.7,
+      scalar: 0.85,
       origin,
-      colors: ['#2bbf9d', '#FBB92A', '#82b3e1', '#E9B5FF', '#BDE786'],
+      colors: CONFETTI_COLORS,
     })
 
     fire({
-      particleCount: 200,
-      spread: 1550,
-      startVelocity: 22,
-      gravity: 0.65,
-      scalar: 0.8,
+      particleCount: 150,
+      spread: 850,
+      startVelocity: 24,
+      gravity: 0.85,
+      scalar: 0.75,
       origin,
-      colors: ['#2bbf9d', '#FBB92A', '#82b3e1', '#E9B5FF', '#BDE786'],
+      colors: CONFETTI_COLORS,
     })
 
-    // 2) Short confetti rain
-    const durationMs = 1200
+    // 2) Short confetti rain — small bursts spread across the width
+    const durationMs = 1600
     const endAt = Date.now() + durationMs
     const rain = window.setInterval(() => {
       if (Date.now() > endAt) {
         window.clearInterval(rain)
         return
       }
-      fire({
-        particleCount: 5,
-        startVelocity: 0,
-        ticks: 220,
-        gravity: 0.8,
-        scalar: 0.75,
-        spread: 70,
-        origin: { x: Math.random(), y: -0.12 },
-        colors: ['#2bbf9d', '#FBB92A', '#82b3e1', '#E9B5FF', '#BDE786'],
-      })
-    }, 120)
+      for (let i = 0; i < 6; i += 1) {
+        fire({
+          particleCount: 10,
+          startVelocity: 10,
+          ticks: 200,
+          gravity: 1.5,
+          scalar: 0.7,
+          spread: 100,
+          origin: { x: Math.random(), y: Math.random() * -0.001 - 0.0001 },
+          colors: CONFETTI_COLORS,
+        })
+      }
+    }, 150)
 
     return () => window.clearInterval(rain)
   }, [])
@@ -127,7 +134,10 @@ export default function Reward() {
 
         <button
           type="button"
-          onClick={() => navigate('/dashboard/kind')}
+          onClick={() => {
+            const routeChildId = resolveKindRouteChildId({ role, profile, searchParams })
+            navigate(routeChildId ? withChildSearch('/dashboard/kind', routeChildId) : '/dashboard/kind')
+          }}
           className="h-16 w-[270px] rounded-xl border-0 bg-kind-green-primary font-nimbli-heading text-[18px] font-black leading-none text-kind-canvas shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
         >
           Doorgaan

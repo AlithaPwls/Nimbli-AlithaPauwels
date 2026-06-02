@@ -12,6 +12,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { applyActiveChildToParams, resolveKindRouteChildId } from '@/lib/activeChild.js'
+import { useAuth } from '@/hooks/useAuth.js'
 import { DrawingUtils, FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision'
 import PoseHoldRing from '@/components/kind/PoseHoldRing.jsx'
 import { cn } from '@/lib/utils'
@@ -132,6 +134,7 @@ function getPoseSpeechPrompt(poseUi) {
 export default function PoseDetection() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { role, profile } = useAuth()
   const exerciseId = searchParams.get('exerciseId')
   const assignmentId = searchParams.get('assignmentId')
   const routine = searchParams.get('routine')
@@ -196,6 +199,10 @@ export default function PoseDetection() {
     const qs = new URLSearchParams()
     if (exerciseId) qs.set('exerciseId', exerciseId)
     if (assignmentId) qs.set('assignmentId', assignmentId)
+    applyActiveChildToParams(
+      qs,
+      resolveKindRouteChildId({ role, profile, searchParams })
+    )
     const search = qs.toString()
     navigate({
       pathname: '/dashboard/kind/oefening',
@@ -377,6 +384,10 @@ export default function PoseDetection() {
                 if (assignmentId) qs.set('assignmentId', assignmentId)
                 if (xpParam) qs.set('xp', xpParam)
                 qs.set('accuracy', String(scorePct))
+                applyActiveChildToParams(
+                  qs,
+                  resolveKindRouteChildId({ role, profile, searchParams })
+                )
                 navigate({ pathname: '/dashboard/kind/oefening/reward', search: `?${qs.toString()}` })
               })()
 

@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import Login from './pages/loginflow/Login.jsx'
 import LoginWithCode from './pages/loginflow/LoginWithCode.jsx'
 import RegisterOuder from './pages/loginflow/RegisterOuder.jsx'
+import RegisterKind from './pages/loginflow/RegisterKind.jsx'
+import OuderKindActiveren from './pages/ouder/OuderKindActiveren.jsx'
 import RegisterKinePractice from './pages/loginflow/RegisterKinePractice.jsx'
 import DashboardKind from './pages/kind/DashboardKind.jsx'
 import KindOverzicht from './pages/kind/KindOverzicht.jsx'
@@ -34,6 +36,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<LoginWithCode />} />
       <Route path="/register/ouder" element={<RegisterOuder />} />
+      <Route path="/register/kind" element={<RegisterKind />} />
       <Route path="/register/kine" element={<RegisterKinePractice />} />
       <Route path="/loginwithcode" element={<Navigate to="/register" replace />} />
       <Route path="/choose-password" element={<Navigate to="/register" replace />} />
@@ -85,6 +88,11 @@ export default function App() {
       <Route path="/dashboard/ouder/kindprofielen" element={
         <ProtectedRoute allowedRole="parent">
           <OuderKindProfielenBeheren />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/ouder/kind-activeren" element={
+        <ProtectedRoute allowedRole="parent">
+          <OuderKindActiveren />
         </ProtectedRoute>
       } />
       

@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useChildrenForParent } from '@/hooks/ouder/useChildrenForParent.js'
+import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { removeChildAvatar, uploadChildAvatar } from '@/lib/ouder/childAvatarStorage.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
 import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderChildCard from '@/components/ouder/OuderChildCard.jsx'
 import OuderChildProfileEditor from '@/components/ouder/OuderChildProfileEditor.jsx'
-import { useSearchParams } from 'react-router-dom'
 
 function revokeBlobUrl(url) {
   if (typeof url === 'string' && url.startsWith('blob:')) {
@@ -25,33 +24,18 @@ function getChildAvatarUrl(child, previewById) {
 export default function OuderKindProfielenBeheren() {
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
-  const { children, loading: childrenLoading, error, patchChild } = useChildrenForParent(profile)
-
-  const [searchParams, setSearchParams] = useSearchParams()
-  const childParam = searchParams.get('child')
-  const [selectedChildId, setSelectedChildId] = useState(childParam)
+  const {
+    children,
+    loading: childrenLoading,
+    error,
+    patchChild,
+    activatedChildren,
+    selectedChildId,
+    setSelectedChildId,
+  } = useActiveChildSelection(profile)
   const [previewById, setPreviewById] = useState(() => new Map())
   const [avatarSaving, setAvatarSaving] = useState(false)
   const [avatarError, setAvatarError] = useState(null)
-
-  useEffect(() => {
-    if (childParam !== selectedChildId) {
-      setSelectedChildId(childParam)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [childParam])
-
-  useEffect(() => {
-    if (!selectedChildId && Array.isArray(children) && children.length > 0) {
-      const id = children[0]?.id ?? null
-      if (!id) return
-      setSelectedChildId(id)
-      const next = new URLSearchParams(searchParams)
-      next.set('child', id)
-      setSearchParams(next, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children, selectedChildId])
 
   useEffect(() => {
     return () => {
@@ -156,15 +140,11 @@ export default function OuderKindProfielenBeheren() {
       <OuderSidebar
         logout={logout}
         logoutLoading={logoutLoading}
-        childrenList={children}
+        childrenList={activatedChildren}
         selectedChildId={selectedChildId}
         onSelectChild={(id) => {
           setSelectedChildId(id)
           setAvatarError(null)
-          const next = new URLSearchParams(searchParams)
-          if (id) next.set('child', id)
-          else next.delete('child')
-          setSearchParams(next, { replace: true })
         }}
       />
 
