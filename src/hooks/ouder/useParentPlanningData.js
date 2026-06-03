@@ -40,6 +40,12 @@ function formatRangeLabel(weekStart) {
   return `${start.getDate()}-${end.getDate()} ${month} ${end.getFullYear()}`
 }
 
+function defaultDayKeyForWeek(days) {
+  const todayKey = dateKeyLocal(new Date())
+  if (todayKey && days.some((d) => d.key === todayKey)) return todayKey
+  return days[0]?.key ?? null
+}
+
 function xpFromSession(ev) {
   const score = typeof ev?.score === 'number' ? ev.score : null
   if (score != null) return Math.max(50, Math.min(250, Math.round(score)))
@@ -77,9 +83,8 @@ export function useParentPlanningData(childProfileId, weekStart) {
   const rangeLabel = useMemo(() => formatRangeLabel(weekStart0), [weekStart0])
 
   useEffect(() => {
-    const first = days[0]?.key ?? null
-    if (!selectedDayKey && first) setSelectedDayKey(first)
-  }, [days, selectedDayKey])
+    setSelectedDayKey(defaultDayKeyForWeek(days))
+  }, [childProfileId, weekStart0, days])
 
   useEffect(() => {
     let cancelled = false

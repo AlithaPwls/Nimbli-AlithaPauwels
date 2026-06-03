@@ -22,11 +22,11 @@ export default function KinePatientCard({ patient, onSelect }) {
       type="button"
       onClick={() => onSelect?.(patient)}
       aria-label={`Bekijk details van ${patient.name}`}
-      className="group relative w-full cursor-pointer rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 hover:bg-nimbli-canvas/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+      className="group relative w-full cursor-pointer rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 text-left shadow-[0_2px_0_0_#e1dbd3] transition-colors hover:border-nimbli/50 hover:bg-nimbli-canvas/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40 active:border-nimbli/50 active:bg-nimbli-canvas/60 max-lg:p-4"
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 max-lg:gap-3">
         <img
-          className="mt-0.5 size-12 shrink-0 rounded-2xl object-cover ring-1 ring-nimbli-slot-border/20"
+          className="mt-0.5 size-12 shrink-0 rounded-2xl object-cover ring-1 ring-nimbli-slot-border/20 max-lg:size-10 max-lg:rounded-xl"
           src={resolveProfileAvatarUrl(patient.avatarUrl)}
           alt={`${patient.name} profielfoto`}
           loading="lazy"

@@ -102,22 +102,22 @@ export default function ExerciseDetailDialog({
 
             <ExerciseDetailMedia exercise={exercise} />
 
-            <dl className="grid gap-3 text-sm text-nimbli-ink sm:grid-cols-3">
-              <div className="rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-3 py-2">
+            <dl className="grid grid-cols-3 gap-2 text-sm text-nimbli-ink sm:gap-3">
+              <div className="min-w-0 rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-2 py-2 sm:px-3">
                 <dt className="flex items-center gap-1.5 text-xs font-medium text-nimbli-muted">
                   <Repeat2 className="size-3.5 shrink-0 text-[#302d2d]" aria-hidden />
                   Herhalingen
                 </dt>
                 <dd className="mt-1 font-nimbli-heading font-semibold">{exercise.reps}</dd>
               </div>
-              <div className="rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-3 py-2">
+              <div className="min-w-0 rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-2 py-2 sm:px-3">
                 <dt className="flex items-center gap-1.5 text-xs font-medium text-nimbli-muted">
                   <Clock className="size-3.5 shrink-0 text-[#302d2d]" aria-hidden />
                   Duur
                 </dt>
                 <dd className="mt-1 font-nimbli-heading font-semibold">{exercise.time}</dd>
               </div>
-              <div className="rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-3 py-2">
+              <div className="min-w-0 rounded-lg border border-[#e1dbd3] bg-nimbli-canvas/30 px-2 py-2 sm:px-3">
                 <dt className="text-xs font-medium text-nimbli-muted">Moeilijkheid</dt>
                 <dd className="mt-1 font-nimbli-heading font-semibold">{exercise.difficulty}</dd>
               </div>
@@ -133,7 +133,7 @@ export default function ExerciseDetailDialog({
             </section>
 
             {onDelete ? (
-              <div className="border-t border-[#e1dbd3] pt-4">
+              <div className="flex justify-center border-t border-[#e1dbd3] pt-4">
                 <Button
                   type="button"
                   variant="destructive"

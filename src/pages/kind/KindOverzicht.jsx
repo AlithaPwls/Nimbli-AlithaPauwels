@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import KindSidebar from '@/components/kind/KindSidebar.jsx'
+import KindDashboardShell from '@/components/kind/KindDashboardShell.jsx'
 import KindOverviewProfileCard from '@/components/kind/KindOverviewProfileCard.jsx'
 import KindDailyMissionsCard from '@/components/kind/KindDailyMissionsCard.jsx'
 import KindBadgesCard from '@/components/kind/KindBadgesCard.jsx'
@@ -25,33 +25,29 @@ export default function KindOverzicht() {
   }, [role, childId, children, profile?.firstname, profile?.lastname])
 
   return (
-    <div className="flex h-svh overflow-hidden bg-kind-canvas" data-page="kind-overzicht">
-      <KindSidebar displayName={displayName} active="overzicht" />
+    <KindDashboardShell displayName={displayName} active="overzicht" dataPage="kind-overzicht">
+      <div className="mx-auto w-full min-w-0 max-w-[960px] px-8 py-10 max-lg:px-4 max-lg:py-6">
+        <header>
+          <h1 className="font-nimbli-heading text-4xl font-extrabold leading-10 text-kind-black max-lg:text-3xl max-sm:text-2xl">
+            Overzicht
+          </h1>
+        </header>
 
-      <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="mx-auto w-full max-w-[960px] px-6 py-8 sm:px-8 sm:py-10">
-          <header>
-            <h1 className="font-nimbli-heading text-4xl font-extrabold leading-10 text-kind-black">
-              Overzicht
-            </h1>
-          </header>
+        <div className="mt-8 flex flex-col gap-6 max-lg:mt-6 max-lg:gap-5">
+          <KindOverviewProfileCard />
 
-          <div className="mt-8 flex flex-col gap-6">
-            <KindOverviewProfileCard />
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-              <div className="flex flex-col gap-6">
-                <KindDailyMissionsCard />
-                <KindStreakCard />
-              </div>
-              <div className="flex flex-col gap-6">
-                <KindBadgesCard />
-                <KindOverviewWeekChart />
-              </div>
+          <div className="grid grid-cols-2 gap-8 max-lg:grid-cols-1 max-lg:gap-6">
+            <div className="flex flex-col gap-6 max-lg:gap-5">
+              <KindDailyMissionsCard />
+              <KindStreakCard />
+            </div>
+            <div className="flex flex-col gap-6 max-lg:gap-5">
+              <KindBadgesCard />
+              <KindOverviewWeekChart />
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </KindDashboardShell>
   )
 }

@@ -17,6 +17,7 @@ export default function ExerciseScheduleDayChips({
   onChange,
   readOnly = false,
   className,
+  chipClassName,
   'aria-label': ariaLabel,
 }) {
   const days = normalizeScheduleDays(value)
@@ -42,7 +43,8 @@ export default function ExerciseScheduleDayChips({
                 chipBase,
                 active
                   ? 'border-nimbli/25 bg-nimbli/10 text-nimbli'
-                  : 'border-[#e1dbd3] bg-[#f9fafb] text-[#9ca3af]'
+                  : 'border-[#e1dbd3] bg-[#f9fafb] text-[#9ca3af]',
+                chipClassName
               )}
             >
               {day.short}
@@ -67,7 +69,8 @@ export default function ExerciseScheduleDayChips({
               'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
               active
                 ? 'border-nimbli bg-nimbli/10 text-nimbli'
-                : 'border-[#e1dbd3] bg-[#f9fafb] text-[#9ca3af] hover:border-nimbli/30 hover:bg-white'
+                : 'border-[#e1dbd3] bg-[#f9fafb] text-[#9ca3af] hover:border-nimbli/30 hover:bg-white',
+              chipClassName
             )}
           >
             {day.short}

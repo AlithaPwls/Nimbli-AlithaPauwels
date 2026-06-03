@@ -18,6 +18,7 @@ const supabaseEphemeralAuth = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
+    storageKey: 'nimbli.supabase.ephemeral-auth',
   },
 })
 

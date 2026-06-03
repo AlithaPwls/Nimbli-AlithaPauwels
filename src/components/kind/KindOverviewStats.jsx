@@ -1,4 +1,5 @@
 import { Star, Trophy, Zap } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { KIND_OVERVIEW_STATS } from '@/lib/kind/kindOverviewMock.js'
 import { useKindProfileStats } from '@/hooks/kind/useKindProfileStats.js'
 
@@ -15,13 +16,13 @@ function StatItem({ icon, value, className }) {
   )
 }
 
-export default function KindOverviewStats() {
+export default function KindOverviewStats({ className }) {
   const { trophies, stars } = KIND_OVERVIEW_STATS
   const { totalXp, loading } = useKindProfileStats()
   const xpDisplay = loading ? '…' : totalXp
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-6">
+    <div className={cn('flex flex-wrap items-center justify-end gap-6', className)}>
       <StatItem
         value={xpDisplay}
         className="bg-kind-purple"

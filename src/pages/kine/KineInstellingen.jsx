@@ -5,6 +5,7 @@ import KinePracticeTeamList from '@/components/kine/KinePracticeTeamList.jsx'
 import KineTeamMemberDeleteDialog from '@/components/kine/KineTeamMemberDeleteDialog.jsx'
 import KineTeamMemberDetailDialog from '@/components/kine/KineTeamMemberDetailDialog.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
+import OuderAddressField from '@/components/ouder/OuderAddressField.jsx'
 import OuderTextField from '@/components/ouder/OuderTextField.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
 import { useLogout } from '@/hooks/useLogout.js'
@@ -102,7 +103,6 @@ export default function KineInstellingen() {
     setMemberSavedMessage(null)
     const result = await updateMember(payload)
     if (result.ok) {
-      setMemberSavedMessage('Wijzigingen opgeslagen.')
       refetchTeam()
       setSelectedMember((prev) => {
         if (!prev || prev.id !== payload.kineId) return prev
@@ -114,6 +114,8 @@ export default function KineInstellingen() {
           lastname,
           name: [firstname, lastname].filter(Boolean).join(' ') || prev.name,
           email: String(payload.email ?? '').trim(),
+          phone: String(payload.phone ?? '').trim() || null,
+          address: String(payload.address ?? '').trim() || null,
           dateOfBirth: payload.dateOfBirth || null,
         }
       })
@@ -219,10 +221,9 @@ export default function KineInstellingen() {
                   value={form.phone}
                   onChange={(e) => updateField('phone', e.target.value)}
                 />
-                <OuderTextField
+                <OuderAddressField
                   label="Adres"
                   placeholder="Adres"
-                  autoComplete="street-address"
                   value={form.address}
                   onChange={(e) => updateField('address', e.target.value)}
                 />

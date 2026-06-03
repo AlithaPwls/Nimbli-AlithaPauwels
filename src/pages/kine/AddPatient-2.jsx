@@ -321,20 +321,20 @@ export default function AddPatient2() {
           <label className="sr-only" htmlFor="exercise-search">
             Zoek een oefening
           </label>
-          <div className="flex items-center gap-3 rounded-xl border border-nimbli-slot-border bg-white px-4 py-3">
-            <Search className="size-4 text-nimbli-muted" aria-hidden />
+          <div className="flex h-10 items-center gap-2 rounded-lg border border-nimbli-slot-border bg-white px-3">
+            <Search className="size-3.5 shrink-0 text-nimbli-muted" aria-hidden />
             <input
               id="exercise-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Zoek een oefening"
-              className="w-full bg-transparent text-sm text-nimbli-ink placeholder:text-nimbli-muted focus:outline-none"
+              className="w-full bg-transparent text-xs text-nimbli-ink placeholder:text-nimbli-muted focus:outline-none sm:text-sm"
               type="text"
               autoComplete="off"
             />
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-4 flex flex-wrap gap-2">
             {FILTERS.map((f) => {
               const active = f.id === filter
               return (
@@ -343,7 +343,7 @@ export default function AddPatient2() {
                   type="button"
                   onClick={() => setFilter(f.id)}
                   className={cn(
-                    'h-11 cursor-pointer rounded-md border px-5 text-sm font-bold transition-colors duration-200',
+                    'h-8 cursor-pointer rounded-md border px-3 text-xs font-bold transition-colors duration-200',
                     'font-nimbli-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
                     active
                       ? 'border-nimbli bg-nimbli text-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_0_rgba(0,0,0,0.1)]'
@@ -404,36 +404,34 @@ export default function AddPatient2() {
             )}
           </div>
 
-          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5"
-              onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
-            >
-              <ArrowLeft className="mr-2 size-5" aria-hidden />
-              Vorige
-            </Button>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="order-1 flex w-full max-w-sm flex-col items-center gap-3 sm:order-2 sm:max-w-none sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                type="button"
+                className="h-11 w-full justify-center gap-2 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90 sm:w-auto"
+                onClick={goNext}
+              >
+                Opslaan
+                <ArrowRight className="size-5 shrink-0" aria-hidden />
+              </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5"
+                className="h-11 w-full justify-center border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5 sm:w-auto"
                 onClick={goNext}
               >
                 Overslaan
               </Button>
-
-              <Button
-                type="button"
-                className="h-11 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90"
-                onClick={goNext}
-              >
-                Opslaan
-                <ArrowRight className="ml-2 size-5" aria-hidden />
-              </Button>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="order-3 h-11 w-full max-w-sm justify-center gap-2 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5 sm:order-1 sm:w-auto sm:max-w-none"
+              onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
+            >
+              <ArrowLeft className="size-5 shrink-0" aria-hidden />
+              Vorige
+            </Button>
           </div>
         </SectionCard>
       </div>

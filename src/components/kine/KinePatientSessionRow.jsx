@@ -6,7 +6,7 @@ export default function KinePatientSessionRow({ title, time, score, success }) {
   const succeeded = success === true || (scoreLabel != null && Number(score) >= 70)
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white px-4 py-3">
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#e5e7eb] bg-white px-4 py-3 max-sm:px-3 max-sm:py-2.5">
       <div className="flex min-w-0 items-center gap-3">
         {succeeded ? (
           <CheckCircle2 className="size-5 shrink-0 text-[#22c55e]" aria-hidden />

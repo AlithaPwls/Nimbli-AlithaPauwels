@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
@@ -6,6 +6,7 @@ import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.j
 import { useParentDashboardData } from '@/hooks/ouder/useParentDashboardData.js'
 import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderMobileNav from '@/components/ouder/OuderMobileNav.jsx'
 import OuderChildSwitcher from '@/components/ouder/OuderChildSwitcher.jsx'
 import OuderStatPill from '@/components/ouder/OuderStatPill.jsx'
 import OuderMiniLineChart from '@/components/ouder/OuderMiniLineChart.jsx'
@@ -34,6 +35,13 @@ function formatMemberSince(dateValue) {
 }
 
 export default function DashboardOuder() {
+  const mainRef = useRef(null)
+  const [scrollContainer, setScrollContainer] = useState(null)
+  const setMainRef = useCallback((node) => {
+    mainRef.current = node
+    setScrollContainer(node)
+  }, [])
+
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
   const {
@@ -54,6 +62,14 @@ export default function DashboardOuder() {
     const full = `${first} ${last}`.trim()
     return full ? `Welkom, ${full} !` : 'Welkom'
   }, [profile])
+
+  const mobileNavLabel = useMemo(() => {
+    if (selectedChild) {
+      const name = `${selectedChild?.firstname ?? ''} ${selectedChild?.lastname ?? ''}`.trim()
+      return name || 'Kind'
+    }
+    return 'Dashboard'
+  }, [selectedChild])
 
   if (loading) {
     return <div className="text-center py-8">Laden...</div>
@@ -95,14 +111,25 @@ export default function DashboardOuder() {
         onSelectChild={setSelectedChildId}
       />
 
-      <main className="min-w-0 flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
-          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <OuderMobileNav
+          scrollEl={scrollContainer}
+          logout={logout}
+          logoutLoading={logoutLoading}
+          childrenList={activatedChildren}
+          selectedChildId={activeChildId}
+          onSelectChild={setSelectedChildId}
+          headerLabel={mobileNavLabel}
+        />
+
+        <main ref={setMainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink max-lg:px-4 max-lg:py-6">
+          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-[#1a1a1a] max-lg:text-3xl max-sm:text-2xl">
             {parentWelcomeTitle}
           </h1>
 
           <OuderChildSwitcher
-            className="mt-5"
+            className="mt-5 max-lg:mt-4"
             childrenList={activatedChildren}
             selectedChildId={activeChildId}
             onSelectChild={setSelectedChildId}
@@ -154,9 +181,9 @@ export default function DashboardOuder() {
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
-            <div className="flex items-start gap-6">
-              <div className="h-[125px] w-[125px] shrink-0 overflow-hidden rounded-lg border border-[#e1dbd3] shadow-[0_2px_0_0_#e1dbd3]">
+          <div className="mt-6 rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3] max-lg:mt-5 max-lg:p-4">
+            <div className="flex items-start gap-6 max-lg:gap-4">
+              <div className="h-[125px] w-[125px] shrink-0 overflow-hidden rounded-lg border border-[#e1dbd3] shadow-[0_2px_0_0_#e1dbd3] max-lg:h-20 max-lg:w-20">
                 <img
                   src={avatarSrc}
                   alt=""
@@ -168,26 +195,28 @@ export default function DashboardOuder() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-nimbli-heading text-2xl font-bold text-[#1a1a1a]">{childLine}</p>
-                <p className="mt-2 text-base text-[#1a1a1a]">{memberSince}</p>
-                <p className="mt-10 text-base text-[#1a1a1a]">{goal}</p>
+                <p className="font-nimbli-heading text-2xl font-bold text-[#1a1a1a] max-lg:text-xl max-sm:text-lg">{childLine}</p>
+                <p className="mt-2 text-base text-[#1a1a1a] max-lg:mt-1 max-lg:text-sm">{memberSince}</p>
+                <p className="mt-10 text-base text-[#1a1a1a] max-lg:mt-4 max-lg:text-sm">{goal}</p>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 grid items-stretch gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
-            <section className="flex min-h-0 w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
-              <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div className="mt-6 grid items-stretch gap-6 max-lg:mt-5 max-lg:gap-4 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
+            <section className="flex min-h-0 w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3] max-lg:px-4 max-lg:pt-4 max-lg:pb-5">
+              <header className="flex flex-col gap-3 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-2">
                 <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Frequentie per week</p>
-                {dashboard.weekly?.monthLabel ? (
-                  <span className="text-center text-sm font-medium text-[#6b7280]">
-                    {dashboard.weekly.monthLabel}
-                  </span>
-                ) : (
-                  <span aria-hidden />
-                )}
-                <div className="flex justify-end">
-                  <OuderStatPill value={`${dashboard.weekly?.deltaPercent ?? 0}%`} />
+                <div className="flex items-center justify-between gap-3 lg:contents">
+                  {dashboard.weekly?.monthLabel ? (
+                    <span className="text-sm font-medium text-[#6b7280] lg:text-center">
+                      {dashboard.weekly.monthLabel}
+                    </span>
+                  ) : (
+                    <span aria-hidden className="hidden lg:block" />
+                  )}
+                  <div className="flex shrink-0 justify-end">
+                    <OuderStatPill value={`${dashboard.weekly?.deltaPercent ?? 0}%`} />
+                  </div>
                 </div>
               </header>
               <div className="mt-4 flex min-h-0 flex-1 flex-col">
@@ -199,7 +228,7 @@ export default function DashboardOuder() {
               </div>
             </section>
 
-            <section className="flex w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
+            <section className="flex w-full min-w-0 flex-col rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3] max-lg:px-4 max-lg:pt-4 max-lg:pb-5">
               <header className="flex items-center justify-between">
                 <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Aankomende oefeningen</p>
               </header>
@@ -228,7 +257,7 @@ export default function DashboardOuder() {
               </div>
             </section>
 
-            <section className="w-full min-w-0 rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3]">
+            <section className="w-full min-w-0 rounded-[14px] border-2 border-[#e1dbd3] bg-white px-[21px] pt-[21px] pb-[22px] shadow-[0_2px_0_0_#e1dbd3] max-lg:px-4 max-lg:pt-4 max-lg:pb-5">
               <header className="flex items-center justify-between">
                 <p className="font-nimbli-heading text-base font-bold text-[#1a1a1a]">Voortgangsindicatoren</p>
               </header>
@@ -242,11 +271,12 @@ export default function DashboardOuder() {
             <OuderRecentSection
               items={dashboard.recent ?? []}
               loading={dashboard.loading}
-              className="rounded-[14px]"
+              className="rounded-[14px] max-lg:px-4 max-lg:pt-4 max-lg:pb-5"
             />
           </div>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

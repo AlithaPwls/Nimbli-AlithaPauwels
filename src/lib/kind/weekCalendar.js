@@ -219,12 +219,19 @@ function pathVariantForDot(dot, { futureIndex }) {
  * Index 0–1: top curve · 2–5: rest of segment.
  */
 const PATH_DAY_ZIGZAG_SLOTS = [
-  { className: 'left-[31%] top-[4%] -translate-x-1/2' },
+  
+  { className: 'left-[31%] top-[7%] -translate-x-1/2' },
   { className: 'left-[74%] top-[18%] -translate-x-1/2' },
   { className: 'left-[28%] top-[35%] -translate-x-1/2' },
   { className: 'left-[73%] top-[51%] -translate-x-1/2' },
   { className: 'left-[25%] top-[66%] -translate-x-1/2' },
   { className: 'left-[74%] top-[84%] -translate-x-1/2' },
+]
+
+/** Bovenste pad — eigen offsets (slot 0 los van middenpad). */
+const PATH_UPPER_DAY_SLOTS = [
+  { className: 'left-[74%] top-[32%] -translate-x-1/2' },
+  ...PATH_DAY_ZIGZAG_SLOTS.slice(1),
 ]
 
 const PATH_SLOT_TOP_PCT = [4, 15, 33, 50, 66, 84]
@@ -243,6 +250,10 @@ const PATH_LOWER_TOP_PCT = [12, 24, 38, 52, 66, 80]
 
 function lowerPathSlot(index) {
   return PATH_LOWER_DAY_SLOTS[Math.min(index, PATH_LOWER_DAY_SLOTS.length - 1)]
+}
+
+function upperPathSlot(index) {
+  return PATH_UPPER_DAY_SLOTS[Math.min(index, PATH_UPPER_DAY_SLOTS.length - 1)]
 }
 
 const PATH_MAIN_BEFORE_SLOT = PATH_DAY_ZIGZAG_SLOTS[0]
@@ -293,7 +304,7 @@ export function buildPathMarkersFromWeekDays(weekDays) {
 
   const upperDots =
     beforeToday.length > 1
-      ? beforeToday.slice(0, -1).slice(-PATH_DAY_ZIGZAG_SLOTS.length)
+      ? beforeToday.slice(0, -1).slice(-PATH_UPPER_DAY_SLOTS.length)
       : []
   const mainBeforeDot = beforeToday.length > 0 ? beforeToday[beforeToday.length - 1] : null
   const mainAfterDots = afterToday.slice(0, PATH_MAIN_AFTER_MAX)
@@ -303,7 +314,7 @@ export function buildPathMarkersFromWeekDays(weekDays) {
   )
 
   return {
-    upperPath: upperDots.map((dot, i) => toPathMarker(dot, PATH_DAY_ZIGZAG_SLOTS[i], { futureIndex: i })),
+    upperPath: upperDots.map((dot, i) => toPathMarker(dot, upperPathSlot(i), { futureIndex: i })),
     mainBeforeToday: mainBeforeDot
       ? toPathMarker(mainBeforeDot, PATH_MAIN_BEFORE_SLOT, { futureIndex: 0, labelMode: 'full' })
       : null,

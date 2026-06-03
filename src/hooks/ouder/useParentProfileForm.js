@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import supabase from '@/lib/supabaseClient.js'
 import { useAuth } from '@/hooks/useAuth.js'
+import { parseIsoDateLocal } from '@/lib/dateInput.js'
 
 function splitFullName(fullName) {
   const trimmed = fullName.trim()
@@ -22,70 +23,34 @@ function toDateInputValue(dateOfBirth) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function profileToForm(profile, practice) {
+function profileToForm(profile) {
   const first = profile?.firstname?.trim() ?? ''
   const last = profile?.lastname?.trim() ?? ''
   return {
     fullName: [first, last].filter(Boolean).join(' '),
     email: profile?.email?.trim() ?? '',
-    phone: practice?.phone?.trim() ?? '',
+    phone: profile?.phone_number?.trim() ?? '',
     address: profile?.address?.trim() ?? '',
     dateOfBirth: toDateInputValue(profile?.date_of_birth),
     password: '',
   }
 }
 
-export function useKineProfileForm() {
+export function useParentProfileForm() {
   const { profile, loading: authLoading, refreshProfile } = useAuth()
-  const [practice, setPractice] = useState(null)
-  const [practiceLoading, setPracticeLoading] = useState(false)
-  const [form, setForm] = useState(() => profileToForm(null, null))
-  const [baseline, setBaseline] = useState(() => profileToForm(null, null))
+  const [form, setForm] = useState(() => profileToForm(null))
+  const [baseline, setBaseline] = useState(() => profileToForm(null))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [savedMessage, setSavedMessage] = useState(null)
 
   useEffect(() => {
-    if (!profile?.practice_id) {
-      setPractice(null)
-      setPracticeLoading(false)
-      if (profile) {
-        const next = profileToForm(profile, null)
-        setForm(next)
-        setBaseline(next)
-      }
-      return
-    }
-
-    let cancelled = false
-    setPracticeLoading(true)
-
-    void (async () => {
-      const { data, error: practiceError } = await supabase
-        .from('practices')
-        .select('id, phone')
-        .eq('id', profile.practice_id)
-        .maybeSingle()
-
-      if (cancelled) return
-
-      if (practiceError) {
-        setPractice(null)
-      } else {
-        setPractice(data ?? null)
-      }
-
-      const next = profileToForm(profile, practiceError ? null : data)
-      setForm(next)
-      setBaseline(next)
-      setError(null)
-      setSavedMessage(null)
-      setPracticeLoading(false)
-    })()
-
-    return () => {
-      cancelled = true
-    }
+    if (!profile) return
+    const next = profileToForm(profile)
+    setForm(next)
+    setBaseline(next)
+    setError(null)
+    setSavedMessage(null)
   }, [profile])
 
   const updateField = useCallback((key, value) => {
@@ -107,6 +72,9 @@ export function useKineProfileForm() {
 
   const save = useCallback(async () => {
     if (!profile?.id) return { ok: false, message: 'Profiel niet gevonden.' }
+    if (profile.role !== 'parent') {
+      return { ok: false, message: 'Alleen ouderprofielen kunnen hier worden bewerkt.' }
+    }
 
     const { firstname, lastname } = splitFullName(form.fullName)
     if (!firstname.trim()) {
@@ -117,6 +85,18 @@ export function useKineProfileForm() {
     }
     if (form.password && form.password.length < 8) {
       return { ok: false, message: 'Wachtwoord moet minstens 8 tekens zijn.' }
+    }
+
+    if (form.dateOfBirth) {
+      const dob = parseIsoDateLocal(form.dateOfBirth)
+      if (!dob) {
+        return { ok: false, message: 'Vul een geldige geboortedatum in.' }
+      }
+      const today = new Date()
+      today.setHours(23, 59, 59, 999)
+      if (dob > today) {
+        return { ok: false, message: 'Geboortedatum kan niet in de toekomst liggen.' }
+      }
     }
 
     setSaving(true)
@@ -130,6 +110,7 @@ export function useKineProfileForm() {
           firstname: firstname.trim(),
           lastname: lastname.trim(),
           email: form.email.trim(),
+          phone_number: form.phone.trim() || null,
           address: form.address.trim() || null,
           date_of_birth: form.dateOfBirth || null,
         })
@@ -137,22 +118,6 @@ export function useKineProfileForm() {
 
       if (profileError) {
         return { ok: false, message: 'Profiel opslaan mislukt. Probeer opnieuw.' }
-      }
-
-      if (profile.practice_id) {
-        const phone = form.phone.trim() || null
-        const baselinePhone = baseline.phone.trim() || null
-        if (phone !== baselinePhone) {
-          const { error: practiceError } = await supabase
-            .from('practices')
-            .update({ phone })
-            .eq('id', profile.practice_id)
-
-          if (practiceError) {
-            return { ok: false, message: 'Telefoonnummer opslaan mislukt. Probeer opnieuw.' }
-          }
-          setPractice((current) => (current ? { ...current, phone } : { id: profile.practice_id, phone }))
-        }
       }
 
       const authUpdates = {}
@@ -174,30 +139,27 @@ export function useKineProfileForm() {
       }
 
       await refreshProfile()
-      const nextBaseline = profileToForm(
-        {
-          ...profile,
-          firstname: firstname.trim(),
-          lastname: lastname.trim(),
-          email: form.email.trim(),
-          address: form.address.trim() || null,
-          date_of_birth: form.dateOfBirth || null,
-        },
-        practice ? { ...practice, phone: form.phone.trim() || null } : null
-      )
+      const nextBaseline = profileToForm({
+        ...profile,
+        firstname: firstname.trim(),
+        lastname: lastname.trim(),
+        email: form.email.trim(),
+        phone_number: form.phone.trim() || null,
+        address: form.address.trim() || null,
+        date_of_birth: form.dateOfBirth || null,
+      })
       setBaseline(nextBaseline)
-      setForm(nextBaseline)
+      setForm({ ...nextBaseline, password: '' })
       setSavedMessage('Je wijzigingen zijn opgeslagen.')
       return { ok: true }
     } finally {
       setSaving(false)
     }
-  }, [form, profile, baseline.phone, refreshProfile])
+  }, [form, profile, refreshProfile])
 
   return {
     profile,
-    practice,
-    loading: authLoading || practiceLoading,
+    loading: authLoading,
     form,
     updateField,
     reset,

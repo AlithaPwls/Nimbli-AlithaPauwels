@@ -83,7 +83,6 @@ export default function KinePatientDetail() {
     patient,
     parent,
     siblings,
-    linkedParentId,
     weeklyChart,
     sessions,
     assignments,
@@ -240,11 +239,11 @@ export default function KinePatientDetail() {
 
   return (
     <div className="min-h-svh bg-nimbli-foreground">
-      <div className="mx-auto max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
+      <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink max-lg:px-4 max-lg:py-6">
         {loading || showContent ? (
-          <div className="flex items-start gap-6 sm:gap-10">
-            <OuderBackLink to="/dashboard/kine" className="shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col gap-6">
+          <div className="flex flex-col gap-3 max-lg:gap-4 lg:flex-row lg:items-start lg:gap-10">
+            <OuderBackLink to="/dashboard/kine" className="shrink-0 self-start" />
+            <div className="flex min-w-0 flex-1 flex-col gap-6 max-lg:gap-5">
               {loading ? (
                 <KinePatientDetailSkeleton />
               ) : (
@@ -255,55 +254,6 @@ export default function KinePatientDetail() {
                     qrDisabled={!patient.inviteCode}
                     onQrClick={() => setInviteOpen(true)}
                   />
-
-                  {linkedParentId ? (
-                    <section className="rounded-2xl border-2 border-[#e1dbd3] bg-white p-5 shadow-[0_2px_0_0_#e1dbd3]">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="font-nimbli-heading text-base font-bold text-nimbli-ink">
-                          Gezin
-                        </h2>
-                        <Button
-                          type="button"
-                          className="h-9 bg-nimbli font-nimbli-heading text-xs font-bold"
-                          onClick={() => {
-                            const params = new URLSearchParams({
-                              existingParentId: linkedParentId,
-                            })
-                            const relation = parent?.role_parent?.trim()
-                            if (relation) {
-                              params.set('parentRelation', relation)
-                            }
-                            navigate(`/dashboard/kine/patienten/nieuw?${params.toString()}`)
-                          }}
-                        >
-                          Kind toevoegen
-                        </Button>
-                      </div>
-                      {Array.isArray(siblings) && siblings.length > 0 ? (
-                        <ul className="mt-3 flex flex-col gap-2">
-                          {siblings.map((s) => {
-                            const name = `${s?.firstname ?? ''} ${s?.lastname ?? ''}`.trim() || 'Kind'
-                            return (
-                              <li key={s.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/dashboard/kine/patienten/${s.id}`)}
-                                  className="w-full rounded-lg border border-[#e1dbd3] px-3 py-2 text-left text-sm hover:border-nimbli/40"
-                                >
-                                  <span className="font-nimbli-heading font-bold">{name}</span>
-                                  {!s.user_id ? (
-                                    <span className="ml-2 text-xs text-amber-700">Nog niet geactiveerd</span>
-                                  ) : null}
-                                </button>
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-nimbli-muted">Geen andere kinderen gekoppeld.</p>
-                      )}
-                    </section>
-                  ) : null}
 
                   <KinePatientDetailTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -325,12 +275,12 @@ export default function KinePatientDetail() {
                     onDeleteNote={openDeleteNoteDialog}
                   />
 
-                  <div className="flex justify-center pt-2">
+                  <div className="flex justify-center pt-2 max-sm:px-1">
                     <Button
                       type="button"
                       variant="destructive"
                       onClick={openDeleteDialog}
-                      className="h-11 w-fit font-nimbli-heading text-sm font-bold"
+                      className="h-11 w-fit max-w-full font-nimbli-heading text-sm font-bold max-sm:w-full"
                     >
                       <Trash2 className="mr-2 size-[18px]" aria-hidden />
                       Patiënt verwijderen
@@ -344,7 +294,7 @@ export default function KinePatientDetail() {
           <>
             <OuderBackLink to="/dashboard/kine" />
             {notFound ? (
-              <div className="mt-10 rounded-2xl border-2 border-[#e1dbd3] bg-white px-6 py-12 text-center shadow-[0_2px_0_0_#e1dbd3]">
+              <div className="mt-10 rounded-2xl border-2 border-[#e1dbd3] bg-white px-6 py-12 text-center shadow-[0_2px_0_0_#e1dbd3] max-lg:mt-8 max-sm:px-4 max-sm:py-10">
                 <p className="font-nimbli-heading text-lg font-bold text-nimbli-ink">Patiënt niet gevonden</p>
                 <p className="mt-2 text-sm text-nimbli-muted">
                   Deze patiënt bestaat niet of hoort niet bij jouw praktijk.

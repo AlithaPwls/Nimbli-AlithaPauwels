@@ -13,7 +13,7 @@ export default function PoseHoldRing({ progress01, className }) {
 
   return (
     <div
-      className={cn('relative mx-auto grid size-[min(42vw,168px)] place-items-center', className)}
+      className={cn('relative mx-auto grid size-[min(42vw,168px)] place-items-center max-lg:size-[min(38vw,140px)]', className)}
       role="img"
       aria-label="Rustpositie vasthouden"
     >
@@ -40,7 +40,7 @@ export default function PoseHoldRing({ progress01, className }) {
         <circle cx="60" cy="60" r="22" className="fill-kind-yellow/90" />
       </svg>
       <UserRound
-        className="pointer-events-none absolute size-9 text-nimbli-ink/80"
+        className="pointer-events-none absolute size-9 text-nimbli-ink/80 max-lg:size-8"
         strokeWidth={2.25}
         aria-hidden
       />

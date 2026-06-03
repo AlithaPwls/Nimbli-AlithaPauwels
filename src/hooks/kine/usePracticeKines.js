@@ -15,6 +15,8 @@ function mapKineRow(row) {
     lastname,
     name,
     email: row?.email?.trim() || null,
+    phone: row?.phone_number?.trim() || null,
+    address: row?.address?.trim() || null,
     avatarUrl: row?.avatar_url?.trim() || null,
     dateOfBirth: row?.date_of_birth ?? null,
     createdAt: row?.created_at ?? null,
@@ -48,7 +50,7 @@ export function usePracticeKines({ practiceId, currentProfileId = null }) {
 
       const { data, error: qErr } = await supabase
         .from('profiles')
-        .select('id, firstname, lastname, email, avatar_url, date_of_birth, created_at')
+        .select('id, firstname, lastname, email, phone_number, address, avatar_url, date_of_birth, created_at')
         .eq('practice_id', practiceId)
         .eq('role', 'kine')
         .order('firstname', { ascending: true })

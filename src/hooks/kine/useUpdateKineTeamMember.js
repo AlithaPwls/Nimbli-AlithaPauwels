@@ -41,7 +41,8 @@ export function useUpdateKineTeamMember() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const updateMember = useCallback(async ({ kineId, firstname, lastname, dateOfBirth, email, password }) => {
+  const updateMember = useCallback(
+    async ({ kineId, firstname, lastname, dateOfBirth, email, phone, address, password }) => {
     setError(null)
 
     if (!kineId) {
@@ -74,6 +75,8 @@ export function useUpdateKineTeamMember() {
           lastname: String(lastname).trim(),
           date_of_birth: dateOfBirth || null,
           email: String(email).trim(),
+          phone_number: String(phone ?? '').trim() || null,
+          address: String(address ?? '').trim() || null,
           password: password || '',
         },
       })

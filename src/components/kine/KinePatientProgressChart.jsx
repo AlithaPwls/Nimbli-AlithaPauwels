@@ -90,8 +90,8 @@ export default function KinePatientProgressChart({
   const activeYPct = activeIndex != null ? (activeCy / H) * 100 : 0
 
   return (
-    <div className="flex w-full gap-3">
-      <div className="flex h-[220px] w-11 shrink-0 flex-col justify-between py-1 text-[13px] text-[#9ca3af]">
+    <div className="flex w-full min-w-0 gap-2 max-sm:gap-1.5 sm:gap-3">
+      <div className="flex h-[220px] w-11 shrink-0 flex-col justify-between py-1 text-[13px] text-[#9ca3af] max-sm:h-[180px] max-sm:w-9 max-sm:text-[11px]">
         {Y_LABELS.map((label) => (
           <span key={label}>{label}%</span>
         ))}
@@ -117,7 +117,7 @@ export default function KinePatientProgressChart({
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          className="block h-[220px] w-full"
+          className="block h-[220px] w-full max-sm:h-[180px]"
           role="img"
           aria-label="Voortgang per dag van de week"
         >

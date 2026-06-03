@@ -74,7 +74,7 @@ function Marker({ className, Icon, label, variant = 'neutral', labelClassName, o
       {variant === 'today' ? (
         <div
           className={cn(
-            'relative grid size-[96px] place-items-center rounded-full',
+            'relative grid size-[96px] place-items-center rounded-full max-lg:size-[80px]',
             MARKER_ICON_MOTION,
             MARKER_ICON_HOVER
           )}
@@ -94,14 +94,14 @@ function Marker({ className, Icon, label, variant = 'neutral', labelClassName, o
       ) : (
         <div
           className={cn(
-            'grid size-[68px] place-items-center rounded-full shadow-[0_10px_22px_rgba(0,0,0,0.08)] ring-1 ring-black/5',
+            'grid size-[68px] place-items-center rounded-full shadow-[0_10px_22px_rgba(0,0,0,0.08)] ring-1 ring-black/5 max-lg:size-[58px]',
             MARKER_ICON_MOTION,
             MARKER_ICON_HOVER,
             iconWrapClass
           )}
         >
           <IconComponent
-            className="size-8 transition-transform duration-200 ease-out group-hover/marker:scale-110 motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none"
+            className="size-8 max-lg:size-7 transition-transform duration-200 ease-out group-hover/marker:scale-110 motion-reduce:group-hover/marker:scale-100 motion-reduce:transition-none"
             aria-hidden
           />
         </div>
@@ -222,15 +222,19 @@ export default function KindProgressPath() {
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-[440px] min-w-0 flex-col items-center pb-16 pt-2 sm:max-w-[480px]">
+    <div className="mx-auto flex w-full max-w-[480px] min-w-0 flex-col items-center pb-16 pt-2 max-lg:max-w-[440px] max-lg:pb-12 max-lg:pt-1">
       {pathMarkers.upperPath.length > 0 ? (
         <section className="relative -mb-1 w-full" aria-label="Eerdere dagen op het pad">
+        <div className="relative w-full -translate-x-7 translate-y-8 scale-x-[-1]">            
           <PathSegment src={pathMainSvg} alt="" clipPercent={upperClipPercent} />
-          <PathMarkersOverlay>
-            {pathMarkers.upperPath.map((marker) => (
-              <PathDayMarker key={marker.key} marker={marker} />
-            ))}
-          </PathMarkersOverlay>
+            <PathMarkersOverlay>
+              <div className="relative size-full scale-x-[-1]">
+                {pathMarkers.upperPath.map((marker) => (
+                  <PathDayMarker key={marker.key} marker={marker} />
+                ))}
+              </div>
+            </PathMarkersOverlay>
+          </div>
         </section>
       ) : null}
 
@@ -256,7 +260,7 @@ export default function KindProgressPath() {
 
           <p
             className={cn(
-              'absolute font-nimbli-heading text-[26px] font-bold italic leading-tight tracking-tight text-[#6c6c6c]',
+              'absolute font-nimbli-heading text-[26px] font-bold italic leading-tight tracking-tight text-[#6c6c6c] max-lg:text-[22px]',
               PATH_MAIN_MONTH_SLOT.className
             )}
           >

@@ -43,13 +43,13 @@ export default function KinePatientSessionsSection({
   }, [listScrollable, list.length, updateBottomFade])
 
   return (
-    <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3]">
+    <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3] max-lg:px-5 max-lg:pb-6 max-lg:pt-6 max-sm:px-4 max-sm:pb-5 max-sm:pt-5">
       <header>
-        <h2 className="font-nimbli-heading text-[22px] font-bold text-[#1a1a1a]">Sessies</h2>
-        <p className="mt-1 text-[15px] text-nimbli-muted">Alle voltooide oefeningen</p>
+        <h2 className="font-nimbli-heading text-[22px] font-bold text-[#1a1a1a] max-sm:text-lg">Sessies</h2>
+        <p className="mt-1 text-[15px] text-nimbli-muted max-sm:text-sm">Alle voltooide oefeningen</p>
       </header>
 
-      <div className="mt-6">
+      <div className="mt-6 max-sm:mt-4">
         {loading ? (
           <p className="text-sm text-nimbli-muted">Sessies laden…</p>
         ) : isEmpty ? (

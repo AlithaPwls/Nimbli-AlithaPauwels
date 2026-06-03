@@ -18,6 +18,9 @@ export default function NimbliDatePicker({
   required = false,
   disabled = false,
   className,
+  labelClassName,
+  fromYear = MIN_BIRTH_YEAR,
+  toYear = CURRENT_YEAR,
 }) {
   const [open, setOpen] = useState(false)
   const selected = useMemo(() => parseIsoDateLocal(value), [value])
@@ -33,7 +36,10 @@ export default function NimbliDatePicker({
   return (
     <div className={cn('flex w-full flex-col gap-1.5 text-left', className)}>
       {label ? (
-        <label htmlFor={id} className="text-sm font-semibold text-nimbli-ink">
+        <label
+          htmlFor={id}
+          className={labelClassName ?? 'text-sm font-semibold text-nimbli-ink'}
+        >
           {label}
           {required ? '*' : ''}
         </label>
@@ -78,8 +84,8 @@ export default function NimbliDatePicker({
             selected={selected}
             onSelect={handleSelect}
             defaultMonth={defaultMonth}
-            fromYear={MIN_BIRTH_YEAR}
-            toYear={CURRENT_YEAR}
+            fromYear={fromYear}
+            toYear={toYear}
             disabled={(date) => date > new Date()}
             initialFocus
           />

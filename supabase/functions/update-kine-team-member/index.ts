@@ -71,6 +71,8 @@ Deno.serve(async (req) => {
   const dateOfBirthRaw = requiredText(body.date_of_birth)
   const date_of_birth = dateOfBirthRaw ? dateOfBirthRaw : null
   const email = requiredText(body.email)
+  const phone_number = requiredText(body.phone_number) || null
+  const address = requiredText(body.address) || null
   const password = String(body.password ?? '')
 
   if (!firstname || !lastname) {
@@ -129,6 +131,8 @@ Deno.serve(async (req) => {
       firstname,
       lastname,
       email,
+      phone_number,
+      address,
       date_of_birth,
     })
     .eq('id', target.id)

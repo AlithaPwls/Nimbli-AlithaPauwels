@@ -16,13 +16,13 @@ export default function KinePatientHeaderCard({ patient, parent, onQrClick, qrDi
   const parentPhone = dash(parent?.phone)
 
   return (
-    <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3]">
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex min-w-0 flex-1 items-start gap-5">
+    <section className="rounded-[14px] border-2 border-[#e1dbd3] bg-white px-8 pb-8 pt-8 shadow-[0_2px_0_0_#e1dbd3] max-lg:px-5 max-lg:pb-6 max-lg:pt-6 max-sm:px-4 max-sm:pb-5 max-sm:pt-5">
+      <div className="flex items-start justify-between gap-4 max-sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-4 max-sm:gap-3 sm:gap-5">
           <img
             src={resolveProfileAvatarUrl(patient?.avatarUrl)}
             alt={patient?.name ? `Profielfoto van ${patient.name}` : ''}
-            className="size-24 shrink-0 rounded-md object-cover ring-1 ring-nimbli-slot-border/20"
+            className="size-24 shrink-0 rounded-md object-cover ring-1 ring-nimbli-slot-border/20 max-sm:size-20"
             loading="lazy"
             decoding="async"
             onError={(e) => {
@@ -31,7 +31,7 @@ export default function KinePatientHeaderCard({ patient, parent, onQrClick, qrDi
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-nimbli-heading text-2xl font-extrabold text-[#1a1a1a]">
+              <h1 className="font-nimbli-heading text-2xl font-extrabold text-[#1a1a1a] max-sm:text-xl">
                 {patient?.name ?? '—'}
               </h1>
               {patient?.ageLabel ? (
@@ -61,8 +61,8 @@ export default function KinePatientHeaderCard({ patient, parent, onQrClick, qrDi
         </button>
       </div>
 
-      <div className="mt-6 border-t border-[#e5e7eb] pt-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mt-6 border-t border-[#e5e7eb] pt-4 max-sm:mt-5 max-sm:pt-3">
+        <div className="flex flex-col gap-4 max-sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-[14px] bg-[#e8f7f4] text-nimbli">
               <User className="size-5" aria-hidden />

@@ -75,6 +75,7 @@ export default function AddPatient1() {
 
   const [mode, setMode] = useState(draft.mode ?? 'new_family')
   const [existingParentId, setExistingParentId] = useState(draft.existingParentId ?? null)
+  const [selectedParent, setSelectedParent] = useState(null)
   const [lockExistingParent, setLockExistingParent] = useState(Boolean(draft.lockExistingParent))
   const [parentSearch, setParentSearch] = useState('')
   const { parents: parentResults, loading: parentsLoading } = useKineParentsSearch(
@@ -128,6 +129,13 @@ export default function AddPatient1() {
   useEffect(() => {
     if (!linkedParent?.id) return
 
+    setSelectedParent({
+      id: linkedParent.id,
+      firstname: linkedParent.firstname ?? '',
+      lastname: linkedParent.lastname ?? '',
+      email: linkedParent.email ?? '',
+    })
+
     const first = linkedParent.firstname ?? ''
     const last = linkedParent.lastname ?? ''
     const email = linkedParent.email ?? ''
@@ -146,6 +154,42 @@ export default function AddPatient1() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedParent?.id, linkedParent?.firstname, linkedParent?.lastname, linkedParent?.email, linkedParent?.phone_number])
+
+  function parentDisplayName(parent) {
+    if (!parent) return 'Ouder'
+    return `${parent.firstname ?? ''} ${parent.lastname ?? ''}`.trim() || 'Ouder'
+  }
+
+  function selectExistingParent(parent) {
+    setExistingParentId(parent.id)
+    setSelectedParent({
+      id: parent.id,
+      firstname: parent.firstname ?? '',
+      lastname: parent.lastname ?? '',
+      email: parent.email ?? '',
+    })
+    setParentSearch('')
+    setError(null)
+    persist({ existingParentId: parent.id })
+  }
+
+  function clearExistingParent() {
+    setExistingParentId(null)
+    setSelectedParent(null)
+    setParentSearch('')
+    setParentFirstname('')
+    setParentLastname('')
+    setParentEmail('')
+    setParentPhone('')
+    setError(null)
+    persist({
+      existingParentId: null,
+      parentFirstname: '',
+      parentLastname: '',
+      parentEmail: '',
+      parentPhone: '',
+    })
+  }
 
   function persist(next) {
     updateAddPatientDraft(next)
@@ -305,87 +349,125 @@ export default function AddPatient1() {
 
         {mode === 'existing_parent' ? (
           <SectionCard title="Ouder / voogd van dit gezin">
-            {linkedParentLoading ? (
-              <p className="text-sm text-nimbli-muted">Gegevens van de ouder laden…</p>
-            ) : linkedParent ? (
-              <>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Field
-                    label="Voornaam ouder/voogd"
-                    placeholder="—"
-                    value={parentFirstname}
-                    readOnly
-                  />
-                  <Field
-                    label="Achternaam ouder/voogd"
-                    placeholder="—"
-                    value={parentLastname}
-                    readOnly
-                  />
-                </div>
-                <div className="mt-6 grid gap-6 md:grid-cols-2">
-                  <Field
-                    label="Telefoonnummer ouder/voogd"
-                    placeholder="—"
-                    type="tel"
-                    value={parentPhone}
-                    readOnly
-                  />
-                  <Field
-                    label="E-mailadres ouder/voogd"
-                    placeholder="—"
-                    type="email"
-                    value={parentEmail}
-                    readOnly
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <Field
-                  label="Zoek ouder (naam of e-mail)"
-                  placeholder="Minimaal 2 tekens"
-                  autoComplete="off"
-                  value={parentSearch}
-                  onChange={(e) => {
-                    setError(null)
-                    setParentSearch(e.target.value)
-                  }}
-                />
-                {parentsLoading ? (
-                  <p className="mt-3 text-sm text-nimbli-muted">Zoeken…</p>
-                ) : null}
-                <ul className="mt-3 flex flex-col gap-2">
-                  {parentResults.map((p) => {
-                    const name = `${p.firstname ?? ''} ${p.lastname ?? ''}`.trim()
-                    const active = p.id === existingParentId
-                    return (
-                      <li key={p.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setExistingParentId(p.id)
-                            setError(null)
-                            persist({ existingParentId: p.id })
-                          }}
-                          className={cn(
-                            'w-full rounded-lg border px-3 py-2 text-left text-sm',
-                            active
-                              ? 'border-nimbli bg-nimbli/10 font-semibold text-nimbli'
-                              : 'border-[#e1dbd3] bg-white hover:border-nimbli/40'
-                          )}
-                        >
-                          <span className="font-nimbli-heading font-bold">{name || 'Ouder'}</span>
-                          {p.email ? (
-                            <span className="mt-0.5 block text-xs text-nimbli-muted">{p.email}</span>
+            {(() => {
+              const displayParent = linkedParent ?? selectedParent
+              return (
+                <>
+                  <div className="flex w-full flex-col gap-1.5 text-left">
+                    <span className="text-sm font-semibold text-nimbli-ink">
+                      {existingParentId ? 'Geselecteerde ouder' : 'Zoek ouder (naam of e-mail)'}
+                    </span>
+                    {existingParentId && !displayParent ? (
+                      <div className="flex h-12 w-full items-center rounded-lg border border-[#e1dbd3] bg-[#f9fafb] px-3 text-sm text-nimbli-muted">
+                        Ouder laden…
+                      </div>
+                    ) : existingParentId && displayParent ? (
+                      <div className="flex h-12 w-full items-center gap-2 rounded-lg border border-nimbli bg-nimbli/5 px-3 shadow-[inset_0_0_0_1px_rgba(43,191,157,0.15)]">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-nimbli-heading text-sm font-bold text-nimbli-ink">
+                            {parentDisplayName(displayParent)}
+                          </p>
+                          {displayParent.email ? (
+                            <p className="truncate text-xs text-nimbli-muted">{displayParent.email}</p>
                           ) : null}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </>
-            )}
+                        </div>
+                        {!lockExistingParent ? (
+                          <button
+                            type="button"
+                            onClick={clearExistingParent}
+                            className="shrink-0 rounded-md px-2 py-1 font-nimbli-heading text-xs font-bold text-nimbli transition-colors hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+                          >
+                            Wijzig
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <input
+                        className="h-12 w-full rounded-lg border border-[#7c7c7c] bg-white px-3 text-sm text-nimbli-ink placeholder:text-[#7c7c7c] focus:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+                        placeholder="Minimaal 2 tekens"
+                        type="text"
+                        autoComplete="off"
+                        value={parentSearch}
+                        onChange={(e) => {
+                          setError(null)
+                          setParentSearch(e.target.value)
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {!existingParentId ? (
+                    <>
+                      {parentsLoading ? (
+                        <p className="mt-3 text-sm text-nimbli-muted">Zoeken…</p>
+                      ) : null}
+                      {parentResults.length > 0 ? (
+                        <ul className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Ouders">
+                          {parentResults.map((p) => (
+                            <li key={p.id}>
+                              <button
+                                type="button"
+                                role="option"
+                                onClick={() => selectExistingParent(p)}
+                                className="w-full rounded-lg border border-[#e1dbd3] bg-white px-3 py-2 text-left text-sm hover:border-nimbli/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40"
+                              >
+                                <span className="font-nimbli-heading font-bold">
+                                  {parentDisplayName(p)}
+                                </span>
+                                {p.email ? (
+                                  <span className="mt-0.5 block text-xs text-nimbli-muted">{p.email}</span>
+                                ) : null}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : parentSearch.trim().length >= 2 && !parentsLoading ? (
+                        <p className="mt-3 text-sm text-nimbli-muted">Geen ouders gevonden.</p>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {existingParentId && linkedParentLoading ? (
+                    <p className="mt-4 text-sm text-nimbli-muted">Gegevens van de ouder laden…</p>
+                  ) : null}
+
+                  {linkedParent ? (
+                    <>
+                      <div className="mt-6 grid gap-6 md:grid-cols-2">
+                        <Field
+                          label="Voornaam ouder/voogd"
+                          placeholder="—"
+                          value={parentFirstname}
+                          readOnly
+                        />
+                        <Field
+                          label="Achternaam ouder/voogd"
+                          placeholder="—"
+                          value={parentLastname}
+                          readOnly
+                        />
+                      </div>
+                      <div className="mt-6 grid gap-6 md:grid-cols-2">
+                        <Field
+                          label="Telefoonnummer ouder/voogd"
+                          placeholder="—"
+                          type="tel"
+                          value={parentPhone}
+                          readOnly
+                        />
+                        <Field
+                          label="E-mailadres ouder/voogd"
+                          placeholder="—"
+                          type="email"
+                          value={parentEmail}
+                          readOnly
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              )
+            })()}
             <div className="mt-6">
               <Field
                 label="Relatie met patiënt"

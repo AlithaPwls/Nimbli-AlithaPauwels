@@ -453,19 +453,22 @@ export default function PoseDetection() {
   }, [speechMuted, speechPromptKey, speechPromptText, speechSupported, speak])
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-black text-white" data-page="kind-pose-detection">
-      <header className="absolute left-0 right-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 via-black/30 to-transparent px-4 pb-8 pt-4 sm:px-5">
+    <div
+      className="relative flex h-dvh min-h-svh flex-col overflow-hidden bg-black text-white"
+      data-page="kind-pose-detection"
+    >
+      <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 bg-gradient-to-b from-black/70 via-black/30 to-transparent px-5 pb-8 pt-[max(1rem,env(safe-area-inset-top))] max-lg:gap-2 max-lg:px-4 max-lg:pb-6 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))]">
         <button
           type="button"
           onClick={backToExercise}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-white/90 px-3.5 py-2 font-nimbli-heading text-sm font-black text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary sm:text-base"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-white/90 px-3.5 py-2 font-nimbli-heading text-base font-black text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary max-lg:min-h-10 max-lg:px-3 max-lg:text-sm"
         >
           <ArrowLeft className="size-5 shrink-0" aria-hidden strokeWidth={2.25} />
           Terug
         </button>
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 items-start justify-end gap-2">
           {hint ? (
-            <p className="rounded-full bg-black/55 px-3.5 py-2 text-right font-nimbli-heading text-sm font-bold text-white ring-1 ring-white/15 sm:text-lg">
+            <p className="hidden max-w-[min(42vw,280px)] truncate rounded-full bg-black/55 px-3.5 py-2 text-right font-nimbli-heading text-lg font-bold text-white ring-1 ring-white/15 lg:block">
               {hint}
             </p>
           ) : null}
@@ -473,7 +476,7 @@ export default function PoseDetection() {
             type="button"
             disabled={!speechSupported}
             onClick={() => setSpeechMuted((value) => !value)}
-            className="inline-flex size-10 items-center justify-center rounded-full bg-white/90 text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-nimbli-ink shadow-lg transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-kind-green-primary disabled:cursor-not-allowed disabled:opacity-50 max-lg:size-10"
             aria-label={speechMuted ? 'Zet voorlezen aan' : 'Zet voorlezen uit'}
           >
             {speechMuted ? (
@@ -485,9 +488,9 @@ export default function PoseDetection() {
         </div>
       </header>
 
-      <main className="relative min-h-svh flex-1 overflow-hidden bg-black">
+      <main className="relative h-full min-h-0 flex-1 overflow-hidden bg-black">
         {error ? (
-          <p className="absolute left-1/2 top-1/2 z-40 w-[min(92vw,640px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border-2 border-kind-border bg-kind-white px-6 py-5 text-center font-nimbli-heading text-2xl font-bold text-kind-red shadow-2xl sm:text-3xl">
+          <p className="absolute left-1/2 top-1/2 z-40 w-[min(92vw,640px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border-2 border-kind-border bg-kind-white px-6 py-5 text-center font-nimbli-heading text-3xl font-bold text-kind-red shadow-2xl max-lg:px-4 max-lg:py-4 max-lg:text-2xl">
             {error}
           </p>
         ) : null}
@@ -503,9 +506,9 @@ export default function PoseDetection() {
           </div>
 
           {showRoutineOverlay ? (
-            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/50 px-3 pb-3 pt-18 text-center sm:px-4 sm:pb-4 sm:pt-20">
-              <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-2">
-                <div className="rounded-full bg-kind-yellow px-3.5 py-1 font-nimbli-heading text-sm font-black tabular-nums text-nimbli-ink shadow-lg ring-1 ring-white/40 sm:text-base">
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/25 via-transparent to-black/50 px-4 pb-4 pt-20 text-center max-lg:px-3 max-lg:pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] max-lg:pt-[calc(4.25rem+env(safe-area-inset-top,0px))]">
+              <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-2 max-lg:gap-1.5">
+                <div className="rounded-full bg-kind-yellow px-3.5 py-1 font-nimbli-heading text-base font-black tabular-nums text-nimbli-ink shadow-lg ring-1 ring-white/40 max-lg:px-3 max-lg:text-sm">
                   {poseUi.repsCompleted} / {poseUi.repsTarget} herhalingen
                 </div>
                 <svg viewBox="0 0 100 4" className="h-2 w-full max-w-md text-kind-yellow" aria-hidden>
@@ -520,25 +523,25 @@ export default function PoseDetection() {
                   />
                 </svg>
               </div>
-              <div className="mx-auto flex w-full max-w-2xl flex-col justify-end rounded-2xl bg-kind-white/92 px-3.5 py-3 text-nimbli-ink shadow-xl ring-1 ring-white/40 backdrop-blur-sm sm:px-5 sm:py-4">
+              <div className="mx-auto flex w-full max-w-2xl flex-col justify-end rounded-2xl bg-kind-white/92 px-5 py-4 text-nimbli-ink shadow-xl ring-1 ring-white/40 backdrop-blur-sm max-lg:max-h-[42vh] max-lg:px-3.5 max-lg:py-3">
                 {overlayCopy.showHoldRing ? (
                   <PoseHoldRing progress01={holdRingProgress} className="mb-1" />
                 ) : (
-                  <p className="font-nimbli-heading text-[clamp(1.25rem,2.5vw,2.1rem)] font-black leading-none tracking-tight text-nimbli-ink">
+                  <p className="font-nimbli-heading text-[clamp(1.25rem,2.5vw,2.1rem)] font-black leading-none tracking-tight text-nimbli-ink max-lg:text-[clamp(1.125rem,5vw,1.75rem)]">
                     {overlayCopy.title}
                   </p>
                 )}
                 {overlayCopy.subtitle ? (
-                  <p className="mx-auto mt-1.5 max-w-xl font-nimbli-body text-[clamp(0.8rem,1.2vw,1rem)] font-bold leading-snug text-[#364153]">
+                  <p className="mx-auto mt-1.5 max-w-xl font-nimbli-body text-[clamp(0.875rem,1.2vw,1rem)] font-bold leading-snug text-[#364153] max-lg:mt-1 max-lg:text-sm">
                     {overlayCopy.subtitle}
                   </p>
                 ) : null}
                 {!overlayCopy.showHoldRing ? (
-                  <div className="mt-2.5">
+                  <div className="mt-2.5 max-lg:mt-2">
                     <svg
                       viewBox="0 0 100 6"
                       className={cn(
-                        'h-3 w-full text-kind-green-primary',
+                        'h-3 w-full text-kind-green-primary max-lg:h-2.5',
                         (poseUi.phase === 'between_reps' || poseUi.phase === 'complete') && 'text-kind-yellow'
                       )}
                       aria-hidden
@@ -558,8 +561,8 @@ export default function PoseDetection() {
               </div>
             </div>
           ) : hint && !error ? (
-            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/25 px-6 text-center">
-              <p className="rounded-[24px] bg-kind-white/95 px-5 py-4 font-nimbli-heading text-[clamp(1.25rem,3vw,2.4rem)] font-black text-nimbli-ink shadow-2xl ring-2 ring-white/30">
+            <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/25 px-6 text-center max-lg:px-4">
+              <p className="max-w-[min(92vw,640px)] rounded-[24px] bg-kind-white/95 px-5 py-4 font-nimbli-heading text-[clamp(1.25rem,3vw,2.4rem)] font-black leading-tight text-nimbli-ink shadow-2xl ring-2 ring-white/30 max-lg:px-4 max-lg:py-3.5">
                 {hint}
               </p>
             </div>
