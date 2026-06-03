@@ -9,6 +9,8 @@ import {
 import { createPracticeExercise } from '@/hooks/kine/createPracticeExercise.js'
 import { useGeneratePoseConfig } from '@/hooks/kine/useGeneratePoseConfig.js'
 import ExerciseFrameCapture from '@/components/kine/ExerciseFrameCapture.jsx'
+import PoseConfigFrameTest from '@/components/kine/PoseConfigFrameTest.jsx'
+import { checkPoseConfigAgainstCaptures } from '@/lib/kind/poseConfigCaptureCheck.js'
 import {
   DIFFICULTY_OPTIONS,
   GOAL_OPTIONS,
@@ -253,6 +255,7 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
     reset: resetPoseGeneration,
     loading: poseGenerateLoading,
     error: poseGenerateError,
+    data: poseGenerateData,
   } = useGeneratePoseConfig()
 
   const invalidatePoseGeneration = useCallback(() => {
@@ -375,6 +378,16 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
         'Je hebt rust- en doelpositie vastgelegd. Klik eerst op Genereer oefening-logica, of wis één van de twee poses om zonder pose-regels op te slaan.',
       )
       return
+    }
+
+    if (generatedPoseConfig && capturedLandmarks.rest && capturedLandmarks.target) {
+      const frameTest = checkPoseConfigAgainstCaptures(generatedPoseConfig, capturedLandmarks)
+      if (!frameTest.ok) {
+        setSaveError(
+          'Pose-logica slaagt niet op je vastgelegde rust- en doelframes. Genereer opnieuw of pas de frames aan.',
+        )
+        return
+      }
     }
 
     if (previewUrl && measureVideoRef.current) {
@@ -632,6 +645,9 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-nimbli">
                       <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
                       Pose-logica klaar
+                      {poseGenerateData?.source === 'fallback' ? (
+                        <span className="font-normal text-nimbli-muted">(afgeleid van frames)</span>
+                      ) : null}
                     </span>
                   ) : null}
                 </div>
@@ -649,6 +665,12 @@ export default function AddExerciseDialog({ open, onOpenChange, onSaved, practic
                   <p className="text-xs font-medium text-red-600" role="alert">
                     {poseGenerateError}
                   </p>
+                ) : null}
+                {generatedPoseConfig ? (
+                  <PoseConfigFrameTest
+                    poseConfig={generatedPoseConfig}
+                    capturedLandmarks={capturedLandmarks}
+                  />
                 ) : null}
               </div>
             </>

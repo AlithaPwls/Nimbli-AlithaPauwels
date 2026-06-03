@@ -7,6 +7,7 @@
  * 3. Each animation frame: run detectForVideo(video, timestamp) → draw landmarks on <canvas>.
  * 4. “Stretch naar de sterren”: zelfde als `rules_engine_v1` — volledige `pose_config` in Supabase (`pose_enabled`).
  * 5. Andere oefeningen: `pose_config.type === "rules_engine_v1"` + `rules` / `copy` in DB.
+ * 6. Doelpose (groen, vast op scherm): DB-referentie of één keer afgeleid uit `rules.up` bij eerste frame.
  * 6. On unmount: stop camera, cancel rAF, close landmarker (frees GPU/WASM).
  */
 import { useEffect, useRef, useState } from 'react'
@@ -26,6 +27,7 @@ import supabase from '@/lib/supabaseClient.js'
 import { useActiveChildId } from '@/hooks/kind/useActiveChildId.js'
 import { useSpeechGuide } from '@/hooks/kind/useSpeechGuide.js'
 import { POSE_MODEL_LITE, VISION_WASM } from '@/lib/kind/poseConstants.js'
+import { acquireFrozenTargetLandmarks, drawTargetPoseSkeleton } from '@/lib/kind/poseTargetOverlay.js'
 
 async function createPoseLandmarker(delegate = 'GPU') {
   const vision = await FilesetResolver.forVisionTasks(VISION_WASM)
@@ -235,6 +237,8 @@ export default function PoseDetection() {
     }
     const lastPhaseRef = { current: '' }
     const lastUiAtRef = { current: 0 }
+    /** Doelpose: één keer vastgezet, beweegt niet mee met live tracking. */
+    const frozenTargetLmRef = { current: null }
 
     async function run() {
       if (!ctx) {
@@ -331,8 +335,21 @@ export default function PoseDetection() {
         ctx.save()
         ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+        const drawingUtils = new DrawingUtils(ctx)
+        const liveLm = result.landmarks?.[0] ?? null
+
+        if (rulesEnginePoseConfig) {
+          const targetLm = acquireFrozenTargetLandmarks(
+            frozenTargetLmRef,
+            liveLm,
+            rulesEnginePoseConfig
+          )
+          if (targetLm) {
+            drawTargetPoseSkeleton(drawingUtils, targetLm)
+          }
+        }
+
         if (result.landmarks?.length) {
-          const drawingUtils = new DrawingUtils(ctx)
           for (const landmarks of result.landmarks) {
             drawingUtils.drawLandmarks(landmarks, {
               radius: (data) => DrawingUtils.lerp(data.from?.z ?? 0, -0.15, 0.1, 5, 1),
@@ -340,8 +357,8 @@ export default function PoseDetection() {
             drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS)
           }
 
-          if (rulesRt && result.landmarks[0]) {
-            const ui = stepRulesEngine(rulesRt, result.landmarks[0], now, rulesEnginePoseConfig)
+          if (rulesRt && liveLm) {
+            const ui = stepRulesEngine(rulesRt, liveLm, now, rulesEnginePoseConfig)
 
             const score01 =
               typeof ui?.score01 === 'number' && Number.isFinite(ui.score01)
@@ -422,12 +439,14 @@ export default function PoseDetection() {
       if (s) s.getTracks().forEach((t) => t.stop())
       video.srcObject = null
       setPoseUi(null)
+      frozenTargetLmRef.current = null
       didNavigateRewardRef.current = false
       lastLoggedRepRef.current = 0
       sessionStartMsRef.current = null
     }
   }, [routine, poseType, poseConfig, repsParam, exerciseId, assignmentId, childId, xpParam, navigate])
 
+  const showTargetPoseGuide = poseType === RULES_ENGINE_POSE_TYPE && Boolean(poseConfig?.rules?.up)
   const showRoutineOverlay =
     (poseType === 'stretch_sterren' ||
       routine === 'stretchSterren' ||
@@ -496,6 +515,14 @@ export default function PoseDetection() {
         ) : null}
 
         <div className="absolute inset-0 overflow-hidden bg-black">
+          {showTargetPoseGuide ? (
+            <p
+              className="pointer-events-none absolute left-4 top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-20 rounded-full bg-nimbli/90 px-3 py-1.5 font-nimbli-heading text-xs font-black text-white shadow-lg ring-1 ring-white/25 max-lg:left-3 max-lg:text-[11px]"
+              aria-hidden
+            >
+              Groene lijn = doelpose
+            </p>
+          ) : null}
           <div className="relative size-full scale-x-[-1]">
             <video ref={videoRef} className="block size-full object-cover" playsInline muted />
             <canvas
