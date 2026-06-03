@@ -8,8 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import NimbliDatePicker from '@/components/NimbliDatePicker.jsx'
+import OuderAddressField from '@/components/ouder/OuderAddressField.jsx'
 import OuderTextField from '@/components/ouder/OuderTextField.jsx'
 import { memberToForm } from '@/lib/kine/teamMemberForm.js'
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 const primaryButtonClass =
   'h-10 rounded bg-nimbli px-6 font-nimbli-heading text-base font-black text-white shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90 disabled:opacity-60'
@@ -37,7 +41,7 @@ export default function KineTeamMemberDetailDialog({
   }, [member])
 
   const isDirty = useMemo(() => {
-    const keys = ['firstname', 'lastname', 'email', 'dateOfBirth', 'password']
+    const keys = ['firstname', 'lastname', 'email', 'phone', 'address', 'dateOfBirth', 'password']
     return keys.some((key) => form[key] !== baseline[key])
   }, [form, baseline])
 
@@ -108,10 +112,27 @@ export default function KineTeamMemberDetailDialog({
                 onChange={(e) => updateField('email', e.target.value)}
               />
               <OuderTextField
+                label="Telefoonnummer"
+                placeholder="Telefoonnummer"
+                type="tel"
+                autoComplete="tel"
+                value={form.phone}
+                onChange={(e) => updateField('phone', e.target.value)}
+              />
+              <OuderAddressField
+                label="Adres"
+                placeholder="Adres"
+                value={form.address}
+                onChange={(e) => updateField('address', e.target.value)}
+              />
+              <NimbliDatePicker
+                id={`kine-member-dob-${member.id}`}
                 label="Geboortedatum"
-                type="date"
+                labelClassName="font-nimbli-body text-[18px] leading-[25.2px] text-black"
                 value={form.dateOfBirth}
-                onChange={(e) => updateField('dateOfBirth', e.target.value)}
+                onChange={(iso) => updateField('dateOfBirth', iso)}
+                fromYear={CURRENT_YEAR - 90}
+                toYear={CURRENT_YEAR}
               />
               <OuderTextField
                 label="Nieuw wachtwoord"

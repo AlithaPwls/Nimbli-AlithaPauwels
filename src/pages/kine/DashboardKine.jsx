@@ -50,7 +50,7 @@ export default function DashboardKine() {
           Goeiedag {greetingName}!
         </h1>
 
-        <div className="mt-8 grid grid-cols-3 gap-5 max-lg:mt-6 max-lg:grid-cols-2 max-lg:gap-4 max-sm:grid-cols-1">
+        <div className="mt-8 grid grid-cols-3 gap-5 max-lg:mt-6 max-lg:gap-3 max-sm:gap-2">
           <KineStatCard
             title="Totaal Patiënten"
             value={kpisLoading ? '…' : String(totalPatients)}

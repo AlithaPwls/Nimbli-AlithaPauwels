@@ -10,6 +10,7 @@ import { useDeletePracticeExercise } from '@/hooks/kine/useDeletePracticeExercis
 import { usePracticeExercises } from '@/hooks/kine/usePracticeExercises.js'
 import { normalizeExerciseRow } from '@/lib/exerciseDisplay.js'
 import { dbExerciseRowToEigenVideoCard, rowHasUploadedVideoFile } from '@/lib/eigenExerciseCard.js'
+import { cn } from '@/lib/utils'
 import { Search } from 'lucide-react'
 
 const FILTER_CHIPS = [
@@ -105,13 +106,15 @@ export default function KineOefeningenEigenVideos() {
         error={deleteError}
         onConfirm={handleConfirmDelete}
       />
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-nimbli-ink">
             Oefeningen bibliotheek
           </h1>
         </div>
-        <KineOefeningenModeSwitch />
+        <div className="w-full min-w-0 sm:w-auto sm:shrink-0">
+          <KineOefeningenModeSwitch />
+        </div>
       </div>
 
       <div className="mt-6 rounded-2xl border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
@@ -140,7 +143,7 @@ export default function KineOefeningenEigenVideos() {
         </div>
 
         <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {FILTER_CHIPS.map((chip) => {
               const active = category === chip.id
               return (
@@ -148,12 +151,12 @@ export default function KineOefeningenEigenVideos() {
                   key={chip.id}
                   type="button"
                   onClick={() => setCategory(chip.id)}
-                  className={[
-                    'h-11 rounded border px-5 font-nimbli-heading text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
+                  className={cn(
+                    'h-8 cursor-pointer rounded-md border px-3 font-nimbli-heading text-xs font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nimbli/40',
                     active
                       ? 'border-nimbli bg-nimbli text-white shadow-[0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_0_rgba(0,0,0,0.1)]'
-                      : 'border-nimbli bg-white text-[#6b7280] hover:bg-nimbli/5',
-                  ].join(' ')}
+                      : 'border-nimbli bg-white text-nimbli-muted hover:bg-nimbli/5'
+                  )}
                 >
                   {chip.label}
                 </button>

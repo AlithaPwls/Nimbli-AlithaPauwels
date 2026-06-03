@@ -29,7 +29,7 @@ function profileToForm(profile, practice) {
     fullName: [first, last].filter(Boolean).join(' '),
     email: profile?.email?.trim() ?? '',
     phone: practice?.phone?.trim() ?? '',
-    address: '',
+    address: profile?.address?.trim() ?? '',
     dateOfBirth: toDateInputValue(profile?.date_of_birth),
     password: '',
   }
@@ -101,7 +101,7 @@ export function useKineProfileForm() {
   }, [baseline])
 
   const isDirty = useMemo(() => {
-    const keys = ['fullName', 'email', 'phone', 'dateOfBirth', 'password']
+    const keys = ['fullName', 'email', 'phone', 'address', 'dateOfBirth', 'password']
     return keys.some((key) => form[key] !== baseline[key])
   }, [form, baseline])
 
@@ -130,6 +130,7 @@ export function useKineProfileForm() {
           firstname: firstname.trim(),
           lastname: lastname.trim(),
           email: form.email.trim(),
+          address: form.address.trim() || null,
           date_of_birth: form.dateOfBirth || null,
         })
         .eq('id', profile.id)
@@ -179,6 +180,7 @@ export function useKineProfileForm() {
           firstname: firstname.trim(),
           lastname: lastname.trim(),
           email: form.email.trim(),
+          address: form.address.trim() || null,
           date_of_birth: form.dateOfBirth || null,
         },
         practice ? { ...practice, phone: form.phone.trim() || null } : null

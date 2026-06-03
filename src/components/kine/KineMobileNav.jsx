@@ -46,6 +46,10 @@ export default function KineMobileNav({ scrollEl }) {
 
   function closeDrawer() {
     setDrawerOpen(false)
+    const drawer = document.getElementById('kine-mobile-drawer')
+    if (drawer?.contains(document.activeElement)) {
+      document.activeElement?.blur?.()
+    }
   }
 
   return (
@@ -96,6 +100,7 @@ export default function KineMobileNav({ scrollEl }) {
       <aside
         id="kine-mobile-drawer"
         aria-hidden={!drawerOpen}
+        {...(!drawerOpen ? { inert: true } : {})}
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col border-r border-[#e5e7eb] bg-white px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(1.5rem+env(safe-area-inset-top,0px))] transition-transform duration-300 ease-out lg:hidden',
           drawerOpen ? 'translate-x-0' : '-translate-x-full'

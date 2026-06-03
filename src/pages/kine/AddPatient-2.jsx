@@ -404,36 +404,34 @@ export default function AddPatient2() {
             )}
           </div>
 
-          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5"
-              onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
-            >
-              <ArrowLeft className="mr-2 size-5" aria-hidden />
-              Vorige
-            </Button>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="order-1 flex w-full max-w-sm flex-col items-center gap-3 sm:order-2 sm:max-w-none sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                type="button"
+                className="h-11 w-full justify-center gap-2 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90 sm:w-auto"
+                onClick={goNext}
+              >
+                Opslaan
+                <ArrowRight className="size-5 shrink-0" aria-hidden />
+              </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5"
+                className="h-11 w-full justify-center border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5 sm:w-auto"
                 onClick={goNext}
               >
                 Overslaan
               </Button>
-
-              <Button
-                type="button"
-                className="h-11 bg-nimbli font-nimbli-heading font-black text-nimbli-foreground shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/90"
-                onClick={goNext}
-              >
-                Opslaan
-                <ArrowRight className="ml-2 size-5" aria-hidden />
-              </Button>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="order-3 h-11 w-full max-w-sm justify-center gap-2 border-nimbli font-nimbli-heading font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli/5 sm:order-1 sm:w-auto sm:max-w-none"
+              onClick={() => navigate('/dashboard/kine/patienten/nieuw')}
+            >
+              <ArrowLeft className="size-5 shrink-0" aria-hidden />
+              Vorige
+            </Button>
           </div>
         </SectionCard>
       </div>

@@ -28,26 +28,32 @@ export default function KineStatCard({ title, value, subtitle, accent = 'nimbli'
         : 'bg-nimbli'
 
   return (
-    <div className="relative overflow-hidden rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3] max-lg:p-4">
+    <div className="relative min-w-0 overflow-hidden rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3] max-lg:p-4 max-sm:p-3">
       {accent === 'nimbli' ? (
         <div
           className="pointer-events-none absolute -right-2 -top-8 size-24 rounded-full bg-nimbli/10 blur-2xl"
           aria-hidden
         />
       ) : null}
-      <div className="relative flex items-start gap-2.5">
-        <div className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${iconWrap}`}>
-          {Icon ? <Icon className="size-5" strokeWidth={2} aria-hidden /> : null}
+      <div className="relative flex items-start gap-2.5 max-sm:flex-col max-sm:gap-2">
+        <div
+          className={`grid size-8 shrink-0 place-items-center rounded-[10px] max-sm:size-7 ${iconWrap}`}
+        >
+          {Icon ? <Icon className="size-5 max-sm:size-4" strokeWidth={2} aria-hidden /> : null}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-nimbli-heading text-lg font-bold leading-tight text-[#6b7280]">{title}</p>
-          <p className={`mt-3 font-nimbli-heading text-[32px] font-extrabold leading-none max-lg:text-2xl ${valueClass}`}>
+          <p className="font-nimbli-heading text-lg font-bold leading-tight text-[#6b7280] max-sm:text-sm">
+            {title}
+          </p>
+          <p
+            className={`mt-3 font-nimbli-heading text-[32px] font-extrabold leading-none max-lg:text-2xl max-sm:mt-2 max-sm:text-xl ${valueClass}`}
+          >
             {value}
           </p>
           {subtitle ? (
             <p
               className={[
-                'mt-1 font-nimbli-body text-xs',
+                'mt-1 font-nimbli-body text-xs max-sm:text-[10px] max-sm:leading-snug',
                 accent === 'nimbli' ? 'text-[#9ca3af]' : 'text-[#6b7280]',
               ].join(' ')}
             >

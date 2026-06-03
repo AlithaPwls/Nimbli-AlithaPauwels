@@ -12,6 +12,8 @@ export function memberToForm(member) {
     firstname: member?.firstname?.trim() ?? '',
     lastname: member?.lastname?.trim() ?? '',
     email: member?.email?.trim() ?? '',
+    phone: member?.phone?.trim() ?? '',
+    address: member?.address?.trim() ?? '',
     dateOfBirth: toDateInputValue(member?.dateOfBirth),
     password: '',
   }
