@@ -103,7 +103,6 @@ export default function KineInstellingen() {
     setMemberSavedMessage(null)
     const result = await updateMember(payload)
     if (result.ok) {
-      setMemberSavedMessage('Wijzigingen opgeslagen.')
       refetchTeam()
       setSelectedMember((prev) => {
         if (!prev || prev.id !== payload.kineId) return prev

@@ -59,9 +59,7 @@ export default function KineTeamMemberDetailDialog({
       ...form,
     })
     if (result?.ok) {
-      const next = { ...form, password: '' }
-      setBaseline(next)
-      setForm(next)
+      onOpenChange?.(false)
     }
   }
 
