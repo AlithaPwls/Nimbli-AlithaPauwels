@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import OuderBackLink from '@/components/ouder/OuderBackLink.jsx'
+import NimbliDatePicker from '@/components/NimbliDatePicker.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderTextField from '@/components/ouder/OuderTextField.jsx'
 import { useInviteKineTeamMember } from '@/hooks/kine/useInviteKineTeamMember.js'
@@ -11,6 +12,8 @@ const primaryButtonClass =
 
 const outlineButtonClass =
   'h-10 rounded border border-nimbli bg-white px-6 font-nimbli-heading text-base font-black text-nimbli shadow-[0_2px_0_0_#1e7a6a] hover:bg-nimbli-canvas disabled:opacity-60'
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 const emptyForm = {
   firstname: '',
@@ -84,12 +87,14 @@ export default function KineNieuweGebruiker() {
                 value={form.lastname}
                 onChange={(e) => updateField('lastname', e.target.value)}
               />
-              <OuderTextField
+              <NimbliDatePicker
+                id="kine-invite-dob"
                 label="Geboortedatum"
-                placeholder="Geboortedatum"
-                type="date"
+                labelClassName="font-nimbli-body text-[18px] leading-[25.2px] text-black"
                 value={form.dateOfBirth}
-                onChange={(e) => updateField('dateOfBirth', e.target.value)}
+                onChange={(iso) => updateField('dateOfBirth', iso)}
+                fromYear={CURRENT_YEAR - 90}
+                toYear={CURRENT_YEAR}
               />
               <OuderTextField
                 label="Email adres"

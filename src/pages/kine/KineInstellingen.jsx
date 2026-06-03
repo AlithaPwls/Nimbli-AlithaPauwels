@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import KinePracticeTeamList from '@/components/kine/KinePracticeTeamList.jsx'
 import KineTeamMemberDeleteDialog from '@/components/kine/KineTeamMemberDeleteDialog.jsx'
 import KineTeamMemberDetailDialog from '@/components/kine/KineTeamMemberDetailDialog.jsx'
+import NimbliDatePicker from '@/components/NimbliDatePicker.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderAddressField from '@/components/ouder/OuderAddressField.jsx'
 import OuderTextField from '@/components/ouder/OuderTextField.jsx'
@@ -22,6 +23,8 @@ const outlineButtonClass =
 
 const asidePrimaryButtonClass = `${primaryButtonClass} w-full`
 const asideOutlineButtonClass = `${outlineButtonClass} w-full`
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 export default function KineInstellingen() {
   const navigate = useNavigate()
@@ -227,12 +230,14 @@ export default function KineInstellingen() {
                   value={form.address}
                   onChange={(e) => updateField('address', e.target.value)}
                 />
-                <OuderTextField
+                <NimbliDatePicker
+                  id="kine-profile-dob"
                   label="Geboortedatum"
-                  placeholder="bv. 29 juli 2001"
-                  type="date"
+                  labelClassName="font-nimbli-body text-[18px] leading-[25.2px] text-black"
                   value={form.dateOfBirth}
-                  onChange={(e) => updateField('dateOfBirth', e.target.value)}
+                  onChange={(iso) => updateField('dateOfBirth', iso)}
+                  fromYear={CURRENT_YEAR - 90}
+                  toYear={CURRENT_YEAR}
                 />
                 <OuderTextField
                   label="Wachtwoord"
