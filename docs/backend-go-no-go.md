@@ -1,160 +1,160 @@
-# Backend pre-implementation: GO / NO-GO checklist
+# Backend vóór implementatie: GO / NO-GO-checklist
 
-Use this **before** you implement Supabase login end-to-end. You are not being graded — you’re making sure you don’t build on missing pieces.
+Gebruik dit **voordat** je Supabase-login end-to-end implementeert. Je wordt hier niet op beoordeeld — je controleert of je niet bouwt op ontbrekende onderdelen.
 
 ---
 
-## How to fill this in (start here)
+## Zo vul je dit in (start hier)
 
-### The two columns
+### De twee kolommen
 
-| Column | What you do |
+| Kolom | Wat je doet |
 |--------|-------------|
-| **Pass?** | When you’ve **actually checked** the item, change `[ ]` to `[x]`. If you’re **skipping on purpose**, leave `[ ]` and explain in **Notes** (that counts as a documented exception). |
-| **Notes** | Short reminder: *what you saw*, *where*, or *what you decided*. Examples: `Checked in Dashboard → API`, `We use dev project only`, `Deferred until after thesis demo`. |
+| **OK?** | Als je het item **echt gecontroleerd** hebt, wijzig `[ ]` in `[x]`. Als je **bewust overslaat**, laat `[ ]` staan en leg uit in **Opmerkingen** (dat telt als gedocumenteerde uitzondering). |
+| **Opmerkingen** | Korte notitie: *wat je zag*, *waar*, of *wat je besliste*. Voorbeelden: `Gecontroleerd in Dashboard → API`, `We gebruiken alleen dev-project`, `Uitgesteld tot na thesisdemo`. |
 
-### Where the answers come from
+### Waar de antwoorden vandaan komen
 
-- **Supabase Dashboard** (browser): [https://supabase.com/dashboard](https://supabase.com/dashboard) → your project.
-- **Your laptop**: project folder → `.env`, `.gitignore`, code under `src/`.
-- **Your head**: product decisions (e.g. “forgot password goes to email reset later”).
+- **Supabase Dashboard** (browser): [https://supabase.com/dashboard](https://supabase.com/dashboard) → jouw project.
+- **Je laptop**: projectmap → `.env`, `.gitignore`, code onder `src/`.
+- **Je hoofd**: productbeslissingen (bv. “wachtwoord vergeten gaat later via e-mailreset”).
 
-You don’t need to paste secrets into this file — never put keys here.
-
----
-
-## Step-by-step: Critical items (C1–C7)
-
-Do these in order once; then tick the table below.
-
-### C1 — Env vars load in the app
-
-1. In your project root, open **`.env`** (create it from `.env.example` if you have one).
-2. Confirm you have **`VITE_SUPABASE_URL`** and **`VITE_SUPABASE_ANON_KEY`** (names must match what `src/lib/supabaseClient.js` uses).
-3. In Supabase Dashboard → **Project Settings** → **API**: compare **URL** and **anon public** key — they should match `.env` (first/last few characters are enough to verify).
-4. Run `npm run dev`, open the app — if login page loads without console errors about missing env, you’re good.
-
-**Notes example:** `Keys match Dashboard → Settings → API (anon).`
+Je hoeft geen secrets in dit bestand te plakken — zet hier nooit keys in.
 
 ---
 
-### C2 — Email sign-in is turned on
+## Stap voor stap: kritieke items (C1–C7)
+
+Doe deze één keer in volgorde; vink daarna de tabel hieronder af.
+
+### C1 — Omgevingsvariabelen laden in de app
+
+1. Open in de projectroot **`.env`** (maak aan vanuit `.env.example` als je die hebt).
+2. Controleer of je **`VITE_SUPABASE_URL`** en **`VITE_SUPABASE_ANON_KEY`** hebt (namen moeten overeenkomen met wat `src/lib/supabaseClient.js` gebruikt).
+3. In Supabase Dashboard → **Project Settings** → **API**: vergelijk **URL** en **anon public** key — die moeten overeenkomen met `.env` (eerste/laatste paar tekens volstaan om te verifiëren).
+4. Run `npm run dev`, open de app — als de loginpagina laadt zonder consolefouten over ontbrekende env, ben je goed.
+
+**Voorbeeld opmerking:** `Keys komen overeen met Dashboard → Settings → API (anon).`
+
+---
+
+### C2 — E-mail inloggen staat aan
 
 1. Dashboard → **Authentication** → **Providers**.
-2. Find **Email** — it should be **enabled**.
-3. Same area: check **“Confirm email”** (wording may vary). Note whether new users **must click a link in email** before they can log in.
+2. Zoek **Email** — die moet **ingeschakeld** zijn.
+3. Zelfde scherm: controleer **“Confirm email”** (formulering kan variëren). Noteer of nieuwe gebruikers **op een link in de e-mail moeten klikken** voordat ze kunnen inloggen.
 
-**Notes example:** `Email on. Confirm email = required` or `Confirm email = off for dev`.
+**Voorbeeld opmerking:** `Email aan. Confirm email = verplicht` of `Confirm email = uit voor dev`.
 
 ---
 
-### C3 — `profiles` table matches the app
+### C3 — Tabel `profiles` komt overeen met de app
 
 1. Dashboard → **Table Editor** → open **`profiles`**.
-2. Confirm there is a column **`id`** (usually UUID, same as user id).
-3. Confirm there is **`role`** (text or enum). Values your app uses are in `Login.jsx`: `child`, `parent`, `kine` — they must match what you store in the database.
+2. Controleer of er een kolom **`id`** is (meestal UUID, zelfde als user id).
+3. Controleer of er **`role`** is (text of enum). Waarden die de app gebruikt staan in `Login.jsx`: `child`, `parent`, `kine` — die moeten overeenkomen met wat je in de database opslaat.
 
-**Notes example:** `role is text; values parent/kine/child used in Table Editor`.
-
----
-
-### C4 — Every login user has a profile row
-
-Answer **one** of these honestly:
-
-- **A)** When someone signs up (or you create them), a **row in `profiles`** is always created (e.g. trigger, or you always insert manually).  
-- **B)** Not yet — then you **must** handle “logged in but no profile” in the app (see C7).
-
-**Notes example:** `Trigger on auth.users creates profiles` or `No trigger yet — will show error in UI`.
+**Voorbeeld opmerking:** `role is text; waarden parent/kine/child gebruikt in Table Editor`.
 
 ---
 
-### C5 — Service role never in the frontend
+### C4 — Elke ingelogde gebruiker heeft een profielrij
 
-1. Open **`src/lib/supabaseClient.js`** — it should only use **anon** key from env (already the case in your repo).
-2. Search the repo for `service_role` — should be **no matches** in client code.
-3. Confirm `.env` is in **`.gitignore`** and you never committed a file containing the service role key.
+Beantwoord **één** van deze opties eerlijk:
 
-**Notes example:** `Only anon in supabaseClient; .env gitignored`.
+- **A)** Bij aanmelding (of wanneer je iemand aanmaakt) wordt **altijd een rij in `profiles`** aangemaakt (bv. trigger, of je insert altijd handmatig).  
+- **B)** Nog niet — dan **moet** je in de app omgaan met “ingelogd maar geen profiel” (zie C7).
 
----
-
-### C6 — Session updates after login (plan)
-
-Right now **`AuthContext`** loads the session **once** on startup. After you implement login, you need **`onAuthStateChange`** so when someone signs in, **`user` / `role` in context update** without refreshing the page.
-
-**Notes example:** `Will add listener in AuthContext in same PR as login hardening`.
+**Voorbeeld opmerking:** `Trigger op auth.users maakt profiles aan` of `Nog geen trigger — foutmelding in UI`.
 
 ---
 
-### C7 — Missing profile or unknown role
+### C5 — Service role nooit in de frontend
 
-Decide what the user **sees** if password login works but:
+1. Open **`src/lib/supabaseClient.js`** — die mag alleen de **anon** key uit env gebruiken (in deze repo al zo).
+2. Zoek in de repo naar `service_role` — in clientcode mag dat **geen** treffers geven.
+3. Controleer of `.env` in **`.gitignore`** staat en je nooit een bestand met de service role key hebt gecommit.
 
-- there is **no** `profiles` row, or  
-- `role` is **empty** or not one of `child` / `parent` / `kine`.
-
-Examples: show Dutch error *“Account niet volledig ingesteld”*, log out, link to support, etc.
-
-**Notes example:** `Show error + signOut + message to contact kinesist`.
+**Voorbeeld opmerking:** `Alleen anon in supabaseClient; .env gitignored`.
 
 ---
 
-## Critical — required for GO
+### C6 — Sessie werkt bij na login (plan)
 
-| # | Check | Pass? | Notes |
+Nu laadt **`AuthContext`** de sessie **één keer** bij opstarten. Na implementatie van login heb je **`onAuthStateChange`** nodig zodat bij inloggen **`user` / `role` in context** bijwerken zonder de pagina te verversen.
+
+**Voorbeeld opmerking:** `Listener toevoegen in AuthContext in dezelfde PR als login-hardening`.
+
+---
+
+### C7 — Ontbrekend profiel of onbekende rol
+
+Bepaal wat de gebruiker **ziet** als wachtwoordlogin werkt maar:
+
+- er **geen** `profiles`-rij is, of  
+- `role` **leeg** is of niet één van `child` / `parent` / `kine`.
+
+Voorbeelden: Nederlandse fout *“Account niet volledig ingesteld”*, uitloggen, link naar support, enz.
+
+**Voorbeeld opmerking:** `Fout tonen + signOut + bericht om kinesist te contacteren`.
+
+---
+
+## Kritiek — vereist voor GO
+
+| # | Controle | OK? | Opmerkingen |
 |---|--------|:-----:|-------|
-| C1 | **Supabase URL + anon key** in `.env`; match Dashboard → Settings → API; app runs. | [x] | |
-| C2 | **Email** provider enabled; you know if **email confirmation** is required. | [ ] | |
-| C3 | **`profiles`** has **`id`** + **`role`**; values match app (`child` / `parent` / `kine`). | [x] | |
-| C4 | Plan for **profile row** for every email user (or explicit “no row yet” handling). | [x] | |
-| C5 | **Service role** not in client / Git; only **anon** in frontend. | [x] | |
-| C6 | Plan to add **`onAuthStateChange`** (or equivalent) when implementing login. | [x] | |
-| C7 | **Product decision** for missing / invalid `role` after successful auth. | [x] | |
+| C1 | **Supabase URL + anon key** in `.env`; komt overeen met Dashboard → Settings → API; app draait. | [x] | |
+| C2 | **Email**-provider ingeschakeld; je weet of **e-mailbevestiging** verplicht is. | [ ] | |
+| C3 | **`profiles`** heeft **`id`** + **`role`**; waarden komen overeen met app (`child` / `parent` / `kine`). | [x] | |
+| C4 | Plan voor **profielrij** voor elke e-mailgebruiker (of expliciete afhandeling “nog geen rij”). | [x] | |
+| C5 | **Service role** niet in client / Git; alleen **anon** in frontend. | [x] | |
+| C6 | Plan om **`onAuthStateChange`** (of equivalent) toe te voegen bij implementatie login. | [x] | |
+| C7 | **Productbeslissing** voor ontbrekende / ongeldige `role` na geslaagde auth. | [x] | |
 
-**GO rule:** All **C1–C7** have `[x]` **or** a **Notes** exception you accept (with date).
+**GO-regel:** Alle **C1–C7** hebben `[x]` **of** een **Opmerkingen**-uitzondering die je accepteert (met datum).
 
 ---
 
-## Important — before production (OK to defer for dev MVP)
+## Belangrijk — vóór productie (OK om uit te stellen voor dev-MVP)
 
-| # | Check | Pass? | Notes |
+| # | Controle | OK? | Opmerkingen |
 |---|--------|:-----:|-------|
-| I1 | **RLS** on `profiles`: users can read **own** row; writes locked down. | [x] | |
-| I2 | **Auth** URL + redirect URLs in Supabase match your app URLs (local + prod). | [x] | |
-| I3 | **ProtectedRoute:** only `user` vs also check **`role`** per dashboard — decided. | [x] | |
-| I4 | **Onthoud mij:** real behavior or “cosmetic for now” written in Notes. | [ ] | |
-| I5 | **Forgot password:** email reset vs code flow — decided; UI matches. | [ ] | |
-| I6 | **Sign-up path** creates **Auth user + profile** (no orphans). | [ ] | |
+| I1 | **RLS** op `profiles`: gebruikers kunnen **eigen** rij lezen; schrijven afgeschermd. | [x] | |
+| I2 | **Auth**-URL + redirect-URL’s in Supabase komen overeen met je app-URL’s (lokaal + prod). | [x] | |
+| I3 | **ProtectedRoute:** alleen `user` vs ook **`role`** per dashboard — beslist. | [x] | |
+| I4 | **Onthoud mij:** echt gedrag of “voorlopig cosmetisch” genoteerd in Opmerkingen. | [ ] | |
+| I5 | **Wachtwoord vergeten:** e-mailreset vs codeflow — beslist; UI sluit aan. | [ ] | |
+| I6 | **Aanmeldpad** maakt **Auth-user + profiel** aan (geen wezen). | [ ] | |
 
-**How to verify I1:** Dashboard → **Authentication** → **Policies** or Table Editor → **profiles** → RLS enabled + list policies.  
-**How to verify I2:** Dashboard → **Authentication** → **URL Configuration** — Site URL and Redirect URLs include e.g. `http://localhost:5173` and your production domain.
+**I1 controleren:** Dashboard → **Authentication** → **Policies** of Table Editor → **profiles** → RLS aan + policies bekijken.  
+**I2 controleren:** Dashboard → **Authentication** → **URL Configuration** — Site URL en Redirect URLs bevatten bv. `http://localhost:5173` en je productiedomein.
 
 ---
 
-## Environment & repo
+## Omgeving & repository
 
-| # | Check | Pass? | Notes |
+| # | Controle | OK? | Opmerkingen |
 |---|--------|:-----:|-------|
-| E1 | `.env` gitignored; `.env.example` has **placeholder** names (no real keys). | [ ] | |
-| E2 | Using a **dev** Supabase project for experiments (recommended). | [ ] | |
+| E1 | `.env` gitignored; `.env.example` heeft **placeholder**-namen (geen echte keys). | [ ] | |
+| E2 | Je gebruikt een **dev**-Supabase-project voor experimenten (aanbevolen). | [ ] | |
 
 ---
 
-## Final decision
+## Eindbeslissing
 
-**Date:** _______________  
+**Datum:** _______________  
 **Reviewer:** _______________
 
-- [ ] **GO** — Critical items done or explicitly excepted; safe to implement.
-- [ ] **NO-GO** — Fix blockers first.
+- [ ] **GO** — Kritieke items af of expliciet uitgezonderd; veilig om te implementeren.
+- [ ] **NO-GO** — Eerst blockers oplossen.
 
-**Blockers (if NO-GO):**
+**Blockers (bij NO-GO):**
 
 1. _________________________________  
 2. _________________________________  
 
-**Deferred (GO with debt):**
+**Uitgesteld (GO met technische schuld):**
 
 1. _________________________________  
 2. _________________________________  
