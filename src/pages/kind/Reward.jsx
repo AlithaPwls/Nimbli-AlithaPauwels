@@ -10,11 +10,11 @@ const CONFETTI_COLORS = ['#2bbf9d', '#FBB92A', '#82b3e1', '#E9B5FF', '#BDE786']
 
 function StatCard({ label, value, valueClassName }) {
   return (
-    <div className="flex h-[126px] w-[250px] flex-col gap-2 rounded-2xl border border-[#f3f4f6] bg-kind-white px-[33px] pt-[33px] pb-px shadow-[0px_4px_4px_rgba(0,0,0,0.25),0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_rgba(0,0,0,0.1)]">
-      <p className="w-full text-center font-nimbli-body text-[18px] font-normal leading-[25.2px] text-[#6a7282]">
+    <div className="flex h-[126px] w-[250px] flex-col gap-2 rounded-2xl border border-[#f3f4f6] bg-kind-white px-[33px] pt-[33px] pb-px shadow-[0px_4px_4px_rgba(0,0,0,0.25),0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_rgba(0,0,0,0.1)] max-lg:h-[104px] max-lg:w-full max-lg:gap-1 max-lg:rounded-xl max-lg:px-4 max-lg:pt-5 max-lg:pb-3">
+      <p className="w-full text-center font-nimbli-body text-[18px] font-normal leading-[25.2px] text-[#6a7282] max-lg:text-sm max-lg:leading-5">
         {label}
       </p>
-      <p className={`w-full text-center font-sans text-2xl font-bold leading-8 ${valueClassName}`}>{value}</p>
+      <p className={`w-full text-center font-sans text-2xl font-bold leading-8 max-lg:text-xl max-lg:leading-7 ${valueClassName}`}>{value}</p>
     </div>
   )
 }
@@ -127,7 +127,7 @@ export default function Reward() {
           draggable={false}
         />
 
-        <div className="flex w-full flex-col items-center justify-center gap-6 sm:flex-row sm:gap-12">
+        <div className="grid w-full max-w-[340px] grid-cols-2 gap-4 max-lg:mx-auto lg:flex lg:max-w-none lg:flex-row lg:justify-center lg:gap-12">
           <StatCard label="Beloning" value={`+${rewardXp} XP`} valueClassName="text-kind-yellow" />
           <StatCard label="Juistheid" value={`${accuracy}%`} valueClassName="text-[#82b3e1]" />
         </div>
@@ -138,7 +138,7 @@ export default function Reward() {
             const routeChildId = resolveKindRouteChildId({ role, profile, searchParams })
             navigate(routeChildId ? withChildSearch('/dashboard/kind', routeChildId) : '/dashboard/kind')
           }}
-          className="h-16 w-[270px] rounded-xl border-0 bg-kind-green-primary font-nimbli-heading text-[18px] font-black leading-none text-kind-canvas shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas"
+          className="h-16 w-[270px] rounded-xl border-0 bg-kind-green-primary font-nimbli-heading text-[18px] font-black leading-none text-kind-canvas shadow-[0_4px_0_0_#1e7a6a] transition-colors hover:bg-kind-green-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kind-green-primary focus-visible:ring-offset-2 focus-visible:ring-offset-kind-canvas max-lg:h-12 max-lg:w-[220px] max-lg:text-base max-lg:shadow-[0_3px_0_0_#1e7a6a]"
         >
           Doorgaan
         </button>

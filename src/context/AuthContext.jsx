@@ -11,7 +11,7 @@ const PROFILE_CACHE_KEY = 'nimbli.profileCache.v2'
 async function fetchProfileRow(userId) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, firstname, lastname, email, role, practice_id, invite_code, date_of_birth')
+    .select('id, firstname, lastname, email, role, practice_id, invite_code, date_of_birth, phone_number, address')
     .eq('id', userId)
     .maybeSingle()
 

@@ -1,25 +1,44 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useActiveChildSelection } from '@/hooks/ouder/useActiveChildSelection.js'
 import { buildChildSearch } from '@/lib/activeChild.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderMobileNav from '@/components/ouder/OuderMobileNav.jsx'
 import OuderSettingsCard from '@/components/ouder/OuderSettingsCard.jsx'
 import OuderSettingsToggleRow from '@/components/ouder/OuderSettingsToggleRow.jsx'
 import OuderSettingsActionRow from '@/components/ouder/OuderSettingsActionRow.jsx'
 
 export default function OuderInstellingen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const mainRef = useRef(null)
+  const [scrollContainer, setScrollContainer] = useState(null)
+  const setMainRef = useCallback((node) => {
+    mainRef.current = node
+    setScrollContainer(node)
+  }, [])
+
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
   const { activatedChildren, activeChildId, setSelectedChildId } = useActiveChildSelection(profile)
 
+  const [profileSavedNotice, setProfileSavedNotice] = useState(false)
   const [cameraAccess, setCameraAccess] = useState(true)
   const [shareData, setShareData] = useState(false)
   const [progressUpdates, setProgressUpdates] = useState(true)
   const [missedExercise, setMissedExercise] = useState(true)
   const [dailyReminder, setDailyReminder] = useState(false)
+
+  useEffect(() => {
+    if (!location.state?.profileSaved) return
+    setProfileSavedNotice(true)
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: null }
+    )
+  }, [location.pathname, location.search, location.state, navigate])
 
   if (loading) {
     return <div className="text-center py-8">Laden...</div>
@@ -39,11 +58,28 @@ export default function OuderInstellingen() {
         onSelectChild={setSelectedChildId}
       />
 
-      <main className="min-w-0 flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
-          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-black">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <OuderMobileNav
+          scrollEl={scrollContainer}
+          logout={logout}
+          logoutLoading={logoutLoading}
+          childrenList={activatedChildren}
+          selectedChildId={activeChildId}
+          onSelectChild={setSelectedChildId}
+          headerLabel="Instellingen"
+        />
+
+        <main ref={setMainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink max-lg:px-4 max-lg:py-6">
+          <h1 className="font-nimbli-heading text-4xl font-extrabold tracking-tight text-black max-lg:text-3xl max-sm:text-2xl">
             Instellingen
           </h1>
+
+          {profileSavedNotice ? (
+            <p className="mt-4 text-sm font-medium text-nimbli" role="status">
+              Je wijzigingen zijn opgeslagen.
+            </p>
+          ) : null}
 
           <div className="mt-10 flex max-w-[540px] flex-col gap-10">
             <section>
@@ -123,19 +159,14 @@ export default function OuderInstellingen() {
                       icon="edit"
                       onClick={() => navigate('/dashboard/ouder/account-bewerken')}
                     />
-                    <OuderSettingsActionRow
-                      label="Profiel archiveren"
-                      tone="danger"
-                      icon="trash"
-                      onClick={() => {}}
-                    />
                   </div>
                 </div>
               </div>
             </section>
           </div>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

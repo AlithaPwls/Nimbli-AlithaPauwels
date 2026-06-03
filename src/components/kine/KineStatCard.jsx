@@ -28,7 +28,7 @@ export default function KineStatCard({ title, value, subtitle, accent = 'nimbli'
         : 'bg-nimbli'
 
   return (
-    <div className="relative overflow-hidden rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3]">
+    <div className="relative overflow-hidden rounded-[14px] border-2 border-[#e1dbd3] bg-white p-6 shadow-[0_2px_0_0_#e1dbd3] max-lg:p-4">
       {accent === 'nimbli' ? (
         <div
           className="pointer-events-none absolute -right-2 -top-8 size-24 rounded-full bg-nimbli/10 blur-2xl"
@@ -41,7 +41,7 @@ export default function KineStatCard({ title, value, subtitle, accent = 'nimbli'
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-nimbli-heading text-lg font-bold leading-tight text-[#6b7280]">{title}</p>
-          <p className={`mt-3 font-nimbli-heading text-[32px] font-extrabold leading-none ${valueClass}`}>
+          <p className={`mt-3 font-nimbli-heading text-[32px] font-extrabold leading-none max-lg:text-2xl ${valueClass}`}>
             {value}
           </p>
           {subtitle ? (

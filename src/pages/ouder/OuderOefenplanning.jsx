@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import ExerciseDetailDialog from '@/components/kine/ExerciseDetailDialog.jsx'
 import { useProfile } from '@/hooks/useProfile.js'
 import { useLogout } from '@/hooks/useLogout.js'
 import OuderSidebar from '@/components/ouder/OuderSidebar.jsx'
+import OuderMobileNav from '@/components/ouder/OuderMobileNav.jsx'
 import OuderChildSwitcher from '@/components/ouder/OuderChildSwitcher.jsx'
 import OuderWeekStrip from '@/components/ouder/OuderWeekStrip.jsx'
 import OuderUpcomingExercise from '@/components/ouder/OuderUpcomingExercise.jsx'
@@ -34,6 +35,13 @@ function formatDayHeader(d) {
 }
 
 export default function OuderOefenplanning() {
+  const mainRef = useRef(null)
+  const [scrollContainer, setScrollContainer] = useState(null)
+  const setMainRef = useCallback((node) => {
+    mainRef.current = node
+    setScrollContainer(node)
+  }, [])
+
   const { profile, loading } = useProfile()
   const { logout, loading: logoutLoading } = useLogout()
   const {
@@ -41,6 +49,7 @@ export default function OuderOefenplanning() {
     loading: childrenLoading,
     error: childrenError,
     activeChildId,
+    selectedChild,
     setSelectedChildId,
   } = useActiveChildSelection(profile)
 
@@ -57,6 +66,14 @@ export default function OuderOefenplanning() {
     if (!planning.selectedDayKey) return []
     return planning.plannedByDay?.[planning.selectedDayKey] ?? []
   }, [planning.plannedByDay, planning.selectedDayKey])
+
+  const mobileNavLabel = useMemo(() => {
+    if (selectedChild) {
+      const name = `${selectedChild?.firstname ?? ''} ${selectedChild?.lastname ?? ''}`.trim()
+      return name || 'Kind'
+    }
+    return 'Oefenplanning'
+  }, [selectedChild])
 
   if (loading) {
     return <div className="text-center py-8">Laden...</div>
@@ -80,7 +97,18 @@ export default function OuderOefenplanning() {
         onSelectChild={setSelectedChildId}
       />
 
-      <main className="min-w-0 flex-1 overflow-auto">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <OuderMobileNav
+          scrollEl={scrollContainer}
+          logout={logout}
+          logoutLoading={logoutLoading}
+          childrenList={activatedChildren}
+          selectedChildId={activeChildId}
+          onSelectChild={setSelectedChildId}
+          headerLabel={mobileNavLabel}
+        />
+
+        <main ref={setMainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl px-8 py-10 font-nimbli-body text-nimbli-ink">
           <ExerciseDetailDialog
             exercise={selectedExercise}
@@ -175,7 +203,8 @@ export default function OuderOefenplanning() {
             </div>
           </div>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

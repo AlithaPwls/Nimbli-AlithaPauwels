@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { withChildSearch } from '@/lib/activeChild.js'
+import { isOuderInstellingenPath } from '@/lib/ouder/ouderInstellingenNav.js'
 import { Calendar, ChevronDown, LayoutDashboard, LogOut, Settings, Sparkles } from 'lucide-react'
 import NimbliSidebarLogo from '@/components/NimbliSidebarLogo.jsx'
 import { cn } from '@/lib/utils'
+
+function handleNavClick(onNavigate) {
+  onNavigate?.()
+}
 import {
   SIDEBAR_BTN_FOCUS,
   SIDEBAR_BTN_HOVER,
@@ -44,8 +49,13 @@ export default function OuderSidebar({
   childrenList = null,
   selectedChildId = null,
   onSelectChild = null,
+  onNavigate = null,
+  isDrawer = false,
+  className,
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const instellingenActive = isOuderInstellingenPath(location.pathname)
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -81,7 +91,13 @@ export default function OuderSidebar({
   }, [open])
 
   return (
-    <aside className="flex h-svh w-[260px] shrink-0 flex-col border-r border-[#e5e7eb] bg-white px-6 pt-6 pb-6">
+    <aside
+      className={cn(
+        'flex flex-col border-r border-[#e5e7eb] bg-white px-6 pt-6 pb-6',
+        isDrawer ? 'h-full w-full border-r-0' : 'hidden h-svh w-[260px] shrink-0 lg:flex',
+        className
+      )}
+    >
       <div className="relative mx-auto w-full max-w-[173px]" ref={rootRef}>
         <button
           type="button"
@@ -125,6 +141,7 @@ export default function OuderSidebar({
                     const nextId = c?.id ?? null
                     if (!nextId || nextId === selectedChildId) return
                     onSelectChild?.(nextId)
+                    onNavigate?.()
                   }}
                   className={cn(
                     'flex w-full items-center justify-between rounded-lg border border-transparent px-3 py-2 text-left text-sm',
@@ -148,6 +165,7 @@ export default function OuderSidebar({
             type="button"
             onClick={() => {
               setOpen(false)
+              onNavigate?.()
               navigate(withChildSearch('/dashboard/kind', selectedChildId))
             }}
             className={cn(
@@ -171,6 +189,7 @@ export default function OuderSidebar({
           to={withChildSearch('/dashboard/ouder', selectedChildId)}
           end
           className={({ isActive }) => navItemClass({ isActive })}
+          onClick={() => handleNavClick(onNavigate)}
         >
           {({ isActive }) => (
             <>
@@ -182,6 +201,7 @@ export default function OuderSidebar({
         <NavLink
           to={withChildSearch('/dashboard/ouder/oefenplanning', selectedChildId)}
           className={({ isActive }) => navItemClass({ isActive })}
+          onClick={() => handleNavClick(onNavigate)}
         >
           {({ isActive }) => (
             <>
@@ -192,11 +212,12 @@ export default function OuderSidebar({
         </NavLink>
         <NavLink
           to={withChildSearch('/dashboard/ouder/instellingen', selectedChildId)}
-          className={({ isActive }) => navItemClass({ isActive })}
+          className={() => navItemClass({ isActive: instellingenActive })}
+          onClick={() => handleNavClick(onNavigate)}
         >
-          {({ isActive }) => (
+          {() => (
             <>
-              <NavIcon Icon={Settings} isActive={isActive} />
+              <NavIcon Icon={Settings} isActive={instellingenActive} />
               Instellingen
             </>
           )}

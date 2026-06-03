@@ -1,12 +1,20 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import LoadingScreen from '@/components/LoadingScreen.jsx'
 import { useAuth } from '@/hooks/useAuth.js'
+import KineMobileNav from './KineMobileNav.jsx'
 import KineSidebar from './KineSidebar.jsx'
 
 export default function KineLayout() {
   const navigate = useNavigate()
+  const mainRef = useRef(null)
+  const [scrollContainer, setScrollContainer] = useState(null)
   const { profile, loading } = useAuth()
+
+  const setMainRef = useCallback((node) => {
+    mainRef.current = node
+    setScrollContainer(node)
+  }, [])
 
   useEffect(() => {
     if (loading) return
@@ -24,9 +32,12 @@ export default function KineLayout() {
   return (
     <div className="flex h-svh overflow-hidden bg-nimbli-canvas">
       <KineSidebar />
-      <main className="min-w-0 flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <KineMobileNav scrollEl={scrollContainer} />
+        <main ref={setMainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

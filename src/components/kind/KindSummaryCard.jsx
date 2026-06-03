@@ -5,8 +5,10 @@ import KindWeekOverview from '@/components/kind/KindWeekOverview.jsx'
 
 export default function KindSummaryCard({ className }) {
   return (
-    <section className={cn('flex w-full max-w-[362px] shrink-0 flex-col items-end gap-[41px]', className)}>
-      <KindOverviewStats />
+    <section className={cn('flex w-full max-w-[362px] shrink-0 flex-col items-end gap-[41px] max-lg:max-w-none max-lg:gap-8', className)}>
+      <div className="max-lg:hidden">
+        <KindOverviewStats />
+      </div>
 
       <div
         className={cn(

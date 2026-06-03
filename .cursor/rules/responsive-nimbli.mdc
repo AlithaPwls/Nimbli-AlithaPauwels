@@ -1,0 +1,343 @@
+---
+alwaysApply: true
+---
+# Nimbli Responsive Design Rules
+
+## Purpose
+
+Nimbli already has a completed and approved desktop interface.
+
+The desktop version is considered the source of truth and must be treated as production-ready.
+
+The purpose of responsive development is to make the application usable on tablets and mobile devices without changing the desktop experience.
+
+Desktop layouts, styling, interactions, and workflows must remain unchanged unless explicitly requested.
+
+The goal is adaptation, not redesign.
+
+---
+
+# Core Principles
+
+## Desktop Is Locked
+
+The existing desktop experience is considered complete.
+
+Never modify desktop layouts, spacing, typography, navigation structure, colors, branding, or interactions unless explicitly requested.
+
+Any responsive implementation should have zero visual impact on desktop screens.
+
+When in doubt:
+
+Preserve desktop behavior.
+
+---
+
+## Add, Don't Replace
+
+Responsive work should add new behavior for smaller screens.
+
+Do not rewrite existing desktop code solely to support responsiveness.
+
+Do not replace working desktop layouts.
+
+Do not remove desktop styles.
+
+Do not redesign existing screens.
+
+Prefer:
+
+- Media queries
+- Responsive utility classes
+- Flex wrapping
+- Grid adaptations
+- Conditional styling
+
+Avoid:
+
+- Rebuilding existing layouts
+- Rewriting components from scratch
+- Large refactors without necessity
+
+---
+
+## Desktop First Strategy
+
+This project follows a desktop-first responsive strategy.
+
+Default styles should represent the desktop experience.
+
+Responsive adjustments should only be applied at smaller breakpoints.
+
+Suggested breakpoints:
+
+- Desktop: 1025px and above
+- Tablet: 769px - 1024px
+- Mobile: 0px - 768px
+
+---
+
+## Preserve Visual Identity
+
+Never change:
+
+- Colors
+- Typography
+- Icons
+- Branding
+- Shadows
+- Border radius
+- Visual hierarchy
+- Design language
+
+Responsive work should only improve usability on smaller screens.
+
+The application should look like the same product across all screen sizes.
+
+---
+
+## Preserve Functionality
+
+Every feature available on desktop must remain available on tablet and mobile.
+
+Never remove functionality because it is difficult to fit on smaller screens.
+
+Instead:
+
+- Stack content vertically
+- Collapse sections
+- Use drawers
+- Use accordions
+- Use horizontal scrolling when appropriate
+- Use modals when appropriate
+
+Functionality must always be preserved.
+
+---
+
+## React Component Rules
+
+When editing React components:
+
+- Prefer CSS-only responsive solutions.
+- Avoid duplicating components for desktop and mobile.
+- Avoid creating separate mobile versions unless absolutely necessary.
+- Keep component logic unchanged whenever possible.
+- Avoid touching business logic during responsive work.
+
+Responsive updates should focus primarily on presentation.
+
+---
+
+## Responsive Adaptation Strategy
+
+When converting desktop layouts:
+
+### Multi-column layouts
+
+Convert to single-column layouts on mobile.
+
+### Horizontal sections
+
+Stack vertically when space becomes limited.
+
+### Buttons
+
+Allow buttons to become full width on mobile when beneficial.
+
+### Forms
+
+Inputs should expand to available width.
+
+### Cards
+
+Cards should stack vertically before shrinking excessively.
+
+### Tables
+
+Prefer horizontal scrolling before removing information.
+
+### Content
+
+Avoid horizontal page scrolling whenever possible.
+
+---
+
+## Before Making Changes
+
+Before implementing any responsive solution, evaluate:
+
+1. Does this affect desktop?
+2. Can this be solved with a media query?
+3. Can this be solved with flex-wrap?
+4. Can this be solved by stacking content?
+5. Can this be solved without changing component logic?
+
+Always choose the least invasive solution.
+
+---
+
+## Required Reporting
+
+Whenever responsive changes are proposed or implemented, clearly explain:
+
+- Which breakpoint is affected.
+- Which components are affected.
+- Whether desktop behavior changes.
+
+Desktop impact should normally be:
+
+"None."
+
+---
+
+# Navigation Requirements
+
+## Desktop Navigation
+
+The desktop navigation must remain unchanged.
+
+Desktop behavior:
+
+- Use the existing left sidebar.
+- Sidebar remains permanently visible.
+- Sidebar remains fixed on the left side of the application.
+- No hamburger menu on desktop.
+- No collapsing behavior on desktop.
+- No auto-hide behavior on desktop.
+- No responsive navigation logic should affect desktop screens.
+
+Desktop navigation is considered locked.
+
+---
+
+## Mobile Navigation
+
+For tablet and mobile devices:
+
+- Replace the desktop sidebar with a top navigation bar.
+- Display a hamburger menu icon.
+- Navigation items should be accessible through the hamburger menu.
+- The mobile navigation must contain all navigation options available on desktop.
+- Routes and permissions must remain unchanged.
+
+The navigation structure must remain identical across all devices.
+
+Only the presentation may change.
+
+---
+
+## Mobile Navigation Drawer
+
+Preferred behavior:
+
+- Hamburger button opens a slide-out navigation drawer.
+- Drawer may slide from the left side.
+- Drawer should close when:
+  - A navigation item is selected.
+  - The user taps outside the drawer.
+  - The user explicitly closes it.
+
+Use smooth animations.
+
+Avoid abrupt transitions.
+
+---
+
+## Smart Navigation Visibility
+
+Mobile devices should maximize available screen space.
+
+Behavior:
+
+### Initial State
+
+- Navbar is visible when the page loads.
+
+### Scrolling Down
+
+- When the user scrolls downward, hide the navbar.
+- Hide using a smooth animation.
+- Do not leave empty space where the navbar was.
+
+### Scrolling Up
+
+- When the user scrolls upward, even slightly, immediately show the navbar again.
+- Reappearance should feel responsive.
+- The user should not need to scroll a large distance.
+
+### Top Of Page
+
+- When near the top of the page, the navbar should always remain visible.
+
+---
+
+## Scroll Detection Logic
+
+Preferred implementation:
+
+- Store the previous scroll position.
+- Compare current scroll position with previous scroll position.
+- If current position is greater than previous position:
+  - User is scrolling down.
+  - Hide navbar.
+- If current position is less than previous position:
+  - User is scrolling up.
+  - Show navbar.
+
+Use throttling or requestAnimationFrame if necessary to avoid performance issues.
+
+Avoid flickering.
+
+---
+
+## Desktop Protection
+
+Scroll-based navbar behavior must never affect desktop screens.
+
+Desktop behavior:
+
+- Sidebar remains visible.
+- Sidebar remains fixed.
+- Sidebar never hides.
+- Sidebar never collapses automatically.
+
+---
+
+# Nimbli-Specific Requirements
+
+Nimbli is a rehabilitation platform for children and healthcare professionals.
+
+The desktop experience has already been designed and approved.
+
+Treat the desktop application as locked.
+
+Responsive work should focus on:
+
+- Mobile phones
+- Tablets
+- Smaller laptops
+
+The objective is to improve usability on smaller screens while preserving the existing desktop experience.
+
+Never redesign screens without explicit instructions.
+
+When uncertain:
+
+Preserve desktop behavior and add responsive adaptations only.
+
+---
+
+# Golden Rule
+
+Desktop is the source of truth.
+
+Do not redesign.
+
+Do not improve.
+
+Do not modernize.
+
+Do not refactor unnecessarily.
+
+Only make the existing Nimbli experience work beautifully on smaller screens while keeping desktop visually identical.
