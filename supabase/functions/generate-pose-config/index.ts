@@ -12,8 +12,12 @@ declare const Deno: {
 }
 
 import { corsHeaders } from '../_shared/cors.ts'
-import { buildSystemPrompt, buildUserPrompt } from './prompt.ts'
+import { buildSystemPrompt, buildUserPrompt, compactLandmarks } from './prompt.ts'
 import { validatePoseConfig } from './validatePoseConfig.ts'
+import { checkPoseConfigAgainstSnapshots } from './snapshotRuleCheck.ts'
+import { buildFallbackPoseConfig } from './fallbackPoseConfig.ts'
+
+const MAX_AI_ATTEMPTS = 3
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_MODEL = 'openai/gpt-4o-mini'
@@ -146,57 +150,115 @@ Deno.serve(async (req) => {
     { role: 'user', content: userPrompt },
   ]
 
-  const firstCall = await callOpenRouter(openrouterKey, model, baseMessages)
-  if (!firstCall.ok) return firstCall.response
+  const restSnap = rest as Parameters<typeof checkPoseConfigAgainstSnapshots>[1]
+  const targetSnap = target as Parameters<typeof checkPoseConfigAgainstSnapshots>[2]
 
-  const firstCheck = validatePoseConfig(firstCall.parsed)
-  if (firstCheck.ok) {
-    return jsonResponse({
-      poseConfig: firstCheck.value,
-      model,
-      usage: firstCall.usage ?? null,
-      retried: false,
+  const messages: ChatMessage[] = [...baseMessages]
+  let lastRaw = ''
+  let lastErrors: string[] = []
+  let totalUsage: unknown = null
+  let attempts = 0
+
+  for (let attempt = 0; attempt < MAX_AI_ATTEMPTS; attempt++) {
+    attempts += 1
+    const call = await callOpenRouter(openrouterKey, model, messages)
+    if (!call.ok) return call.response
+
+    lastRaw = call.rawContent
+    if (call.usage) totalUsage = call.usage
+
+    const accept = acceptGeneratedPoseConfig(call.parsed, restSnap, targetSnap)
+    if (accept.ok) {
+      return jsonResponse({
+        poseConfig: attachReferenceTargetLandmarks(accept.value, target),
+        model,
+        usage: totalUsage,
+        retried: attempt > 0,
+        attempts,
+        frameTest: { ok: true },
+        source: 'ai',
+      })
+    }
+
+    lastErrors = accept.errors
+    messages.push({ role: 'assistant', content: call.rawContent })
+    messages.push({
+      role: 'user',
+      content: [
+        'The previous JSON did not pass validation and/or snapshot tests on the REST/TARGET frames.',
+        'rules.up MUST pass on TARGET landmarks; rules.rest (or default rest) MUST pass on REST.',
+        'Do NOT use above/below with NOSE and shoulders. Use aboveEyeLine for arms above eyes.',
+        'Fix every issue and return ONLY corrected JSON (no markdown fences).',
+        'Errors:',
+        ...accept.errors.map((e) => `- ${e}`),
+      ].join('\n'),
     })
   }
 
-  // One retry with the previous output + concrete errors as feedback.
-  const retryMessages: ChatMessage[] = [
-    ...baseMessages,
-    { role: 'assistant', content: firstCall.rawContent },
-    {
-      role: 'user',
-      content: [
-        'The previous JSON did not pass schema validation.',
-        'Fix every issue below and return ONLY the corrected JSON (no prose, no markdown fences).',
-        'Validation errors:',
-        ...firstCheck.errors.map((e) => `- ${e}`),
-      ].join('\n'),
-    },
-  ]
+  const fallback = buildFallbackPoseConfig({
+    exerciseTitle: exerciseTitle as string,
+    repsCount: repsCount as number,
+    rest: restSnap,
+    target: targetSnap,
+  })
 
-  const retryCall = await callOpenRouter(openrouterKey, model, retryMessages)
-  if (!retryCall.ok) return retryCall.response
-
-  const retryCheck = validatePoseConfig(retryCall.parsed)
-  if (retryCheck.ok) {
+  if (fallback) {
     return jsonResponse({
-      poseConfig: retryCheck.value,
+      poseConfig: attachReferenceTargetLandmarks(fallback.config, target),
       model,
-      usage: retryCall.usage ?? null,
-      retried: true,
+      usage: totalUsage,
+      retried: attempts > 1,
+      attempts,
+      frameTest: { ok: true },
+      source: 'fallback',
+      fallbackKind: fallback.kind,
+      aiErrors: lastErrors,
     })
   }
 
   return jsonResponse(
     {
       error: 'ai_schema_invalid',
-      details: 'AI produced JSON that does not match rules_engine_v1 after one retry.',
-      firstErrors: firstCheck.errors,
-      retryErrors: retryCheck.errors,
+      details: `AI could not produce valid pose_config after ${MAX_AI_ATTEMPTS} attempts and fallback failed.`,
+      lastErrors,
+      lastRaw: lastRaw.slice(0, 800),
     },
     { status: 502 },
   )
 })
+
+function acceptGeneratedPoseConfig(
+  parsed: unknown,
+  rest: Parameters<typeof checkPoseConfigAgainstSnapshots>[1],
+  target: Parameters<typeof checkPoseConfigAgainstSnapshots>[2],
+):
+  | { ok: true; value: Record<string, unknown> }
+  | { ok: false; errors: string[] } {
+  const schema = validatePoseConfig(parsed)
+  if (!schema.ok) {
+    return { ok: false, errors: schema.errors }
+  }
+  const snapshot = checkPoseConfigAgainstSnapshots(schema.value, rest, target)
+  if (!snapshot.ok) {
+    return { ok: false, errors: snapshot.errors }
+  }
+  return { ok: true, value: schema.value as unknown as Record<string, unknown> }
+}
+
+function attachReferenceTargetLandmarks(
+  poseConfig: Record<string, unknown>,
+  targetSnapshot: unknown,
+): Record<string, unknown> {
+  if (!isLandmarkPayload(targetSnapshot)) return poseConfig
+  return {
+    ...poseConfig,
+    reference: {
+      target: {
+        landmarks: compactLandmarks(targetSnapshot as Parameters<typeof compactLandmarks>[0]),
+      },
+    },
+  }
+}
 
 async function callOpenRouter(
   apiKey: string,

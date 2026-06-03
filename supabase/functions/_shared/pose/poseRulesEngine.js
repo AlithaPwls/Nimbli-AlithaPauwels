@@ -7,8 +7,8 @@
  * - `aboveEyeLine(a,delta?)` means a.y < min(visible eye y) - delta (stretch-ooglijn; optioneel `eyeIndices`)
  * - `yWithin(a,b,maxDelta?)` means |a.y - b.y| <= maxDelta (flamingo: knie op heuphoogte; default `thresholds.kneeHipLevelMaxDelta`)
  */
-import { getPoseLandmarkIndex, getPoseLandmarkPoint } from '@/lib/kind/poseLandmarks.js'
-import { angleDeg, distance2D, pointToLineDistance2D, visibleEnough } from '@/lib/kind/poseMath.js'
+import { getPoseLandmarkIndex, getPoseLandmarkPoint } from './poseLandmarks.js'
+import { angleDeg, distance2D, pointToLineDistance2D, visibleEnough } from './poseMath.js'
 
 const DEFAULT_VIS_MIN = 0.55
 const DEFAULT_DELTA_Y = 0.04

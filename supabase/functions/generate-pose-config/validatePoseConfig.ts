@@ -46,6 +46,42 @@ const OP_ALIASES: Record<string, string> = {
 
 const COPY_KEYS = ['waitUp', 'holding', 'waitDown', 'complete'] as const
 
+/** Landmarks that must not appear in yWithin pairs (head/face — never level with shoulders in image space). */
+const YWITHIN_FORBIDDEN = new Set([
+  'NOSE',
+  'LEFT_EYE_INNER',
+  'LEFT_EYE',
+  'LEFT_EYE_OUTER',
+  'RIGHT_EYE_INNER',
+  'RIGHT_EYE',
+  'RIGHT_EYE_OUTER',
+  'LEFT_EAR',
+  'RIGHT_EAR',
+  'MOUTH_LEFT',
+  'MOUTH_RIGHT',
+])
+
+/** Finger, toe, heel — use WRIST / ANKLE instead (matches LANDMARK_GUIDE in prompt.ts). */
+const DISCOURAGED_LANDMARKS = new Set([
+  'LEFT_FOOT_INDEX',
+  'RIGHT_FOOT_INDEX',
+  'LEFT_HEEL',
+  'RIGHT_HEEL',
+  'LEFT_PINKY',
+  'RIGHT_PINKY',
+  'LEFT_INDEX',
+  'RIGHT_INDEX',
+  'LEFT_THUMB',
+  'RIGHT_THUMB',
+  'LEFT_EAR',
+  'RIGHT_EAR',
+  'MOUTH_LEFT',
+  'MOUTH_RIGHT',
+])
+
+const MAX_VISIBLE_POINTS = 6
+const MAX_UP_RULES = 8
+
 type CopyLine = { line1: string; line2: string }
 type Rule = Record<string, unknown> & { op: string }
 
@@ -75,6 +111,138 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0
 }
 
+function normalizeLandmarkName(v: unknown): string | null {
+  if (typeof v === 'number') return null
+  if (typeof v !== 'string') return null
+  return v.trim().toUpperCase()
+}
+
+function flattenRules(rules: unknown): Rule[] {
+  if (!rules) return []
+  if (Array.isArray(rules)) {
+    const out: Rule[] = []
+    for (const r of rules) out.push(...flattenRules(r))
+    return out
+  }
+  if (!isPlainObject(rules)) return []
+  const rawOp = typeof rules.op === 'string' ? rules.op.trim().toLowerCase() : ''
+  const op = OP_ALIASES[rawOp]
+  if (op === 'allOf' || op === 'anyOf') {
+    return flattenRules(rules.rules)
+  }
+  if (op === 'not' && rules.rule) {
+    return flattenRules([rules.rule])
+  }
+  if (typeof rules.op === 'string') {
+    return [rules as Rule]
+  }
+  return []
+}
+
+function validatePoseConfigSemantics(input: Record<string, unknown>, errors: string[]): void {
+  const upFlat = flattenRules(isPlainObject(input.rules) ? input.rules.up : null)
+  const restFlat = flattenRules(isPlainObject(input.rules) ? input.rules.rest : null)
+
+  if (upFlat.length > MAX_UP_RULES) {
+    errors.push(
+      `rules.up: too many rules (${upFlat.length}); keep at most ${MAX_UP_RULES} (prefer 3–6 simple checks).`,
+    )
+  }
+
+  let collinearCount = 0
+  let hasYWithinOrAngle = false
+
+  for (let i = 0; i < upFlat.length; i++) {
+    const rule = upFlat[i]
+    const path = `rules.up[${i}]`
+    const rawOp = typeof rule.op === 'string' ? rule.op.trim().toLowerCase() : ''
+    const op = OP_ALIASES[rawOp]
+
+    if (op === 'visible' && Array.isArray(rule.points)) {
+      if (rule.points.length > MAX_VISIBLE_POINTS) {
+        errors.push(
+          `${path}.points: at most ${MAX_VISIBLE_POINTS} landmarks per visible rule (got ${rule.points.length}).`,
+        )
+      }
+    }
+
+    if (op === 'above' || op === 'below') {
+      const a = normalizeLandmarkName(rule.a)
+      const b = normalizeLandmarkName(rule.b)
+      const involvesNose = a === 'NOSE' || b === 'NOSE'
+      const involvesTorso =
+        (a && (a.includes('SHOULDER') || a.includes('ELBOW') || a.includes('WRIST') || a.includes('HIP'))) ||
+        (b && (b.includes('SHOULDER') || b.includes('ELBOW') || b.includes('WRIST') || b.includes('HIP')))
+      if (involvesNose && involvesTorso) {
+        errors.push(
+          `${path}: do not use ${op} between head (NOSE) and body landmarks — use aboveEyeLine for arms-up or yWithin for level body parts.`,
+        )
+      }
+    }
+
+    if (op === 'yWithin') {
+      hasYWithinOrAngle = true
+      const a = normalizeLandmarkName(rule.a)
+      const b = normalizeLandmarkName(rule.b)
+      if (a && YWITHIN_FORBIDDEN.has(a)) {
+        errors.push(`${path}: yWithin must not use head landmark "${a}" — use aboveEyeLine, above, or below instead.`)
+      }
+      if (b && YWITHIN_FORBIDDEN.has(b)) {
+        errors.push(`${path}: yWithin must not use head landmark "${b}" — use aboveEyeLine, above, or below instead.`)
+      }
+      const maxDelta = isFiniteNumber(rule.maxDelta)
+        ? rule.maxDelta
+        : isFiniteNumber(rule.tolerance)
+          ? rule.tolerance
+          : 0.04
+      if (a && b && maxDelta < 0.06) {
+        const shoulderNose =
+          (a.includes('SHOULDER') && b === 'NOSE') || (b.includes('SHOULDER') && a === 'NOSE')
+        if (shoulderNose) {
+          errors.push(
+            `${path}: yWithin between shoulder and NOSE is invalid (use aboveEyeLine for arms-up, or omit).`,
+          )
+        }
+      }
+    }
+
+    if (op === 'angle') hasYWithinOrAngle = true
+
+    if (op === 'collinear') {
+      collinearCount += 1
+      const tol = isFiniteNumber(rule.tol)
+        ? rule.tol
+        : isFiniteNumber(rule.tolerance)
+          ? rule.tolerance
+          : null
+      if (tol != null && tol < 0.05) {
+        errors.push(`${path}: collinear tol should be at least 0.05 for camera noise (got ${tol}).`)
+      }
+    }
+  }
+
+  if (collinearCount >= 2 && !hasYWithinOrAngle) {
+    errors.push(
+      'rules.up: multiple collinear rules without yWithin/angle — add body-line checks (yWithin shoulder–hip, angle hip–knee–ankle).',
+    )
+  }
+
+  for (let i = 0; i < restFlat.length; i++) {
+    const rule = restFlat[i]
+    const path = `rules.rest[${i}]`
+    const rawOp = typeof rule.op === 'string' ? rule.op.trim().toLowerCase() : ''
+    const op = OP_ALIASES[rawOp]
+    if (op !== 'yWithin') continue
+    const a = normalizeLandmarkName(rule.a)
+    const b = normalizeLandmarkName(rule.b)
+    if ((a && YWITHIN_FORBIDDEN.has(a)) || (b && YWITHIN_FORBIDDEN.has(b))) {
+      errors.push(
+        `${path}: yWithin with head landmarks is invalid for rest — use below(wrist, shoulder) or omit rules.rest.`,
+      )
+    }
+  }
+}
+
 function validateLandmarkRef(v: unknown, path: string, errors: string[]): void {
   if (typeof v === 'number') {
     if (!Number.isInteger(v) || v < 0 || v > 32) {
@@ -86,6 +254,14 @@ function validateLandmarkRef(v: unknown, path: string, errors: string[]): void {
     const key = v.trim().toUpperCase()
     if (!POSE_LANDMARK_NAMES.has(key)) {
       errors.push(`${path}: unknown landmark name "${v}".`)
+      return
+    }
+    if (DISCOURAGED_LANDMARKS.has(key)) {
+      const hint =
+        key.includes('FOOT') || key.includes('HEEL')
+          ? 'use LEFT_ANKLE / RIGHT_ANKLE for feet'
+          : 'use LEFT_WRIST / RIGHT_WRIST for hands'
+      errors.push(`${path}: do not use "${key}" — ${hint}.`)
     }
     return
   }
@@ -310,6 +486,10 @@ export function validatePoseConfig(input: unknown): ValidationResult {
         validateCopyBlock(input.copy[k], `copy.${k}`, errors)
       }
     }
+  }
+
+  if (errors.length === 0) {
+    validatePoseConfigSemantics(input, errors)
   }
 
   if (errors.length > 0) return { ok: false, errors }

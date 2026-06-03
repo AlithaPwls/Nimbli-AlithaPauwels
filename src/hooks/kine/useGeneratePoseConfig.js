@@ -101,6 +101,9 @@ export function useGeneratePoseConfig() {
         model: respData?.model ?? null,
         usage: respData?.usage ?? null,
         retried: Boolean(respData?.retried),
+        source: respData?.source ?? 'ai',
+        fallbackKind: respData?.fallbackKind ?? null,
+        frameTest: respData?.frameTest ?? null,
       }
       setData(result)
       return result
