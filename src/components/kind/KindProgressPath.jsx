@@ -248,7 +248,7 @@ export default function KindProgressPath() {
           <Marker
             className={cn(PATH_MAIN_TODAY_SLOT.className, 'z-20')}
             Icon={Star}
-            label="vandaag"
+            label="Vandaag"
             variant="today"
             labelClassName="text-xs font-normal"
             onClick={openTodayPanel}
