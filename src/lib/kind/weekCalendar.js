@@ -201,7 +201,8 @@ function pathFullLabelFromDot(dot) {
   const parts = String(key).split('-').map(Number)
   if (parts.length !== 3) return pathLabelFromDot(dot)
   const [year, month, day] = parts
-  return kindWeekDayLabelFull(new Date(year, month - 1, day))
+  const label = new Date(year, month - 1, day).toLocaleDateString('nl-BE', { weekday: 'long' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function pathVariantForDot(dot, { futureIndex }) {
@@ -315,7 +316,9 @@ export function buildPathMarkersFromWeekDays(weekDays) {
   )
 
   return {
-    upperPath: upperDots.map((dot, i) => toPathMarker(dot, upperPathSlot(i), { futureIndex: i })),
+    upperPath: upperDots.map((dot, i) =>
+      toPathMarker(dot, upperPathSlot(i), { futureIndex: i, labelMode: 'full' })
+    ),
     mainBeforeToday: mainBeforeDot
       ? toPathMarker(mainBeforeDot, PATH_MAIN_BEFORE_SLOT, { futureIndex: 0, labelMode: 'full' })
       : null,
