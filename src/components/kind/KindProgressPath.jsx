@@ -225,10 +225,10 @@ export default function KindProgressPath() {
     <div className="mx-auto flex w-full max-w-[480px] min-w-0 flex-col items-center pb-16 pt-2 max-lg:max-w-[440px] max-lg:pb-12 max-lg:pt-1">
       {pathMarkers.upperPath.length > 0 ? (
         <section className="relative -mb-1 w-full" aria-label="Eerdere dagen op het pad">
-        <div className="relative w-full -translate-x-7 translate-y-8 scale-x-[-1]">            
+        <div className="relative w-full translate-x-0.5 translate-y-8 scale-y-[-1]">            
           <PathSegment src={pathMainSvg} alt="" clipPercent={upperClipPercent} />
             <PathMarkersOverlay>
-              <div className="relative size-full scale-x-[-1]">
+              <div className="relative size-full scale-y-[-1]">
                 {pathMarkers.upperPath.map((marker) => (
                   <PathDayMarker key={marker.key} marker={marker} />
                 ))}

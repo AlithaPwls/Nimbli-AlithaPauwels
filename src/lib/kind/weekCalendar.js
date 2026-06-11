@@ -230,8 +230,9 @@ const PATH_DAY_ZIGZAG_SLOTS = [
 
 /** Bovenste pad — eigen offsets (slot 0 los van middenpad). */
 const PATH_UPPER_DAY_SLOTS = [
-  { className: 'left-[74%] top-[32%] -translate-x-1/2' },
-  ...PATH_DAY_ZIGZAG_SLOTS.slice(1),
+  { className: 'left-[30%] top-[5%] -translate-x-1/2' },
+  { className: 'left-[74%] top-[50%] -translate-x-1/2' },
+  ...PATH_DAY_ZIGZAG_SLOTS.slice(2),
 ]
 
 const PATH_SLOT_TOP_PCT = [4, 15, 33, 50, 66, 84]
